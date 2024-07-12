@@ -254,7 +254,7 @@ public class RestrictionsTest {
 	}
 	
 	/**
-	 * This test attempts to get the OAS representation of the exact cardinality of an ObjectProperty,
+	 * This test attempts to get the OAS representation of the exact cardinality of an ObjectProperty (which is not functional),
 	 * when properties may or may not be arrays, depending on cardinality.  Plus, list of required properties are set to be generated for schemas.
 	 */
 	@Test
@@ -266,6 +266,40 @@ public class RestrictionsTest {
 
 		// Expected value
 		final var expectedMinMaxResult = 1;
+
+		// Get the class schema and make sure it has properties.
+		final var schema = this.mapper.getSchemas().get("University");
+		Assertions.assertNotNull(schema);
+		Assertions.assertNotNull(schema.getProperties());
+
+		final var isRequired = schema.getRequired() != null && schema.getRequired().contains("hasRector");
+		Assertions.assertTrue(isRequired);
+
+		// Get the property to check object property exact cardinality.
+		// For exact cardinality, the class schema should have it marked as required when required properties are generated.
+		final var property = (Schema) schema.getProperties().get("hasRector");
+		Assertions.assertNotNull(property);
+
+		final var items = property.getItems();
+		Assertions.assertNotNull(items);
+		Assertions.assertNotNull(items.get$ref());
+		Assertions.assertEquals(property.getMaxItems(), property.getMinItems());
+		Assertions.assertEquals(expectedMinMaxResult, property.getMinItems());
+	}
+
+	/**
+	 * This test attempts to get the OAS representation of the exact cardinality of an ObjectProperty which is a functional property,
+	 * when properties may or may not be arrays, depending on cardinality.  Plus, list of required properties are set to be generated for schemas.
+	 */
+	@Test
+	public void testObjectExactCardinalityOfFunctionalPropertyWithRequiredPropertiesAndWithoutArraysGenerated() throws OWLOntologyCreationException, Exception {
+		// Set up the mapper with non-default values.
+		this.configData.setAlways_generate_arrays(false);
+		this.configData.setRequired_properties_from_cardinality(true);
+		this.setupMapper();
+
+		// Expected value
+		final Integer expectedMinMaxResult = null;
 
 		// Get the class schema and make sure it has properties.
 		final var schema = this.mapper.getSchemas().get("AmericanStudent");
