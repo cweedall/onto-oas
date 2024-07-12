@@ -350,12 +350,21 @@ public class ObjectVisitor implements OWLObjectVisitor {
 		propertySchemas.forEach((propertyName, propertySchema) -> {
 			propertySchema.getMinItems();
 
-			if (propertySchema.getMinItems() != null && propertySchema.getMinItems() == 1
-				&& propertySchema.getMaxItems() != null && propertySchema.getMaxItems() == 1) {
+			// If min/max values are both 1, it is required and not nullable.
+			// If only the max value is 1, then it is a functional property which is required but nullable.
+			// TODO: determine whether setting max items value to 1 BUT NOT setting property as functional should be treated differently.
+			if (propertySchema.getMaxItems() != null && propertySchema.getMaxItems() == 1) {
+				if (propertySchema.getMinItems() != null && propertySchema.getMinItems() == 1) {
+					MapperProperty.setNullableValueForPropertySchema(propertySchema, false);
+				} else {
+					MapperProperty.setNullableValueForPropertySchema(propertySchema, true);
+				}
+
 				this.requiredProperties.add(propertyName);
 			}
 
 			if (propertySchema.getMinItems() != null && propertySchema.getMinItems() > 0) {
+				MapperProperty.setNullableValueForPropertySchema(propertySchema, false);
 				this.requiredProperties.add(propertyName);
 			}
 		});
