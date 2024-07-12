@@ -83,33 +83,45 @@ public class MapperProperty {
 				final var itemsSchema = propertySchema.getItems();
 
 				if (itemsSchema != null) {
-          // Initial indicator for whether the property should remain an array is if functional (should not be / false) or not functional (should be / true);
-					boolean shouldBeArray = !(functionalProperties != null && functionalProperties.contains(propertyName));
+          boolean isFunctional = functionalProperties != null && functionalProperties.contains(propertyName);
 
-          shouldBeArray &= (Objects.requireNonNullElse(propertySchema.getMinItems(), -1) > 0
-                            || Objects.requireNonNullElse(propertySchema.getMaxItems(), -1) > 1);
+          // We don't want to change object properties because the reference still needs to occur within the array of property items.
+          boolean isFunctionalObjProp = isFunctional && itemsSchema != null && itemsSchema.get$ref() != null;  // Not currently used, but placeholder in case it is needed later.
+          boolean isFunctionalDataProp = isFunctional && (itemsSchema == null || itemsSchema.get$ref() == null);
           
-          shouldBeArray &= !(Objects.requireNonNullElse(propertySchema.getMinItems(), -1) == 1
-                            && Objects.requireNonNullElse(propertySchema.getMaxItems(), -1) == 1);
-					
-					// Keep as array (even if only one item exists), if there is a single reference or allOf/anyOf/oneOf/enum composed schemas are contained within the property's item.
-					shouldBeArray |= Objects.requireNonNullElse(propertySchema.getMinItems(), -1) < 1 // Weird edge case that someone may define minimum items as zero (or negative?), and should remain as array
-                            || itemsSchema != null && (itemsSchema.get$ref() != null
-														  || (itemsSchema.getAllOf() != null && !itemsSchema.getAllOf().isEmpty())
-														  || (itemsSchema.getAnyOf() != null && !itemsSchema.getAnyOf().isEmpty())
-														  || (itemsSchema.getOneOf() != null && !itemsSchema.getOneOf().isEmpty())
-														  || (itemsSchema.getEnum() != null && !itemsSchema.getEnum().isEmpty()));
+          // Initial indicator for whether the property should remain an array is if functional (should not be / false) or not functional (should be / true);
+          boolean shouldBeArray = !isFunctionalDataProp;
+
+          if (shouldBeArray) {
+            shouldBeArray &= (Objects.requireNonNullElse(propertySchema.getMinItems(), -1) > 0
+                              || Objects.requireNonNullElse(propertySchema.getMaxItems(), -1) > 1);
+            
+            shouldBeArray &= !(Objects.requireNonNullElse(propertySchema.getMinItems(), -1) == 1
+                              && Objects.requireNonNullElse(propertySchema.getMaxItems(), -1) == 1);
+            
+            // Keep as array (even if only one item exists), if there is a single reference or allOf/anyOf/oneOf/enum composed schemas are contained within the property's item.
+            shouldBeArray |= Objects.requireNonNullElse(propertySchema.getMinItems(), -1) < 1 // Weird edge case that someone may define minimum items as zero (or negative?), and should remain as array
+                              || itemsSchema != null && (itemsSchema.get$ref() != null
+                                || (itemsSchema.getAllOf() != null && !itemsSchema.getAllOf().isEmpty())
+                                || (itemsSchema.getAnyOf() != null && !itemsSchema.getAnyOf().isEmpty())
+                                || (itemsSchema.getOneOf() != null && !itemsSchema.getOneOf().isEmpty())
+                                || (itemsSchema.getEnum() != null && !itemsSchema.getEnum().isEmpty()));
+          }
 					
 					// By default, everything is an array.  If this property is not, then convert it from an array to a single item.
 					if (!shouldBeArray) {
             MapperProperty.setSchemaType(propertySchema, itemsSchema.getType());
             MapperProperty.setSchemaFormat(propertySchema, itemsSchema.getFormat());
-						// Anything else?
+            // Anything else?
 
-            // Because non-arrays are allowed by the configuration, we do not need min/max items for an exact configuration of one.
-            // NOTE: These values should only be removed if the property is marked as required (via the configuration file).
-            //        The property *should* be marked required (if applicable) before calling this method!
-            if (classSchemaToConvert.getRequired() != null && classSchemaToConvert.getRequired().contains(propertyName)) {
+            // Now clear out the original items.
+            propertySchema.setItems(null);
+					}
+
+          // Because non-arrays are allowed by the configuration, we do not need min/max items for an exact configuration of one.
+          // NOTE: These values should only be removed if the property is marked as required (via the configuration file).
+          //        The property *should* be marked required (if applicable) before calling this method!
+            if (isFunctional || (!shouldBeArray && classSchemaToConvert.getRequired() != null && classSchemaToConvert.getRequired().contains(propertyName))) {
               if (Objects.requireNonNullElse(propertySchema.getMinItems(), -1) == 1
                   && Objects.requireNonNullElse(propertySchema.getMaxItems(), -1) == 1) {
                 propertySchema.setMaxItems(null);
@@ -119,10 +131,6 @@ public class MapperProperty {
                 MapperProperty.setNullableValueForPropertySchema(propertySchema, true);
               }
             }
-
-						// Now clear out the original items.
-						propertySchema.setItems(null);
-					}
 				}
 			}
 		});
