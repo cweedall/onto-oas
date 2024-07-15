@@ -12,6 +12,7 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -397,6 +398,9 @@ public class ObaUtils {
             languageTag = "en";
         }
 
+        // Use a map to keep track of all the description annotations.
+        final var langDescMap = new HashMap<String, String>();
+
         for (final var description: ObaUtils.DESCRIPTION_PROPERTIES) {
             final var annotationObjectsStream = EntitySearcher.getAnnotationObjects(entity, ontologies.stream(), new OWLAnnotationPropertyImpl(new IRI(description){}));
             final var annotationObjects = annotationObjectsStream.collect(Collectors.toSet());
@@ -406,13 +410,22 @@ public class ObaUtils {
 
                 if (optionalDescriptionLiteral.isPresent()) {
                     final var descriptionLiteral = optionalDescriptionLiteral.get();
-                    if (!descriptionLiteral.hasLang(languageTag) || (descriptionLiteral.hasLang(languageTag) && descriptionLiteral.getLang().equals(languageTag))) {
-                        return descriptionLiteral.getLiteral();
-                    }
+
+                    // A description is present, but if it has no language tag, use empty string "".
+                    // If there are multiple descriptions annotations with no language tag, only the last one encountered will be used.
+                    langDescMap.put(descriptionLiteral.getLang() == null ? "" : descriptionLiteral.getLang(), descriptionLiteral.getLiteral());
                 }
             }
         }
 
+        // Return description for the specified language tag, if it exists.  Otherwise, return description with no language tag, if it exists.
+        if (langDescMap.containsKey(languageTag)) {
+            return langDescMap.get(languageTag);
+        } else if (langDescMap.containsKey("")) {
+            return langDescMap.get("");
+        }
+
+        // If no description was found, then return default description (if configured to do so) or null, otherwise.
         return !Optional.ofNullable(hasDefaultDescriptions).orElse(false) ? null : ObaUtils.DEFAULT_DESCRIPTION;
     }
 
