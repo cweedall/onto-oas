@@ -5,7 +5,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.stream.Collectors;
+
+import org.semanticweb.owlapi.model.OWLLiteral;
 
 import io.swagger.v3.oas.models.media.*;
 
@@ -52,6 +53,26 @@ public class MapperProperty {
    */
   public static void setSchemaFormat(Schema schema, String format) {
     schema.setFormat(format);
+  }
+
+  /**
+   * Sets the {@link Schema}'s default value.
+   * 
+   * @param schema a {@link Schema}
+   * @param defaultValue an {@link Object} of the default value.
+   */
+  public static void setSchemaDefaultValue(Schema schema, Object defaultValue) {
+    schema.setDefault(defaultValue);
+  }
+
+  /**
+   * Sets the {@link Schema}'s list of enum values.
+   * 
+   * @param schema a {@link Schema}
+   * @param enumValuesList a {@link List} of {@link Object}s of possible values.
+   */
+  public static void setSchemaEnums(Schema schema, List<Object> enumValuesList) {
+    schema.setEnum(enumValuesList);
   }
 
   /**
@@ -112,6 +133,8 @@ public class MapperProperty {
 					if (!shouldBeArray) {
             MapperProperty.setSchemaType(propertySchema, itemsSchema.getType());
             MapperProperty.setSchemaFormat(propertySchema, itemsSchema.getFormat());
+            MapperProperty.setSchemaDefaultValue(propertySchema, itemsSchema.getDefault());
+            MapperProperty.setSchemaEnums(propertySchema, itemsSchema.getEnum());
             // Anything else?
 
             // Now clear out the original items.
@@ -184,9 +207,9 @@ public class MapperProperty {
    * Add a "hasValue" value to the property's {@link Schema}.
    * 
    * @param propertySchema a (data / object) property {@link Schema}.
-   * @param cardinalityInt a minimum cardinality value.
+   * @param hasValue an {@link Object} to add to the enum list.  Expect this to be a string ($ref) for object properties and the equivalent {@link OWLLiteral} datatype for data properties.
    */
-  public static void addHasValueOfPropertySchema(Schema propertySchema, String hasValue) {
+  protected static void addHasValueOfPropertySchema(Schema propertySchema, Object hasValue) {
     Schema itemsSchema = null;
 
     if (propertySchema.getItems() == null) {
@@ -206,7 +229,7 @@ public class MapperProperty {
     }
     
     // Only add if no enums already OR it's not contained with the enums yet.
-    if (itemsSchema.getEnum() == null || !((List<String>) itemsSchema.getEnum().stream().map(Object::toString).collect(Collectors.toList())).contains(hasValue)) {
+    if (itemsSchema.getEnum() == null || !itemsSchema.getEnum().contains(hasValue)) {
       itemsSchema.addEnumItemObject(hasValue);
       MapperProperty.setSchemaType(itemsSchema, null);
 
