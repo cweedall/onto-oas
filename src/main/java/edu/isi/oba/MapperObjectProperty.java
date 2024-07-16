@@ -9,6 +9,9 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.semanticweb.owlapi.model.OWLClassExpression;
+import org.semanticweb.owlapi.model.OWLIndividual;
+import org.semanticweb.owlapi.model.OWLLiteral;
+import org.semanticweb.owlapi.model.OWLNamedIndividual;
 import org.semanticweb.owlapi.model.OWLNaryBooleanClassExpression;
 import org.semanticweb.owlapi.model.OWLObjectIntersectionOf;
 import org.semanticweb.owlapi.model.OWLObjectUnionOf;
@@ -249,6 +252,17 @@ public class MapperObjectProperty extends MapperProperty {
         MapperProperty.setSchemaType(objectPropertySchema, "array");
       }
     }
+  }
+
+  /**
+   * Add a "hasValue" value to the property's {@link Schema}.
+   * 
+   * @param propertySchema a (data / object) property {@link Schema}.
+   * @param hasValueIndividual an {@link OWLIndividual} referencing an instance of an individual.
+   */
+  public static void addHasValueOfPropertySchema(Schema propertySchema, OWLIndividual hasValueIndividual) {
+    // Call super class's method after determining named individaul's short name.
+    MapperProperty.addHasValueOfPropertySchema(propertySchema, ((OWLNamedIndividual) hasValueIndividual).getIRI().getShortForm());
   }
 
   /**

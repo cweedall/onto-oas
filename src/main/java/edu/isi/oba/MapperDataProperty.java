@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.semanticweb.owlapi.model.OWLDataIntersectionOf;
 import org.semanticweb.owlapi.model.OWLDataRange;
@@ -118,11 +119,15 @@ class MapperDataProperty extends MapperProperty {
   }
 
   private static String getScrubbedDataType(OWLDatatype owlDatatype) {
-    return owlDatatype.toString().replaceFirst("owl:", "").replaceFirst("rdf:", "").replaceFirst("rdfs:", "").replaceFirst("xsd:", "");
+    return MapperDataProperty.getScrubbedDataType(owlDatatype.toString());
   }
 
   private static String getScrubbedDataType(String owlDatatype) {
-    return owlDatatype.replaceFirst("owl:", "").replaceFirst("rdf:", "").replaceFirst("rdfs:", "").replaceFirst("xsd:", "");
+    if (Set.of("owl:", "rdf:", "rdfs:", "xsd:").stream().anyMatch(owlDatatype::contains)) {
+      return owlDatatype.replaceFirst("owl:", "").replaceFirst("rdf:", "").replaceFirst("rdfs:", "").replaceFirst("xsd:", "");
+    } else {
+      return Stream.of(owlDatatype.split("#")).reduce((first, last) -> last).get();
+    }
   }
 
   /**
@@ -380,6 +385,41 @@ class MapperDataProperty extends MapperProperty {
         dataPropertySchema.setItems(itemsSchema);
         MapperProperty.setSchemaType(dataPropertySchema, "array");
       }
+    }
+  }
+
+  /**
+   * Add a "hasValue" value to the property's {@link Schema}.
+   * 
+   * @param propertySchema a (data / object) property {@link Schema}.
+   * @param hasValueLiteral an {@link OWLLiteral} containing literal value and datatype information.
+   */
+  public static void addHasValueOfPropertySchema(Schema propertySchema, OWLLiteral hasValueLiteral) {
+    // Get datatype to determine how/if to parse the literal value.
+    final var datatype = MapperDataProperty.getDataType(hasValueLiteral.getDatatype());
+
+    // Call super class's with the appropriate object type, based on datatype.
+    switch (datatype) {
+      case NUMBER_TYPE:
+        MapperProperty.addHasValueOfPropertySchema(propertySchema, Double.parseDouble(hasValueLiteral.getLiteral()));
+        MapperProperty.setSchemaType(propertySchema.getItems(), NUMBER_TYPE);
+        break;
+      case INTEGER_TYPE:
+        MapperProperty.addHasValueOfPropertySchema(propertySchema, Integer.parseInt(hasValueLiteral.getLiteral()));
+        MapperProperty.setSchemaType(propertySchema.getItems(), INTEGER_TYPE);
+        break;
+      case BOOLEAN_TYPE:
+        MapperProperty.addHasValueOfPropertySchema(propertySchema, Boolean.parseBoolean(hasValueLiteral.getLiteral()));
+        // When datatype is boolean, the enum list should always include true and false.
+        MapperProperty.setSchemaEnums(propertySchema.getItems(), List.of(true, false));
+        MapperProperty.setSchemaType(propertySchema.getItems(), BOOLEAN_TYPE);
+        break;
+      case STRING_TYPE:
+      case DATETIME_TYPE:
+      default:
+        MapperProperty.addHasValueOfPropertySchema(propertySchema, hasValueLiteral.getLiteral());
+        MapperProperty.setSchemaType(propertySchema.getItems(), STRING_TYPE);
+        break;
     }
   }
 
