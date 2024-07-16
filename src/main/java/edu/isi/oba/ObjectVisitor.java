@@ -924,7 +924,11 @@ public class ObjectVisitor implements OWLObjectVisitor {
 		// If no existing property schema, then create empty schema for it.
 		final var currentPropertySchema = this.getPropertySchemaForRestrictionVisit(this.currentlyProcessedPropertyName);
 		
-		MapperObjectProperty.addHasValueOfPropertySchema(currentPropertySchema, ((OWLNamedIndividual) ce.getFiller()).getIRI().getShortForm());
+		if (ce.getFiller() != null && ce.getFiller() instanceof OWLNamedIndividual) {
+			MapperObjectProperty.addHasValueOfPropertySchema(currentPropertySchema, ce.getFiller());
+		} else {
+			logger.severe("Restriction for OWLObjectHasValue has unknown value \"" + ce.getFiller() + "\", which is not an OWLNamedIndividual.  Skipping restriction.");
+		}
 	}
 	
 	@Override
@@ -1100,7 +1104,11 @@ public class ObjectVisitor implements OWLObjectVisitor {
 
 		// If no existing property schema, then create empty schema for it.
 		final var currentPropertySchema = this.getPropertySchemaForRestrictionVisit(this.currentlyProcessedPropertyName);
-		
-		MapperDataProperty.addHasValueOfPropertySchema(currentPropertySchema, ce.getFiller().getLiteral());
+
+		if (ce.getFiller() != null && ce.getFiller() instanceof OWLLiteral && ce.getFiller().getDatatype() != null) {
+			MapperDataProperty.addHasValueOfPropertySchema(currentPropertySchema, ce.getFiller());
+		} else {
+			logger.severe("Restriction for OWLDataHasValue has unknown value \"" + ce.getFiller() + "\", which is not a valid OWLLiteral.  Skipping restriction.");
+		}
 	}
 }
