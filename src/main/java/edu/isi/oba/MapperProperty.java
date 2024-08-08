@@ -144,16 +144,16 @@ public class MapperProperty {
           // Because non-arrays are allowed by the configuration, we do not need min/max items for an exact configuration of one.
           // NOTE: These values should only be removed if the property is marked as required (via the configuration file).
           //        The property *should* be marked required (if applicable) before calling this method!
-            if (isFunctional || (!shouldBeArray && classSchemaToConvert.getRequired() != null && classSchemaToConvert.getRequired().contains(propertyName))) {
-              if (Objects.requireNonNullElse(propertySchema.getMinItems(), -1) == 1
-                  && Objects.requireNonNullElse(propertySchema.getMaxItems(), -1) == 1) {
-                propertySchema.setMaxItems(null);
-                propertySchema.setMinItems(null);
-              } else if (Objects.requireNonNullElse(propertySchema.getMaxItems(), -1) == 1) {
-                propertySchema.setMaxItems(null);
-                MapperProperty.setNullableValueForPropertySchema(propertySchema, true);
-              }
+          if (isFunctional || (!shouldBeArray && classSchemaToConvert.getRequired() != null && classSchemaToConvert.getRequired().contains(propertyName))) {
+            if (Objects.requireNonNullElse(propertySchema.getMinItems(), -1) == 1
+                && Objects.requireNonNullElse(propertySchema.getMaxItems(), -1) == 1) {
+              propertySchema.setMaxItems(null);
+              propertySchema.setMinItems(null);
+            } else if (Objects.requireNonNullElse(propertySchema.getMaxItems(), -1) == 1) {
+              propertySchema.setMaxItems(null);
+              MapperProperty.setNullableValueForPropertySchema(propertySchema, true);
             }
+          }
 				}
 			}
 		});
