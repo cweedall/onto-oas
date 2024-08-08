@@ -207,6 +207,8 @@ class MapperDataProperty extends MapperProperty {
           return "uri";
         } else if ("byte".equals(scrubbedDatatype)) {
           return "byte";
+        } else if ("date".equals(scrubbedDatatype)) { // Although date-time has its own type, date is `type: string` and `format: date`.  See https://stackoverflow.com/a/49379235
+          return "date";
         }
 
         break;
@@ -485,8 +487,12 @@ class MapperDataProperty extends MapperProperty {
   public static void addMinCardinalityToPropertySchema(Schema propertySchema, Integer cardinalityInt, String dataRangeType) {
     MapperProperty.addMinCardinalityToPropertySchema(propertySchema, cardinalityInt);
 
-    final var dataTypeSchema = MapperDataProperty.getTypeSchema(dataRangeType);
-    propertySchema.setItems(dataTypeSchema);
+    final var itemsSchema = propertySchema.getItems();
+    if (itemsSchema == null) {
+      final var dataTypeSchema = MapperDataProperty.getTypeSchema(dataRangeType);
+      propertySchema.setItems(dataTypeSchema);
+    }
+
     MapperProperty.setSchemaType(propertySchema, "array");
   }
 
@@ -500,8 +506,13 @@ class MapperDataProperty extends MapperProperty {
   public static void addMaxCardinalityToPropertySchema(Schema propertySchema, Integer cardinalityInt, String dataRangeType) {
     MapperProperty.addMaxCardinalityToPropertySchema(propertySchema, cardinalityInt);
 
-    final var dataTypeSchema = MapperDataProperty.getTypeSchema(dataRangeType);
-    propertySchema.setItems(dataTypeSchema);
+    final var itemsSchema = propertySchema.getItems();
+    if (itemsSchema == null) {
+      final var dataTypeSchema = MapperDataProperty.getTypeSchema(dataRangeType);
+      propertySchema.setItems(dataTypeSchema);
+    }
+
+
     MapperProperty.setSchemaType(propertySchema, "array");
   }
 
@@ -516,8 +527,12 @@ class MapperDataProperty extends MapperProperty {
     propertySchema.setMinItems(cardinalityInt);
     propertySchema.setMaxItems(cardinalityInt);
 
-    final var dataTypeSchema = MapperDataProperty.getTypeSchema(dataRangeType);
-    propertySchema.setItems(dataTypeSchema);
+    final var itemsSchema = propertySchema.getItems();
+    if (itemsSchema == null) {
+      final var dataTypeSchema = MapperDataProperty.getTypeSchema(dataRangeType);
+      propertySchema.setItems(dataTypeSchema);
+    }
+    
     MapperProperty.setSchemaType(propertySchema, "array");
   }
 
