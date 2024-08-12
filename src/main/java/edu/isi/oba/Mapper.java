@@ -12,12 +12,14 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
-import java.util.*;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
-import org.jibx.schema.codegen.extend.DefaultNameConverter;
 import org.semanticweb.owlapi.apibinding.OWLManager;
 import org.semanticweb.owlapi.io.FileDocumentSource;
 import org.semanticweb.owlapi.model.*;
@@ -267,20 +269,14 @@ class Mapper {
     }
 
     private void addPath(PathGenerator pathGenerator, Schema mappedSchema, IRI classIRI) {
-        // Pluralizing currently only works for English.  Non-English words will be treated as though they are English.
-        // TODO: Java support for singularization/pluralization and locale/international support supoort for the process does not have many good options that we could find so far.
-        // TODO: If such an option exists or becomes available, this should be updated to support pluralization in other languages.
-        // TODO: The language/locale would need to be set as a configuration value and passed into this class somehow.
-        final var nameTools = new DefaultNameConverter();
-
         // Pluralize the schema name.  Also convert to kebab-case if the configuration specifies it.
         var pluralPathName = "/";
         if (this.configData.getConfigFlagValue(CONFIG_FLAG.USE_KEBAB_CASE_PATHS)) {
             // "kebab-case" -> All lowercase and separate words with a dash/hyphen.
-            pluralPathName += nameTools.pluralize(ObaUtils.pascalCaseToKebabCase(mappedSchema.getName()));
+            pluralPathName += ObaUtils.getLowerCasePluralOf(ObaUtils.pascalCaseToKebabCase(mappedSchema.getName()));
         } else {
             // "flatcase" -> This is the current/original version (all lower case, no spaces/dashes/underscores) of endpoint naming.
-            pluralPathName += nameTools.pluralize(mappedSchema.getName().toLowerCase());
+            pluralPathName += ObaUtils.getLowerCasePluralOf(mappedSchema.getName());
         }
 
         //Create the plural paths: for example: /models/
