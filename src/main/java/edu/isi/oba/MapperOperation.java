@@ -3,7 +3,12 @@ package edu.isi.oba;
 import io.swagger.models.Method;
 import io.swagger.v3.oas.models.Operation;
 import io.swagger.v3.oas.models.examples.Example;
-import io.swagger.v3.oas.models.media.*;
+import io.swagger.v3.oas.models.media.ArraySchema;
+import io.swagger.v3.oas.models.media.Content;
+import io.swagger.v3.oas.models.media.IntegerSchema;
+import io.swagger.v3.oas.models.media.MediaType;
+import io.swagger.v3.oas.models.media.Schema;
+import io.swagger.v3.oas.models.media.StringSchema;
 import io.swagger.v3.oas.models.parameters.Parameter;
 import io.swagger.v3.oas.models.parameters.PathParameter;
 import io.swagger.v3.oas.models.parameters.QueryParameter;
@@ -13,7 +18,9 @@ import io.swagger.v3.oas.models.responses.ApiResponses;
 import io.swagger.v3.oas.models.security.SecurityRequirement;
 
 import java.math.BigDecimal;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
 
 enum Cardinality {
   SINGULAR, PLURAL
@@ -64,7 +71,7 @@ class MapperOperation {
         break;
     }
 
-    if (cardinality == Cardinality.SINGULAR){
+    if (Cardinality.SINGULAR.equals(cardinality)){
       parameters.add(new PathParameter()
               .description("The ID of the [" + this.schemaName + "](" + this.schemaURI + ") to be retrieved")
               .name("id")
@@ -80,7 +87,7 @@ class MapperOperation {
               .schema(new StringSchema()));
     }
 
-    operation = new Operation()
+    this.operation = new Operation()
           .description(this.description)
           .summary(this.summary)
           .addTagsItem(this.schemaName)
@@ -88,13 +95,19 @@ class MapperOperation {
           .responses(apiResponses);
 
     if (Set.of(Method.PATCH, Method.PUT, Method.POST).contains(method)) {
-      operation.setRequestBody(requestBody);
+      this.operation.setRequestBody(requestBody);
     }
 
     if (Set.of(Method.PATCH, Method.PUT, Method.POST, Method.DELETE).contains(method)) {
       SecurityRequirement securityRequirement = new SecurityRequirement();
       securityRequirement.addList("BearerAuth");
-      operation.addSecurityItem(securityRequirement);
+      this.operation.addSecurityItem(securityRequirement);
+    }
+
+    if (Cardinality.SINGULAR.equals(cardinality)) {
+      this.operation.setOperationId(ObaUtils.getLowerCasePluralOf(ObaUtils.pascalCaseToKebabCase(method.name() + this.schemaName + "Id")));
+    } else {
+      this.operation.setOperationId(ObaUtils.getLowerCasePluralOf(ObaUtils.pascalCaseToKebabCase(method.name() + this.schemaName)));
     }
   }
 
