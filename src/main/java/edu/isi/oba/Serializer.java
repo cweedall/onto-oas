@@ -3,10 +3,21 @@ package edu.isi.oba;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
-import java.util.*;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
-import io.swagger.v3.oas.models.*;
+import io.swagger.v3.oas.models.Components;
+import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.PathItem;
+import io.swagger.v3.oas.models.Paths;
 import io.swagger.v3.oas.models.security.SecurityScheme;
+import io.swagger.v3.oas.models.tags.Tag;
 import io.swagger.v3.parser.OpenAPIV3Parser;
 import io.swagger.v3.parser.core.models.ParseOptions;
 import io.swagger.v3.parser.core.models.SwaggerParseResult;
@@ -26,10 +37,49 @@ class Serializer {
     securitySchemes.put("BearerAuth", securityScheme);
 
     Components components = new Components();
-    Paths paths = new Paths();
-    mapper.getPaths().forEach((k, v) -> paths.addPathItem(k, v));
     mapper.getSchemas().forEach((k, v) -> components.addSchemas(k, v));
     components.securitySchemes(securitySchemes);
+
+    Paths paths = new Paths();
+    mapper.getPaths().forEach((k, v) -> {
+      paths.addPathItem(k, v);
+
+      // Copy the List of OpenAPI tags (defined in the configuration file, if at all).
+      final var tags = openAPI.getTags().stream().collect(Collectors.toSet());
+
+      // Remove existing Tags so that we make sure everything is in alphabetical order with the "tags" Set<Tag>.
+      openAPI.setTags(null);
+
+      // For each operation, grab any Tags that exist and add them to the Set of Tags.
+      v.readOperations().forEach((operation) -> {
+        operation.getTags().stream().forEach((operationTagName) -> {
+          final var tagObj = new Tag();
+          tagObj.setName(operationTagName);
+
+          // There should always be one path/endpoint tag which is the schema's name.
+          // Getting the tags from the operation only returns a List<String> (where String is the name of the Tag).
+          // This appears to be a quirk between the operation tags and the global tags which have a description and externalUrl.
+          // This grabs the schema's description by searching for the schema's name.
+          final var schemas = components.getSchemas();
+          var tagDescription = "";
+          if (schemas != null && schemas.get(operationTagName) != null) {
+            tagDescription = components.getSchemas().get(operationTagName).getDescription();
+          }
+
+          // Use a generic description if one was not found.
+          if (tagDescription == null || tagDescription.isBlank()) {
+            tagObj.setDescription(operationTagName + " description not set in the ontology.");
+          } else {
+            tagObj.setDescription(tagDescription);
+          }
+
+          tags.add(tagObj);
+        });
+      });
+
+      // Convert Set to List and sort in alphabetical order (by Tag's name).
+      openAPI.setTags(tags.stream().sorted((tag1, tag2) -> tag1.getName().compareToIgnoreCase(tag2.getName())).collect(Collectors.toList()));
+    });
 
     //add custom paths
     Map<String, Object> custom_extensions = new HashMap<String, Object>();
