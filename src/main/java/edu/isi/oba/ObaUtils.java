@@ -2,6 +2,7 @@ package edu.isi.oba;
 
 import static edu.isi.oba.Oba.logger;
 
+import edu.isi.oba.config.CONFIG_FLAG;
 import edu.isi.oba.config.YamlConfig;
 
 import java.io.*;
@@ -22,7 +23,7 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
 import org.apache.commons.cli.*;
-
+import org.jibx.schema.codegen.extend.DefaultNameConverter;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -453,6 +454,20 @@ public class ObaUtils {
         .replaceAll("\\B([a-z0-9])([A-Z])", "$1-$2")
         .replaceAll("Ph-D-", "PhD-") // Annoying workaround for "PhD" which usually occurs together as one "word"
         .toLowerCase();
+    }
+
+    public static String getPluralOf(String str) {
+        // Pluralizing currently only works for English.  Non-English words will be treated as though they are English.
+        // TODO: Java support for singularization/pluralization and locale/international support supoort for the process does not have many good options that we could find so far.
+        // TODO: If such an option exists or becomes available, this should be updated to support pluralization in other languages.
+        // TODO: The language/locale would need to be set as a configuration value and passed into this class somehow.
+        final var nameTools = new DefaultNameConverter();
+
+        return nameTools.pluralize(str);
+    }
+
+    public static String getLowerCasePluralOf(String str) {
+        return ObaUtils.getPluralOf(str.toLowerCase());
     }
 }
 
