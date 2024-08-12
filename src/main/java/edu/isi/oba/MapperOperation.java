@@ -105,7 +105,7 @@ class MapperOperation {
     }
 
     if (Cardinality.SINGULAR.equals(cardinality)) {
-      this.operation.setOperationId(ObaUtils.getLowerCasePluralOf(ObaUtils.pascalCaseToKebabCase(method.name() + this.schemaName + "Id")));
+      this.operation.setOperationId(ObaUtils.getLowerCasePluralOf(ObaUtils.pascalCaseToKebabCase(method.name() + this.schemaName)) + "-id");
     } else {
       this.operation.setOperationId(ObaUtils.getLowerCasePluralOf(ObaUtils.pascalCaseToKebabCase(method.name() + this.schemaName)));
     }
