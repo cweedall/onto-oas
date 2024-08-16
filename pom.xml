@@ -65,19 +65,6 @@
             <version>2.1.22</version>
         </dependency>
 
-        <!-- https://mvnrepository.com/artifact/org.openapitools/openapi-generator -->
-        <dependency>
-            <groupId>org.openapitools</groupId>
-            <artifactId>openapi-generator</artifactId>
-            <version>7.6.0</version>
-        </dependency>
-        <!-- https://mvnrepository.com/artifact/org.openapitools/jackson-databind-nullable -->
-        <dependency>
-            <groupId>org.openapitools</groupId>
-            <artifactId>jackson-databind-nullable</artifactId>
-            <version>0.2.6</version>
-        </dependency>
-
         <!-- https://mvnrepository.com/artifact/net.sourceforge.owlapi/owlapi-api -->
         <dependency>
             <groupId>net.sourceforge.owlapi</groupId>
@@ -111,14 +98,6 @@
             <version>1.8.0</version>
         </dependency>
 
-        <!-- https://mvnrepository.com/artifact/com.fasterxml.jackson.core/jackson-core -->
-        <!-- "Unused dependency" - but it is called via SerializerUtils from org.openapitools/openapi-generator and throws an error if not included explicitly -->
-        <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-core</artifactId>
-            <version>2.17.1</version>
-        </dependency>
-
         <!-- https://mvnrepository.com/artifact/org.jibx/jibx-tools -->
         <dependency>
             <groupId>org.jibx</groupId>
@@ -134,13 +113,6 @@
             </resource>
         </resources>
         <plugins>
-            <!-- https://mvnrepository.com/artifact/org.openapitools/openapi-generator-maven-plugin -->
-            <plugin>
-                <groupId>org.openapitools</groupId>
-                <artifactId>openapi-generator-maven-plugin</artifactId>
-                <version>7.6.0</version>
-            </plugin>
-
             <!-- https://mvnrepository.com/artifact/org.apache.maven.plugins/maven-eclipse-plugin -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
