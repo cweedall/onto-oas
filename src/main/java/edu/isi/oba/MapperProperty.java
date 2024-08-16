@@ -76,6 +76,26 @@ public class MapperProperty {
   }
 
   /**
+   * Set the read-only value for a property's {@link Schema}.
+   * 
+   * @param propertySchema a (data / object) property {@link Schema}.
+   * @param isReadOnly a boolean value indicating read-only or not.
+   */
+  public static void setReadOnlyValueForPropertySchema(Schema propertySchema, Boolean isReadOnly) {
+    propertySchema.setReadOnly(isReadOnly);
+  }
+
+  /**
+   * Set the write-only value for a property's {@link Schema}.
+   * 
+   * @param propertySchema a (data / object) property {@link Schema}.
+   * @param isReadOnly a boolean value indicating write-only or not.
+   */
+  public static void setWriteOnlyValueForPropertySchema(Schema propertySchema, Boolean isWriteOnly) {
+    propertySchema.setWriteOnly(isWriteOnly);
+  }
+
+  /**
    * Set the nullable value for a property's {@link Schema}.
    * 
    * @param propertySchema a (data / object) property {@link Schema}.
