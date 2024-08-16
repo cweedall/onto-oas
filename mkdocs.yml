@@ -4,12 +4,10 @@ nav:
   - OBA features: features.md
   - "Generate an OpenAPI specification":
       - "Quickstart...": "quickstart.md"
-      - "OBA Output": "result.md"
       - "Class filtering": "filtering.md"
       - "OWL to OAS mapping": "mapping.md"
   - Configuration file: "configuration_file.md"
   - Examples: examples.md
-  - Performance tips: benchmarking.md
 theme:
   name: material
 
