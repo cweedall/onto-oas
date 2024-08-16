@@ -16,6 +16,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -25,7 +26,6 @@ import org.semanticweb.owlapi.io.FileDocumentSource;
 import org.semanticweb.owlapi.model.*;
 
 class Mapper {
-    private static final String DEFAULT_DIR_QUERY = "_default_";
     private final Map<IRI, String> schemaNames = new HashMap<>(); //URI-names of the schemas
     private final Map<String, Schema> schemas = new HashMap<>();
     private final Paths paths = new Paths();
@@ -57,7 +57,7 @@ class Mapper {
         Set<String> ontologyPaths = new HashSet<>();
         this.downloadOntologies(configOntologies, destinationDir, i, ontologyPaths);
 
-        //set ontology paths in YAML to the ones we have downloaded (for later reference by owl2jsonld)
+        //set ontology paths in YAML to the ones we have downloaded
         this.configData.setOntologies(ontologyPaths);
         this.ontologies = this.manager.ontologies().collect(Collectors.toSet());
 
@@ -83,7 +83,7 @@ class Mapper {
         return this.manager;
     }
 
-    private Schema getSchema(Query query, OWLClass cls) {
+    private Schema getSchema(OWLClass cls) {
         logger.info("=======================================================================");
         logger.info("##############################################");
         logger.info("###  Beginning schema mapping for class:");
@@ -98,9 +98,6 @@ class Mapper {
 
         // Each time we generate a class's schema, there may be referenced classes that need to be added to the set of allowed classes.
         this.allowedClasses.addAll(objVisitor.getAllReferencedClasses());
-
-        // Write queries
-        query.writeReadme(mappedSchema.getName());
 
         // Create the OpenAPI schema
         logger.info("");
@@ -152,14 +149,7 @@ class Mapper {
      * @param destinationDir a {@link String} indicating the filesystem's directory to write the final results.
      */
     public void createSchemas(String destinationDir) {
-        final var query = new Query(destinationDir);
         final var pathGenerator = new PathGenerator(this.configData.getConfigFlags(), this.configData.getAuth() == null ? false : this.configData.getAuth().getEnable());
-
-        try {
-            query.getAll(DEFAULT_DIR_QUERY);
-        } catch (Exception e) {
-            logger.severe("Unable write the queries");
-        }
 
         for (OWLOntology ontology: this.ontologies) {
             final var format = ontology.getFormat();
@@ -177,8 +167,8 @@ class Mapper {
                 var workingAllowedClasses = new HashSet<OWLClass>(this.allowedClasses);
 
                 // Add allowed classes to OpenAPI (i.e. remove classes without default ontology
-                ontology.classesInSignature().filter(owlClass -> owlClass.getIRI() != null && this.allowedClasses.contains(owlClass)).forEach((owlClass) -> {
-                    this.addOwlclassToOpenAPI(query, pathGenerator, ontology, defaultOntologyPrefixIRI, owlClass, true);
+                ontology.classesInSignature().filter(owlClass -> owlClass.getIRI() != null && workingAllowedClasses.contains(owlClass)).forEach((owlClass) -> {
+                    this.addOwlclassToOpenAPI(pathGenerator, ontology, defaultOntologyPrefixIRI, owlClass, true);
                 });
 
                 // After allowed classes have been schema-fied, repeat for all the referenced classes.
@@ -187,8 +177,8 @@ class Mapper {
                 while (!this.allowedClasses.equals(workingAllowedClasses)) {
                     workingAllowedClasses.addAll(this.allowedClasses);
 
-                    ontology.classesInSignature().filter(owlClass -> this.allowedClasses.contains(owlClass) && !this.schemas.keySet().contains(owlClass.getIRI().getShortForm())).forEach((owlClass) -> {
-                        this.addOwlclassToOpenAPI(query, pathGenerator, ontology, defaultOntologyPrefixIRI, owlClass, true);
+                    ontology.classesInSignature().filter(owlClass -> workingAllowedClasses.contains(owlClass) && !this.schemas.keySet().contains(owlClass.getIRI().getShortForm())).forEach((owlClass) -> {
+                        this.addOwlclassToOpenAPI(pathGenerator, ontology, defaultOntologyPrefixIRI, owlClass, true);
                     });
                 }
 
@@ -216,9 +206,9 @@ class Mapper {
         this.paths.addPathItem("/user/login", pathGenerator.user_login(userSchema.getName()));
     }
 
-    private void addOwlclassToOpenAPI(Query query, PathGenerator pathGenerator, OWLOntology ontology, String defaultOntologyPrefixIRI, OWLClass cls, Boolean isTopLevel) {
+    private void addOwlclassToOpenAPI(PathGenerator pathGenerator, OWLOntology ontology, String defaultOntologyPrefixIRI, OWLClass cls, Boolean isTopLevel) {
         try{
-            final var mappedSchema = this.getSchema(query, cls);
+            final var mappedSchema = this.getSchema(cls);
             
             //Add the OpenAPI paths
             if (isTopLevel && this.getClassesAllowedByYamlConfig().contains(cls)) {
