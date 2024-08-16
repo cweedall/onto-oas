@@ -139,6 +139,9 @@
                 <configuration>
                     <source>${jdk.version}</source>
                     <target>${jdk.version}</target>
+                    <compilerArgs>
+                        <Xlint:unchecked />
+                    </compilerArgs>
                 </configuration>
             </plugin>
 
