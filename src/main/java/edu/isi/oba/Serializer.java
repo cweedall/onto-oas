@@ -18,11 +18,11 @@ import io.swagger.v3.oas.models.PathItem;
 import io.swagger.v3.oas.models.Paths;
 import io.swagger.v3.oas.models.security.SecurityScheme;
 import io.swagger.v3.oas.models.tags.Tag;
+import io.swagger.v3.core.util.Json;
+import io.swagger.v3.core.util.Yaml;
 import io.swagger.v3.parser.OpenAPIV3Parser;
 import io.swagger.v3.parser.core.models.ParseOptions;
 import io.swagger.v3.parser.core.models.SwaggerParseResult;
-
-import org.openapitools.codegen.serializer.SerializerUtils;
 
 class Serializer {
   String openapi_path;
@@ -43,9 +43,13 @@ class Serializer {
     Paths paths = new Paths();
     mapper.getPaths().forEach((k, v) -> {
       paths.addPathItem(k, v);
+      
+      final var tags = new HashSet<Tag>();
 
-      // Copy the List of OpenAPI tags (defined in the configuration file, if at all).
-      final var tags = openAPI.getTags().stream().collect(Collectors.toSet());
+      if (openAPI.getTags() != null) {
+        // Copy the List of OpenAPI tags (defined in the configuration file, if at all).
+        tags.addAll(openAPI.getTags().stream().collect(Collectors.toSet()));
+      }
 
       // Remove existing Tags so that we make sure everything is in alphabetical order with the "tags" Set<Tag>.
       openAPI.setTags(null);
@@ -96,7 +100,7 @@ class Serializer {
     openAPI.components(components);
 
     //write the filename
-    final var content = Optional.ofNullable(saveAsJSON).orElse(false) ? SerializerUtils.toJsonString(openAPI) : SerializerUtils.toYamlString(openAPI);
+    final var content = Optional.ofNullable(saveAsJSON).orElse(false) ? Json.pretty().writeValueAsString(openAPI) : Yaml.pretty().writeValueAsString(openAPI);
     this.openapi_path = dir + File.separator + openapi_file;
     File file = new File(openapi_path);
     BufferedWriter writer = new BufferedWriter(new FileWriter(file.getAbsoluteFile()));
