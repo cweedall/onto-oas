@@ -462,7 +462,23 @@ public class ObjectVisitor implements OWLObjectVisitor {
 			// If property is functional, set the schema accordingly.
 			if (EntitySearcher.isFunctional(op, Collections.singleton(this.ontologyOfBaseClass).stream())) {
 				this.functionalProperties.add(propertyName);
-				MapperProperty.setFunctionalForPropertySchema(objPropertySchema);
+				MapperObjectProperty.setFunctionalForPropertySchema(objPropertySchema);
+			}
+
+			// If property contains the annotation property (name is specified in configuration file) indicating it is read-only, then set value on the schema.
+			final var readOnlyAnnotation = this.configData.getSchema_property_read_only_annotation();
+			if (readOnlyAnnotation != null && !readOnlyAnnotation.isBlank()) {
+				if (EntitySearcher.getAnnotations(op, this.ontologyOfBaseClass).filter(annotation -> readOnlyAnnotation.equals(annotation.getProperty().getIRI().getShortForm())).count() > 0) {
+					MapperObjectProperty.setReadOnlyValueForPropertySchema(objPropertySchema, true);
+				}
+			}
+
+			// If property contains the annotation property (name is specified in configuration file) indicating it is write-only, then set value on the schema.
+			final var writeOnlyAnnotation = this.configData.getSchema_property_write_only_annotation();
+			if (writeOnlyAnnotation != null && !writeOnlyAnnotation.isBlank()) {
+				if (EntitySearcher.getAnnotations(op, this.ontologyOfBaseClass).filter(annotation -> writeOnlyAnnotation.equals(annotation.getProperty().getIRI().getShortForm())).count() > 0) {
+					MapperObjectProperty.setWriteOnlyValueForPropertySchema(objPropertySchema, true);
+				}
 			}
 
 			// For any complex property ranges, traverse.  This will grab restrictions also.  There is no good way for this situation to grab only the types in this situation.
@@ -615,6 +631,22 @@ public class ObjectVisitor implements OWLObjectVisitor {
 							this.functionalProperties.add(propertyName);
 							MapperDataProperty.setFunctionalForPropertySchema(dataPropertySchema);
 						}
+
+						// If property contains the annotation property (name is specified in configuration file) indicating it is read-only, then set value on the schema.
+						final var readOnlyAnnotation = this.configData.getSchema_property_read_only_annotation();
+						if (readOnlyAnnotation != null && !readOnlyAnnotation.isBlank()) {
+							if (EntitySearcher.getAnnotations(dp, this.ontologyOfBaseClass).filter(annotation -> readOnlyAnnotation.equals(annotation.getProperty().getIRI().getShortForm())).count() > 0) {
+								MapperDataProperty.setReadOnlyValueForPropertySchema(dataPropertySchema, true);
+							}
+						}
+
+						// If property contains the annotation property (name is specified in configuration file) indicating it is write-only, then set value on the schema.
+						final var writeOnlyAnnotation = this.configData.getSchema_property_write_only_annotation();
+						if (writeOnlyAnnotation != null && !writeOnlyAnnotation.isBlank()) {
+							if (EntitySearcher.getAnnotations(dp, this.ontologyOfBaseClass).filter(annotation -> writeOnlyAnnotation.equals(annotation.getProperty().getIRI().getShortForm())).count() > 0) {
+								MapperDataProperty.setWriteOnlyValueForPropertySchema(dataPropertySchema, true);
+							}
+						}
 	
 						// Save object property schema to class's schema.
 						dataPropertiesMap.put(dataPropertySchema.getName(), dataPropertySchema);
@@ -718,7 +750,23 @@ public class ObjectVisitor implements OWLObjectVisitor {
 			if (enumValues != null && !enumValues.isEmpty()) {
 				// Add enum individuals to restriction range
 				enumValues.forEach((indv) -> {
-					MapperObjectProperty.addEnumValueToObjectSchema(this.classSchema, ((OWLNamedIndividual) indv).getIRI().getShortForm());
+					// The getShortForm() method appears to have a bug and removes numbers at the beginning
+					//MapperObjectProperty.addEnumValueToObjectSchema(this.classSchema, ((OWLNamedIndividual) indv).getIRI().getShortForm());
+
+					// This is a workaround for the bug.
+					// Basically loop through all the prefixes and find/replace the current prefix individual's IRI with nothing.
+					// If different, then we've found the individual and know the short form name.
+					final var format = this.ontologyOfBaseClass.getOWLOntologyManager().getOntologyFormat(this.ontologyOfBaseClass);
+					if (format.isPrefixOWLDocumentFormat()) {
+						final var map = format.asPrefixOWLDocumentFormat().getPrefixName2PrefixMap();
+						final var fullIRI = indv.asOWLNamedIndividual().getIRI().toString();
+						map.forEach((prefix, iri) -> {
+							if (!fullIRI.equals(fullIRI.replaceFirst(iri, ""))) {
+								MapperObjectProperty.addEnumValueToObjectSchema(this.classSchema, fullIRI.replaceFirst(iri, ""));
+							}
+						});
+					}
+					
 				});
 			}
 		});
