@@ -1,28 +1,27 @@
 package edu.isi.oba;
 
-import edu.isi.oba.config.*;
+import edu.isi.oba.config.AuthConfig;
+import edu.isi.oba.config.CONFIG_FLAG;
+import edu.isi.oba.config.FirebaseConfig;
+import edu.isi.oba.config.Provider;
+import edu.isi.oba.config.YamlConfig;
 
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.PathItem;
 
-import java.io.*;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.*;
+import java.util.LinkedHashMap;
 import java.util.logging.ConsoleHandler;
 import java.util.logging.Level;
 import java.util.logging.LogManager;
 import java.util.logging.Logger;
 
-import org.json.JSONObject;
-
 class Oba {
-  public static final String SERVERS_ZIP = "/servers.zip";
-  public static final String SERVERS_DIRECTORY = "servers";
   static Logger logger = null;
-  public enum LANGUAGE {
-    PYTHON_FLASK
-  }
 
   public static void main(String[] args) throws Exception {
     /*
@@ -39,7 +38,6 @@ class Oba {
       e.printStackTrace();
     }
 
-    LANGUAGE selected_language = LANGUAGE.PYTHON_FLASK;
     logger.setLevel(Level.FINE);
     logger.addHandler(new ConsoleHandler());
 	  
@@ -75,15 +73,9 @@ class Oba {
 
         LinkedHashMap<String, PathItem> custom_paths = config_data.getCustom_paths();
         OpenAPI openapi_base = config_data.getOpenapi();
-        String custom_queries_dir = config_data.getCustom_queries_directory();
 
-        //copy base project
-        ObaUtils.unZipIt(Oba.SERVERS_ZIP, destination_dir);
         //get schema and paths
         generate_openapi_spec(openapi_base, mapper, destination_dir, custom_paths, config_data.getConfigFlagValue(CONFIG_FLAG.GENERATE_JSON_FILE));
-        generate_openapi_template(mapper, destination_dir, config_data, selected_language);
-        generate_context(config_data, destination_dir);
-        copy_custom_queries(custom_queries_dir, destination_dir);
         logger.info("OBA finished successfully. Output can be found at: " + destination_dir);
     } catch (Exception e) {
         logger.severe("Error while creating the API specification: " + e.getLocalizedMessage());
@@ -91,57 +83,13 @@ class Oba {
         System.exit(1);
     }
   }
-  
-  private static void generate_context(YamlConfig config_data, String destination_dir) {
-    Set<String> ontologies = config_data.getOntologies();
-    JSONObject context_json_object = null;
-    JSONObject context_json_object_class = null;
-    try {
-      context_json_object = ObaUtils.generate_context_file(ontologies.toArray(new String[0]), false);
-      context_json_object_class = ObaUtils.generate_context_file(ontologies.toArray(new String[0]), true);
-    } catch (Exception e) {
-      e.printStackTrace();
-    }
-    String file_path = destination_dir + File.separator + "servers" + File.separator + "context.json";
-    String file_path_class = destination_dir + File.separator + "servers" + File.separator + "context_class.json";
-    try {
-        ObaUtils.write_file(file_path, context_json_object.toString(4));
-        ObaUtils.write_file(file_path_class, context_json_object_class.toString(4));
-    } catch(Exception e) {
-        logger.severe("Could not generate the context files: "+e.getMessage());
-    }
-  }
-
-  private static void copy_custom_queries(String source, String destination) {
-    if (source != null) {
-      try {
-        ObaUtils.copyFolder(new File(source), new File(destination + File.separator + "queries" + File.separator + "custom"));
-      } catch (IOException e) {
-        logger.severe("The directory custom queries doesn't exists ");
-      }
-    }
-  }
-
-  private static void generate_openapi_template(Mapper mapper,
-                                                String destination_directory,
-                                                YamlConfig config,
-                                                LANGUAGE language) throws Exception {
-    switch (language) {
-      case PYTHON_FLASK:
-        new SerializerPython(mapper, destination_directory, config);
-        break;
-      default:
-        logger.severe("The language selected is not supported");
-    }
-
-  }
 
   private static void generate_openapi_spec(OpenAPI openapi_base,
                                             Mapper mapper,
                                             String dir,
                                             LinkedHashMap<String, PathItem> custom_paths,
                                             Boolean saveAsJSON) throws Exception {
-    String destinationProjectDirectory = dir + File.separator + Oba.SERVERS_DIRECTORY;
+    String destinationProjectDirectory = dir + File.separator;
     Path destinationProject = Paths.get(destinationProjectDirectory);
     new Serializer(mapper, destinationProject, openapi_base, custom_paths, saveAsJSON);
   }

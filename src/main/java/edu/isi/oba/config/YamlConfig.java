@@ -39,7 +39,8 @@ public class YamlConfig {
   public Map<String, List<RelationConfig>> relations;
   private LinkedHashMap<String, PathItem> custom_paths = null;
   public Set<String> classes;
-  public String custom_queries_directory;
+  private String readOnlyAnnotation = null;
+  private String writeOnlyAnnotation = null;
 
   public Boolean getEnable_get_paths() {
     return this.configFlags.get(CONFIG_FLAG.PATH_GET);
@@ -79,14 +80,6 @@ public class YamlConfig {
 
   public void setEnable_delete_paths(Boolean enable_delete_paths) {
     this.configFlags.put(CONFIG_FLAG.PATH_DELETE, enable_delete_paths);
-  }
-
-  public String getCustom_queries_directory() {
-    return this.custom_queries_directory;
-  }
-
-  public void setCustom_queries_directory(String custom_queries_directory) {
-    this.custom_queries_directory = custom_queries_directory;
   }
 
   public String getOutput_dir() {
@@ -239,6 +232,22 @@ public class YamlConfig {
 
   public void setAuth(AuthConfig auth) {
     this.auth = auth;
+  }
+
+  public String getSchema_property_read_only_annotation() {
+    return this.readOnlyAnnotation;
+  }
+
+  public void setSchema_property_read_only_annotation(String readOnlyAnnotation) {
+    this.readOnlyAnnotation = readOnlyAnnotation;
+  }
+
+  public String getSchema_property_write_only_annotation() {
+    return this.writeOnlyAnnotation;
+  }
+
+  public void setSchema_property_write_only_annotation(String writeOnlyAnnotation) {
+    this.writeOnlyAnnotation = writeOnlyAnnotation;
   }
 
   /**

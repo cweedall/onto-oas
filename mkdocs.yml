@@ -2,18 +2,12 @@ site_name: OBA documentation
 nav:
   - Home: index.md
   - OBA features: features.md
-  - 'Generate an OpenAPI specification':
-      - 'Quickstart...': 'quickstart.md'  
-      - 'OBA Output': 'result.md'
-      - 'Class filtering': 'filtering.md'
-      - 'OWL to OAS mapping': 'mapping.md'
-  - 'Generate the server':
-      - 'Quickstart...': 'server.md'  
-      - 'Running the server': 'running_server.md'
-      - 'Testing your API': 'test.md'
-      - 'Adding custom queries': 'adding_custom_queries.md'
-      - 'Authentication': 'authentication.md'
-  - Configuration file: 'configuration_file.md'
+  - "Generate an OpenAPI specification":
+      - "Quickstart...": "quickstart.md"
+      - "OBA Output": "result.md"
+      - "Class filtering": "filtering.md"
+      - "OWL to OAS mapping": "mapping.md"
+  - Configuration file: "configuration_file.md"
   - Examples: examples.md
   - Performance tips: benchmarking.md
 theme:
