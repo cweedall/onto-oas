@@ -36,7 +36,7 @@
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-api</artifactId>
-            <version>5.10.2</version>
+            <version>5.11.0</version>
             <scope>test</scope>
         </dependency>
 
@@ -102,7 +102,7 @@
         <dependency>
             <groupId>commons-cli</groupId>
             <artifactId>commons-cli</artifactId>
-            <version>1.8.0</version>
+            <version>1.9.0</version>
         </dependency>
 
         <!-- https://mvnrepository.com/artifact/org.jibx/jibx-tools -->
@@ -137,9 +137,16 @@
                 <groupId>com.diffplug.spotless</groupId>
                 <artifactId>spotless-maven-plugin</artifactId>
                 <version>2.43.0</version>
+                <!-- For configuration options, see: https://github.com/diffplug/spotless/blob/main/plugin-maven/README.md -->
                 <configuration>
                     <java>
-                        <!-- Cleanthat will refactor your code, but it may break your style: apply it before your formatter -->
+                        <!--
+                            Cleanthat will refactor your code, but it may break your style: apply it before your formatter
+                            see:    https://github.com/diffplug/spotless/tree/main/plugin-maven#cleanthat
+                                    https://github.com/solven-eu/cleanthat
+                                    https://github.com/solven-eu/cleanthat/tree/master/maven
+                                    https://mvnrepository.com/artifact/io.github.solven-eu.cleanthat/cleanthat-maven-plugin
+                        -->
                         <cleanthat />
 
                         <googleJavaFormat>
@@ -207,6 +214,7 @@
                 <configuration>
                     <source>${jdk.version}</source>
                     <target>${jdk.version}</target>
+                    <!-- Added compiler argument based on: https://stackoverflow.com/a/45228340/7363740 -->
                     <compilerArgs>
                         <Xlint:unchecked />
                     </compilerArgs>
