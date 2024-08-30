@@ -120,6 +120,37 @@
             </resource>
         </resources>
         <plugins>
+            <!-- https://mvnrepository.com/artifact/com.diffplug.spotless/spotless-maven-plugin -->
+            <!-- 
+                For details on setting this up
+                see: https://hubertwo.dev/posts/devops/maven-spotless-code-quality/
+
+                For VSCode, also currently using Run on Save extension to call `mvn spotless:apply -DspotlessIdeHook=${file}` to run it on the saved file.
+                    Name: Run on Save
+                    Id: emeraldwalk.RunOnSave
+                    Description: Run commands when a file is saved in vscode.
+                    Version: 0.2.0
+                    Publisher: emeraldwalk
+                    VS Marketplace Link: https://marketplace.visualstudio.com/items?itemName=emeraldwalk.RunOnSave
+            -->
+            <plugin>
+                <groupId>com.diffplug.spotless</groupId>
+                <artifactId>spotless-maven-plugin</artifactId>
+                <version>2.43.0</version>
+                <configuration>
+                    <java>
+                        <includes>
+                            <include>src/main/java/**/*.java</include> <!-- Check application code -->
+                            <include>src/test/java/**/*.java</include> <!-- Check application tests code -->
+                        </includes>
+                        <googleJavaFormat>
+                            <version>1.23.0</version>
+                            <style>GOOGLE</style>
+                        </googleJavaFormat>
+                    </java>
+                </configuration>
+            </plugin>
+            
             <!-- https://mvnrepository.com/artifact/org.apache.maven.plugins/maven-eclipse-plugin -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
