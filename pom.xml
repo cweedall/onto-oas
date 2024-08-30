@@ -139,15 +139,52 @@
                 <version>2.43.0</version>
                 <configuration>
                     <java>
-                        <includes>
-                            <include>src/main/java/**/*.java</include> <!-- Check application code -->
-                            <include>src/test/java/**/*.java</include> <!-- Check application tests code -->
-                        </includes>
+                        <!-- Cleanthat will refactor your code, but it may break your style: apply it before your formatter -->
+                        <cleanthat />
+
                         <googleJavaFormat>
-                            <version>1.23.0</version>
+                            <!-- GOOGLE or AOSP (optional) -->
+                            <!-- https://github.com/google/google-java-format -->
                             <style>GOOGLE</style>
+                            <!-- optional (requires at least 1.8) -->
+                            <reflowLongStrings>true</reflowLongStrings>
                         </googleJavaFormat>
+
+                        <importOrder/>
+
+                        <removeUnusedImports>
+                            <engine>cleanthat-javaparser-unnecessaryimport</engine>
+                            <!--<engine>google-java-format</engine>--> <!-- optional. Defaults to `google-java-format`. Can be switched to `cleanthat-javaparser-unnecessaryimport` (e.g. to process JDK17 source files with a JDK8+ Runtime) -->
+                        </removeUnusedImports>
+
+                        <formatAnnotations /> <!-- fixes formatting of type annotations -->
+
+                        <indent>
+                            <tabs>true</tabs>
+                            <spacesPerTab>2</spacesPerTab>
+                        </indent>
+                        <indent>
+                            <!--<spaces>true</spaces>--> <!-- If using spaces for indents -->
+                            <tabs>true</tabs> <!-- If using tabs for indents -->
+                            <spacesPerTab>4</spacesPerTab>
+                        </indent>
                     </java>
+
+                    <formats>
+                        <!-- you can define as many formats as you want, each is independent -->
+                        <format>
+                            <!-- define the files to apply to -->
+                            <includes>
+                                <include>src/main/java/**/*.java</include> <!-- Check application code -->
+                                <include>src/test/java/**/*.java</include> <!-- Check application tests code -->
+                            </includes>
+                            
+                            <!-- define the steps to apply to those files -->
+                            <trimTrailingWhitespace/>
+                            <endWithNewline/>
+                        </format>
+                    </formats>
+                    
                 </configuration>
             </plugin>
             
@@ -180,7 +217,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
-                <version>3.2.5</version>
+                <version>3.5.0</version>
             </plugin>
 
             <!-- Make this jar executable -->
