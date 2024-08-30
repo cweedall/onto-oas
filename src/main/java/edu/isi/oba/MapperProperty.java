@@ -110,10 +110,11 @@ public class MapperProperty {
    * Some properties cannot be converted (e.g. if they require multiple values) -> these properties are no converted.
    * 
    * @param classSchemaToConvert a {@link Schema} to perform the conversion on.
+   * @param enumProperties a {@link Set} of {@link String} indicating the (short form) names of properties which reference a class/object which is an enum.
    * @param functionalProperties a {@link Set} of {@link String} indicating the (short form) names of properties which are functional.
    * @return a {@link Schema} with all possible non-array properties converted.
    */
-  public static void convertArrayToNonArrayPropertySchemas(Schema classSchemaToConvert, Set<String> functionalProperties) {
+  public static void convertArrayToNonArrayPropertySchemas(Schema classSchemaToConvert, Set<String> enumProperties, Set<String> functionalProperties) {
 		final Map<String, Schema> propertySchemas = classSchemaToConvert.getProperties() == null ? new HashMap<>() : classSchemaToConvert.getProperties();
 
 		// Loop through all of the properties and convert as necessary.
@@ -133,6 +134,8 @@ public class MapperProperty {
           // Initial indicator for whether the property should remain an array is if functional (should not be / false) or not functional (should be / true);
           boolean shouldBeArray = !isFunctionalDataProp;
 
+          var isEnumObjectPropertyReference = (itemsSchema != null && itemsSchema.get$ref() != null && enumProperties != null && enumProperties.contains(propertyName));
+
           if (shouldBeArray) {
             shouldBeArray &= (Objects.requireNonNullElse(propertySchema.getMinItems(), -1) > 0
                               || Objects.requireNonNullElse(propertySchema.getMaxItems(), -1) > 1);
@@ -142,7 +145,7 @@ public class MapperProperty {
             
             // Keep as array (even if only one item exists), if there is a single reference or allOf/anyOf/oneOf/enum composed schemas are contained within the property's item.
             shouldBeArray |= Objects.requireNonNullElse(propertySchema.getMinItems(), -1) < 1 // Weird edge case that someone may define minimum items as zero (or negative?), and should remain as array
-                              || itemsSchema != null && (itemsSchema.get$ref() != null
+                              || itemsSchema != null && ((itemsSchema.get$ref() != null && !isEnumObjectPropertyReference)
                                 || (itemsSchema.getAllOf() != null && !itemsSchema.getAllOf().isEmpty())
                                 || (itemsSchema.getAnyOf() != null && !itemsSchema.getAnyOf().isEmpty())
                                 || (itemsSchema.getOneOf() != null && !itemsSchema.getOneOf().isEmpty())
@@ -151,11 +154,15 @@ public class MapperProperty {
 					
 					// By default, everything is an array.  If this property is not, then convert it from an array to a single item.
 					if (!shouldBeArray) {
-            MapperProperty.setSchemaType(propertySchema, itemsSchema.getType());
-            MapperProperty.setSchemaFormat(propertySchema, itemsSchema.getFormat());
-            MapperProperty.setSchemaDefaultValue(propertySchema, itemsSchema.getDefault());
-            MapperProperty.setSchemaEnums(propertySchema, itemsSchema.getEnum());
-            // Anything else?
+            if (isEnumObjectPropertyReference) {
+              propertySchema.set$ref(itemsSchema.get$ref());
+            } else {
+              MapperProperty.setSchemaType(propertySchema, itemsSchema.getType());
+              MapperProperty.setSchemaFormat(propertySchema, itemsSchema.getFormat());
+              MapperProperty.setSchemaDefaultValue(propertySchema, itemsSchema.getDefault());
+              MapperProperty.setSchemaEnums(propertySchema, itemsSchema.getEnum());
+              // Anything else?
+            }
 
             // Now clear out the original items.
             propertySchema.setItems(null);

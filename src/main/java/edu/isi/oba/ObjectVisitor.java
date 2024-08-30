@@ -43,6 +43,7 @@ public class ObjectVisitor implements OWLObjectVisitor {
 	private final Map<String, Schema> basePropertiesMap = new HashMap<>();
 
 	private final Set<String> propertyNames = new HashSet<>();
+	private final Set<String> enumProperties = new HashSet<>();
 	private final Set<String> requiredProperties = new HashSet<>();
 	private final Set<String> functionalProperties = new HashSet<>();
 	private final Set<OWLClass> referencedClasses = new HashSet<>();
@@ -137,7 +138,7 @@ public class ObjectVisitor implements OWLObjectVisitor {
 
 		// Convert non-array property items, if applicable.
 		if (!this.configData.getConfigFlagValue(CONFIG_FLAG.ALWAYS_GENERATE_ARRAYS)) {
-			MapperProperty.convertArrayToNonArrayPropertySchemas(this.classSchema, this.functionalProperties);
+			MapperProperty.convertArrayToNonArrayPropertySchemas(this.classSchema, this.enumProperties, this.functionalProperties);
 		}
 
 		// If following references AND use inheritance references (for the class), we do not want to inherit/reference the same class multiple times accidentally.
@@ -312,7 +313,7 @@ public class ObjectVisitor implements OWLObjectVisitor {
 								shouldSkipVisits = true;
 							}
 						} else if (ax.getSuperClass() instanceof OWLObjectOneOf) {
-							logger.info("\t" + this.getBaseClassName() + " is an ObjectOneOf set containing one or more Individuals.  Not setting propety name, to treat it like an enum.");
+							logger.info("\t" + this.getBaseClassName() + " is an ObjectOneOf set containing one or more Individuals.  Not setting property name, to treat it like an enum.");
 							logger.info("\t\taxiom:  " + ax);
 						} else {
 							logger.info("\t" + this.getBaseClassName() + " is a subclass of " + ax.getSuperClass().asOWLClass().getIRI().getShortForm() + ".  No restrictions to process.");
@@ -407,6 +408,11 @@ public class ObjectVisitor implements OWLObjectVisitor {
 	
 					// Add the range to the referenced class set.
 					this.referencedClasses.add(objPropRange.asOWLClass());
+
+					if (EntitySearcher.getEquivalentClasses(objPropRange.asOWLClass(), this.ontologyOfBaseClass).count() > 0) {
+						// Add the object property name and NOT the class name that it refers to.
+						this.enumProperties.add(propertyName);
+					}
 				} else {
 					propertyRanges.add(null);
 				}
@@ -418,6 +424,11 @@ public class ObjectVisitor implements OWLObjectVisitor {
 			if (objPropRangeAxiom.getRange() instanceof OWLClass) {
 				if (this.configData.getConfigFlagValue(CONFIG_FLAG.FOLLOW_REFERENCES)) {
 					propertyRanges.add(objPropRangeAxiom.getRange().asOWLClass().getIRI().getShortForm());
+
+					if (EntitySearcher.getEquivalentClasses(objPropRangeAxiom.getRange().asOWLClass(), this.ontologyOfBaseClass).count() > 0) {
+						// Add the object property name and NOT the class name that it refers to.
+						this.enumProperties.add(propertyName);
+					}
 
 					// Add the range to the referenced class set.
 					this.referencedClasses.add(objPropRangeAxiom.getRange().asOWLClass());
@@ -986,7 +997,7 @@ public class ObjectVisitor implements OWLObjectVisitor {
 		logger.info("\t   axiom:  " + ce);
 		logger.info("");
 
-		// ObjectOneOf can occur either for OWLClass or for one of its object properties.  If the property name is null, assume it the class is actually an enum.
+		// ObjectOneOf can occur either for OWLClass or for one of its object properties.  If the property name is null, assume this class is actually an enum.
 		if (this.currentlyProcessedPropertyName == null) {
 			var enumValues = ce.getOperandsAsList();
 			if (enumValues != null && !enumValues.isEmpty()) {
@@ -996,10 +1007,10 @@ public class ObjectVisitor implements OWLObjectVisitor {
 				});
 			}
 		} else {
+			// If no existing property schema, then create empty schema for it.
+			final var currentPropertySchema = this.getPropertySchemaForRestrictionVisit(this.currentlyProcessedPropertyName);
+
 			for (OWLIndividual individual: ce.getIndividuals()) {
-				// If no existing property schema, then create empty schema for it.
-				final var currentPropertySchema = this.getPropertySchemaForRestrictionVisit(this.currentlyProcessedPropertyName);
-				
 				MapperObjectProperty.addOneOfToObjectPropertySchema(currentPropertySchema, individual.asOWLNamedIndividual().getIRI().getShortForm());
 			}
 		}
