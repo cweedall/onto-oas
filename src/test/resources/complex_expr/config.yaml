@@ -1,6 +1,8 @@
 #Name of the project
 name: BusinessOntology-v0.6
 
+output_dir: src/test/resources/complex_expr/MapperTest
+
 ## OpenAPI Section
 ### Name, version and URL of the OpenAPI
 ### For more information about the section. Go to the official documentation
@@ -12,7 +14,7 @@ openapi:
     version: v1
   externalDocs:
     description: BusinessOntology
-    url:  https://www.semanticarts.com/gist/previous-versions/
+    url: https://www.semanticarts.com/gist/previous-versions/
   servers:
     - url: http://localhost:8080/v1
       description: localhost server
