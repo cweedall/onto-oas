@@ -1,6 +1,8 @@
 #Name of the project
 name: dbpedia_music
 
+output_dir: src/test/config/dbpedia_MapperTest
+
 ## OpenAPI Section
 ### Name, version and URL of the OpenAPI
 ### For more information about the section. Go to the official documentation

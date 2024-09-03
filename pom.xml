@@ -6,7 +6,7 @@
     <packaging>jar</packaging>
     <groupId>edu.isi.oba</groupId>
     <artifactId>oba</artifactId>
-    <version>3.9.1</version>
+    <version>4.0.0</version>
     <name>core</name>
     <url>https://github.com/KnowledgeCaptureAndDiscovery/OBA</url>
 
@@ -15,11 +15,16 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.release>11</maven.compiler.release>
         <jdk.version>11</jdk.version>
-        <!-- https://mvnrepository.com/artifact/org.apache.maven.plugins/maven-shade-plugin -->
-        <maven-shade-plugin.version>3.5.3</maven-shade-plugin.version>
     </properties>
 
     <dependencies>
+        <!-- https://mvnrepository.com/artifact/org.apache.maven.plugins/maven-shade-plugin -->
+        <dependency>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-shade-plugin</artifactId>
+            <version>3.6.0</version>
+        </dependency>
+
         <!-- https://mvnrepository.com/artifact/org.json/json -->
         <dependency>
             <groupId>org.json</groupId>
@@ -31,7 +36,7 @@
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-api</artifactId>
-            <version>5.10.2</version>
+            <version>5.11.0</version>
             <scope>test</scope>
         </dependency>
 
@@ -45,7 +50,7 @@
         <dependency>
             <groupId>io.swagger.core.v3</groupId>
             <artifactId>swagger-models</artifactId>
-            <version>2.2.21</version>
+            <version>2.2.22</version>
         </dependency>
         <!-- https://mvnrepository.com/artifact/io.swagger.parser.v3/swagger-parser -->
         <dependency>
@@ -58,13 +63,6 @@
             <groupId>io.swagger.parser.v3</groupId>
             <artifactId>swagger-parser-core</artifactId>
             <version>2.1.22</version>
-        </dependency>
-
-        <!-- https://mvnrepository.com/artifact/org.openapitools/openapi-generator -->
-        <dependency>
-            <groupId>org.openapitools</groupId>
-            <artifactId>openapi-generator</artifactId>
-            <version>7.5.0</version>
         </dependency>
 
         <!-- https://mvnrepository.com/artifact/net.sourceforge.owlapi/owlapi-api -->
@@ -86,26 +84,25 @@
             <version>5.5.0</version>
         </dependency>
 
-        <!-- https://mvnrepository.com/artifact/org.yaml/snakeyaml -->
+        <!-- https://mvnrepository.com/artifact/org.slf4j/slf4j-api -->
         <dependency>
-            <groupId>org.yaml</groupId>
-            <artifactId>snakeyaml</artifactId>
-            <version>2.2</version>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>2.0.16</version>
+        </dependency>
+
+        <!-- https://mvnrepository.com/artifact/org.slf4j/slf4j-simple -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-simple</artifactId>
+            <version>2.0.16</version>
         </dependency>
 
         <!-- https://mvnrepository.com/artifact/commons-cli/commons-cli -->
         <dependency>
             <groupId>commons-cli</groupId>
             <artifactId>commons-cli</artifactId>
-            <version>1.7.0</version>
-        </dependency>
-
-        <!-- https://mvnrepository.com/artifact/com.fasterxml.jackson.core/jackson-core -->
-        <!-- "Unused dependency" - but it is called via SerializerUtils from org.openapitools/openapi-generator and throws an error if not included explicitly -->
-        <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-core</artifactId>
-            <version>2.17.1</version>
+            <version>1.9.0</version>
         </dependency>
 
         <!-- https://mvnrepository.com/artifact/org.jibx/jibx-tools -->
@@ -123,6 +120,81 @@
             </resource>
         </resources>
         <plugins>
+            <!-- https://mvnrepository.com/artifact/com.diffplug.spotless/spotless-maven-plugin -->
+            <!-- 
+                For details on setting this up
+                see: https://hubertwo.dev/posts/devops/maven-spotless-code-quality/
+
+                For VSCode, also currently using Run on Save extension to call `mvn spotless:apply -DspotlessIdeHook=${file}` to run it on the saved file.
+                    Name: Run on Save
+                    Id: emeraldwalk.RunOnSave
+                    Description: Run commands when a file is saved in vscode.
+                    Version: 0.2.0
+                    Publisher: emeraldwalk
+                    VS Marketplace Link: https://marketplace.visualstudio.com/items?itemName=emeraldwalk.RunOnSave
+            -->
+            <plugin>
+                <groupId>com.diffplug.spotless</groupId>
+                <artifactId>spotless-maven-plugin</artifactId>
+                <version>2.43.0</version>
+                <!-- For configuration options, see: https://github.com/diffplug/spotless/blob/main/plugin-maven/README.md -->
+                <configuration>
+                    <java>
+                        <!--
+                            Cleanthat will refactor your code, but it may break your style: apply it before your formatter
+                            see:    https://github.com/diffplug/spotless/tree/main/plugin-maven#cleanthat
+                                    https://github.com/solven-eu/cleanthat
+                                    https://github.com/solven-eu/cleanthat/tree/master/maven
+                                    https://mvnrepository.com/artifact/io.github.solven-eu.cleanthat/cleanthat-maven-plugin
+                        -->
+                        <cleanthat />
+
+                        <googleJavaFormat>
+                            <!-- GOOGLE or AOSP (optional) -->
+                            <!-- https://github.com/google/google-java-format -->
+                            <style>GOOGLE</style>
+                            <!-- optional (requires at least 1.8) -->
+                            <reflowLongStrings>true</reflowLongStrings>
+                        </googleJavaFormat>
+
+                        <importOrder/>
+
+                        <removeUnusedImports>
+                            <engine>cleanthat-javaparser-unnecessaryimport</engine>
+                            <!--<engine>google-java-format</engine>--> <!-- optional. Defaults to `google-java-format`. Can be switched to `cleanthat-javaparser-unnecessaryimport` (e.g. to process JDK17 source files with a JDK8+ Runtime) -->
+                        </removeUnusedImports>
+
+                        <formatAnnotations /> <!-- fixes formatting of type annotations -->
+
+                        <indent>
+                            <tabs>true</tabs>
+                            <spacesPerTab>2</spacesPerTab>
+                        </indent>
+                        <indent>
+                            <!--<spaces>true</spaces>--> <!-- If using spaces for indents -->
+                            <tabs>true</tabs> <!-- If using tabs for indents -->
+                            <spacesPerTab>4</spacesPerTab>
+                        </indent>
+                    </java>
+
+                    <formats>
+                        <!-- you can define as many formats as you want, each is independent -->
+                        <format>
+                            <!-- define the files to apply to -->
+                            <includes>
+                                <include>src/main/java/**/*.java</include> <!-- Check application code -->
+                                <include>src/test/java/**/*.java</include> <!-- Check application tests code -->
+                            </includes>
+                            
+                            <!-- define the steps to apply to those files -->
+                            <trimTrailingWhitespace/>
+                            <endWithNewline/>
+                        </format>
+                    </formats>
+                    
+                </configuration>
+            </plugin>
+            
             <!-- https://mvnrepository.com/artifact/org.apache.maven.plugins/maven-eclipse-plugin -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -142,6 +214,10 @@
                 <configuration>
                     <source>${jdk.version}</source>
                     <target>${jdk.version}</target>
+                    <!-- Added compiler argument based on: https://stackoverflow.com/a/45228340/7363740 -->
+                    <compilerArgs>
+                        <Xlint:unchecked />
+                    </compilerArgs>
                 </configuration>
             </plugin>
 
@@ -149,7 +225,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
-                <version>3.2.5</version>
+                <version>3.5.0</version>
             </plugin>
 
             <!-- Make this jar executable -->
