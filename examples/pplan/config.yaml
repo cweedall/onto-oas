@@ -1,5 +1,6 @@
 ontologies:
-  - http://purl.org/net/p-plan
+  #- http://purl.org/net/p-plan # Regularly unreachable...
+  - https://www.opmw.org/p-plan.owl
 name: p-plan
 output_dir: outputs
 
@@ -11,10 +12,11 @@ openapi:
     version: v1.0.0
   externalDocs:
     description: P-Plan
-    url: http://purl.org/net/p-plan
+    #url: http://purl.org/net/p-plan
+    url: https://www.opmw.org/model/p-plan/
 
 firebase:
-  key: 
+  key:
 
 #endpoint not used for this example.
 endpoint:
@@ -28,4 +30,3 @@ enable_delete_paths: false
 enable_put_paths: false
 
 follow_references: true
-
