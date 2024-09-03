@@ -285,6 +285,13 @@ public class ObjectVisitor implements OWLObjectVisitor {
 			// If we are processing inherited restrictions then we recursively visit named supers.
 			this.processedClasses.add(ce);
 
+			// If using inheritance references, make sure to add super classes.
+			if (this.configData.getConfigFlagValue(CONFIG_FLAG.FOLLOW_REFERENCES)
+					&& this.configData.getConfigFlagValue(CONFIG_FLAG.USE_INHERITANCE_REFERENCES)) {
+				// Add the base and super classes to the referenced class set.
+				this.referencedClasses.add(ce);
+			}
+
 			// Loop through the ontologies to use the one relevant for the current OWLClass.
 			for (OWLOntology ontology : this.ontologies) {
 				// Only traverse this OWLClass's super classes, if it is contained in the ontology.
