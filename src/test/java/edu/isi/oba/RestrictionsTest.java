@@ -30,7 +30,7 @@ public class RestrictionsTest {
 		try {
 			this.mapper = new Mapper(this.configData);
 			// Use temporary directory for unit testing
-			mapper.createSchemas("examples/restrictions/ObjectVisitorTest/");
+			mapper.createSchemas();
 
 			// If no schemas are returned from the mapper, something is wrong.  Probably with the
 			// ontology(?).
@@ -57,6 +57,8 @@ public class RestrictionsTest {
 	@AfterAll
 	public static void removeUnitTestFiles() throws Exception {
 		// Delete temporary directory now
+		// examples/restrictions/ObjectVisitorTest/ is defined in examples/restrictions/config.yaml
+		// "output" item
 		Files.walk(Paths.get("examples/restrictions/ObjectVisitorTest/"))
 				.sorted(Comparator.reverseOrder())
 				.map(Path::toFile)

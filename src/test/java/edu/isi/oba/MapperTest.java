@@ -18,15 +18,19 @@ import org.junit.jupiter.api.Test;
 import org.semanticweb.owlapi.model.OWLOntologyCreationException;
 
 public class MapperTest {
-	private Mapper setupMapper(String configFilePath, String destinationDirectory) throws Exception {
+	String outputPath = null;
+
+	private Mapper setupMapper(String configFilePath) throws Exception {
 		Mapper mapper = null;
 
 		try {
 			final var configData = ObaUtils.get_yaml_data(configFilePath);
 			configData.setAuth(new AuthConfig());
+			outputPath = configData.getOutput_dir();
+
 			mapper = new Mapper(configData);
 			// Use temporary directory for unit testing
-			mapper.createSchemas(destinationDirectory);
+			mapper.createSchemas();
 
 			// If no schemas are returned from the mapper, something is wrong.  Probably with the
 			// ontology(?).
@@ -76,8 +80,7 @@ public class MapperTest {
 		// - http://dbpedia.org/ontology/Genre
 		// - http://dbpedia.org/ontology/Band
 		final var configFilePath = "src/test/config/dbpedia.yaml";
-		final var mapperTestTempDirectory = "src/test/config/dbpedia_MapperTest/";
-		final var mapper = this.setupMapper(configFilePath, mapperTestTempDirectory);
+		final var mapper = this.setupMapper(configFilePath);
 
 		// The Genre and Band model schemas must exist.
 		final var keys = mapper.getSchemas().keySet();
@@ -86,10 +89,12 @@ public class MapperTest {
 		Assertions.assertEquals(expectedResultSize, keys.size());
 
 		// Delete temporary directory now
-		Files.walk(Paths.get(mapperTestTempDirectory))
-				.sorted(Comparator.reverseOrder())
-				.map(Path::toFile)
-				.forEach(File::delete);
+		if (this.outputPath != null && !this.outputPath.isBlank()) {
+			Files.walk(Paths.get(this.outputPath))
+					.sorted(Comparator.reverseOrder())
+					.map(Path::toFile)
+					.forEach(File::delete);
+		}
 	}
 
 	/**
@@ -150,17 +155,18 @@ public class MapperTest {
 		this.initializeLogger();
 
 		final var configFilePath = "src/test/resources/complex_expr/config.yaml";
-		final var mapperTestTempDirectory = "src/test/resources/complex_expr/MapperTest/";
-		final var mapper = this.setupMapper(configFilePath, mapperTestTempDirectory);
+		final var mapper = this.setupMapper(configFilePath);
 
 		// The person model schema must exist.
 		final var keys = mapper.getSchemas().keySet();
 		Assertions.assertTrue(keys.contains("Person"));
 
 		// Delete temporary directory now
-		Files.walk(Paths.get(mapperTestTempDirectory))
-				.sorted(Comparator.reverseOrder())
-				.map(Path::toFile)
-				.forEach(File::delete);
+		if (this.outputPath != null && !this.outputPath.isBlank()) {
+			Files.walk(Paths.get(this.outputPath))
+					.sorted(Comparator.reverseOrder())
+					.map(Path::toFile)
+					.forEach(File::delete);
+		}
 	}
 }

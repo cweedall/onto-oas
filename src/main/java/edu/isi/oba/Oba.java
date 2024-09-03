@@ -67,7 +67,7 @@ class Oba {
 
 		try {
 			Mapper mapper = new Mapper(config_data);
-			mapper.createSchemas(destination_dir);
+			mapper.createSchemas();
 
 			LinkedHashMap<String, PathItem> custom_paths = config_data.getCustom_paths();
 			OpenAPI openapi_base = config_data.getOpenapi();

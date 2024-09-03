@@ -159,11 +159,8 @@ class Mapper {
 	/**
 	 * Obtain Schemas using the ontology classes The schemas includes all (object and data)
 	 * properties.
-	 *
-	 * @param destinationDir a {@link String} indicating the filesystem's directory to write the final
-	 *     results.
 	 */
-	public void createSchemas(String destinationDir) {
+	public void createSchemas() {
 		final var pathGenerator =
 				new PathGenerator(
 						this.configData.getConfigFlags(),
