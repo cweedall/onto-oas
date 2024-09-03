@@ -1,7 +1,5 @@
 package edu.isi.oba;
 
-import static edu.isi.oba.ObaUtils.get_yaml_data;
-
 import java.io.IOException;
 import java.util.logging.ConsoleHandler;
 import java.util.logging.Level;
@@ -10,7 +8,6 @@ import java.util.logging.Logger;
 import org.json.JSONObject;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.semanticweb.owlapi.model.OWLClass;
 import org.semanticweb.owlapi.model.OWLOntologyCreationException;
 
 public class ObaUtilsTest {
@@ -63,12 +60,12 @@ public class ObaUtilsTest {
 	@Test
 	public void getDescription() throws OWLOntologyCreationException {
 		final var example_remote = "src/test/config/pplan.yaml";
-		final var config_data = get_yaml_data(example_remote);
+		final var config_data = ObaUtils.get_yaml_data(example_remote);
 
 		try {
 			this.initializeLogger();
 			final var mapper = new Mapper(config_data);
-			OWLClass planClass =
+			final var planClass =
 					mapper.getManager().getOWLDataFactory().getOWLClass("http://purl.org/net/p-plan#Plan");
 			String desc = ObaUtils.getDescription(planClass, mapper.getOntologies(), true);
 			Assertions.assertNotEquals("", desc);
@@ -86,7 +83,7 @@ public class ObaUtilsTest {
 	@Test
 	public void missingFile() throws OWLOntologyCreationException {
 		final var missing_file = "src/test/config/missing_file.yaml";
-		final var config_data = get_yaml_data(missing_file);
+		final var config_data = ObaUtils.get_yaml_data(missing_file);
 
 		try {
 			final var mapper = new Mapper(config_data);
