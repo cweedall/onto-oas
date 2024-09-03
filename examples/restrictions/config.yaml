@@ -1,7 +1,8 @@
 ontologies:
   - examples/restrictions/example.owl
 name: Restrictions example
-output_dir: outputs
+
+output_dir: examples/restrictions/ObjectVisitorTest
 
 openapi:
   openapi: 3.0.1
