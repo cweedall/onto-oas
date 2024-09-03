@@ -1,10 +1,8 @@
 package edu.isi.oba;
 
 import edu.isi.oba.config.YamlConfig;
-
 import io.swagger.v3.oas.models.media.ComposedSchema;
 import io.swagger.v3.oas.models.media.Schema;
-
 import java.io.File;
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -17,12 +15,10 @@ import java.util.logging.ConsoleHandler;
 import java.util.logging.Level;
 import java.util.logging.LogManager;
 import java.util.logging.Logger;
-
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
 import org.semanticweb.owlapi.model.OWLOntologyCreationException;
 
 public class RestrictionsTest {
@@ -36,7 +32,8 @@ public class RestrictionsTest {
 			// Use temporary directory for unit testing
 			mapper.createSchemas("examples/restrictions/ObjectVisitorTest/");
 
-			// If no schemas are returned from the mapper, something is wrong.  Probably with the ontology(?).
+			// If no schemas are returned from the mapper, something is wrong.  Probably with the
+			// ontology(?).
 			final var schemas = this.mapper.getSchemas();
 			Assertions.assertNotNull(schemas);
 		} catch (OWLOntologyCreationException e) {
@@ -61,13 +58,13 @@ public class RestrictionsTest {
 	public static void removeUnitTestFiles() throws Exception {
 		// Delete temporary directory now
 		Files.walk(Paths.get("examples/restrictions/ObjectVisitorTest/"))
-			.sorted(Comparator.reverseOrder())
-			.map(Path::toFile)
-			.forEach(File::delete);
+				.sorted(Comparator.reverseOrder())
+				.map(Path::toFile)
+				.forEach(File::delete);
 	}
-	
+
 	/**
-	 * This method allows you to configure the logger variable that is required to print several 
+	 * This method allows you to configure the logger variable that is required to print several
 	 * messages during the OBA execution.
 	 */
 	public void initializeLogger() throws Exception {
@@ -78,15 +75,13 @@ public class RestrictionsTest {
 			edu.isi.oba.Oba.logger = Logger.getLogger(Oba.class.getName());
 		} catch (IOException e) {
 			e.printStackTrace();
-		}	
+		}
 
 		edu.isi.oba.Oba.logger.setLevel(Level.FINE);
 		edu.isi.oba.Oba.logger.addHandler(new ConsoleHandler());
 	}
-	
-	/**
-	 * This test attempts to get the OAS representation of a FunctionalObjectProperty.
-	 */
+
+	/** This test attempts to get the OAS representation of a FunctionalObjectProperty. */
 	@Test
 	public void testFunctionalObjectProperty() throws OWLOntologyCreationException, Exception {
 		// Expected value
@@ -102,10 +97,8 @@ public class RestrictionsTest {
 		Assertions.assertNotNull(property);
 		Assertions.assertEquals(expectedResult, property.getMaxItems());
 	}
-	
-	/**
-	 * This test attempts to get the OAS representation of a ObjectUnionOf restriction.
-	 */
+
+	/** This test attempts to get the OAS representation of a ObjectUnionOf restriction. */
 	@Test
 	public void testObjectUnionOf() throws OWLOntologyCreationException, Exception {
 		// Expected value
@@ -133,10 +126,8 @@ public class RestrictionsTest {
 			}
 		}
 	}
-	
-	/**
-	 * This test attempts to get the OAS representation of a ObjectIntersectionOf restriction.
-	 */
+
+	/** This test attempts to get the OAS representation of a ObjectIntersectionOf restriction. */
 	@Test
 	public void testObjectIntersectionOf() throws OWLOntologyCreationException, Exception {
 		// Expected value
@@ -164,10 +155,10 @@ public class RestrictionsTest {
 			}
 		}
 	}
-	
+
 	/**
-	 * This test attempts to get the OAS representation of a ObjectSomeValuesFrom without a complex restriction
-	 * e.g. it doesn't include a union.
+	 * This test attempts to get the OAS representation of a ObjectSomeValuesFrom without a complex
+	 * restriction e.g. it doesn't include a union.
 	 */
 	@Test
 	public void testSimpleObjectSomeValuesFrom() throws OWLOntologyCreationException, Exception {
@@ -186,11 +177,12 @@ public class RestrictionsTest {
 	}
 
 	/**
-	 * This test attempts to get the OAS representation of a ObjectSomeValuesFrom which includes another 
-	 * restriction e.g. UnionOf.
+	 * This test attempts to get the OAS representation of a ObjectSomeValuesFrom which includes
+	 * another restriction e.g. UnionOf.
 	 */
 	@Test
-	public void testObjectSomeValuesFrom_ComposedByRestriction() throws OWLOntologyCreationException, Exception {
+	public void testObjectSomeValuesFrom_ComposedByRestriction()
+			throws OWLOntologyCreationException, Exception {
 		// Expected value
 		final var expectedResult = new ArrayList<String>();
 		expectedResult.add("#/components/schemas/BachelorProgram");
@@ -208,7 +200,7 @@ public class RestrictionsTest {
 
 		final var items = property.getItems();
 		Assertions.assertNotNull(property.getItems());
-		
+
 		if (items instanceof ComposedSchema) {
 			final var itemsValue = ((ComposedSchema) items).getAnyOf();
 
@@ -223,7 +215,8 @@ public class RestrictionsTest {
 				expectedResult.remove(itemsValue.get(i).get$ref());
 			}
 
-			// If the expectedResult list is now empty, then both lists contained the same reference values (even if in a different order).
+			// If the expectedResult list is now empty, then both lists contained the same reference
+			// values (even if in a different order).
 			Assertions.assertTrue(expectedResult.isEmpty());
 		}
 	}
@@ -233,7 +226,8 @@ public class RestrictionsTest {
 	 * when arrays are set to always be generated for properties.
 	 */
 	@Test
-	public void testObjectExactCardinalityWithArraysGenerated() throws OWLOntologyCreationException, Exception {
+	public void testObjectExactCardinalityWithArraysGenerated()
+			throws OWLOntologyCreationException, Exception {
 		// Set up the mapper with non-default values.
 		this.configData.setAlways_generate_arrays(true);
 		this.setupMapper();
@@ -252,13 +246,15 @@ public class RestrictionsTest {
 		Assertions.assertEquals(expectedValue, property.getMinItems());
 		Assertions.assertEquals(property.getMinItems(), property.getMaxItems());
 	}
-	
+
 	/**
-	 * This test attempts to get the OAS representation of the exact cardinality of an ObjectProperty (which is not functional),
-	 * when properties may or may not be arrays, depending on cardinality.  Plus, list of required properties are set to be generated for schemas.
+	 * This test attempts to get the OAS representation of the exact cardinality of an ObjectProperty
+	 * (which is not functional), when properties may or may not be arrays, depending on cardinality.
+	 * Plus, list of required properties are set to be generated for schemas.
 	 */
 	@Test
-	public void testObjectExactCardinalityWithRequiredPropertiesAndWithoutArraysGenerated() throws OWLOntologyCreationException, Exception {
+	public void testObjectExactCardinalityWithRequiredPropertiesAndWithoutArraysGenerated()
+			throws OWLOntologyCreationException, Exception {
 		// Set up the mapper with non-default values.
 		this.configData.setAlways_generate_arrays(false);
 		this.configData.setRequired_properties_from_cardinality(true);
@@ -272,11 +268,13 @@ public class RestrictionsTest {
 		Assertions.assertNotNull(schema);
 		Assertions.assertNotNull(schema.getProperties());
 
-		final var isRequired = schema.getRequired() != null && schema.getRequired().contains("hasRector");
+		final var isRequired =
+				schema.getRequired() != null && schema.getRequired().contains("hasRector");
 		Assertions.assertTrue(isRequired);
 
 		// Get the property to check object property exact cardinality.
-		// For exact cardinality, the class schema should have it marked as required when required properties are generated.
+		// For exact cardinality, the class schema should have it marked as required when required
+		// properties are generated.
 		final var property = (Schema) schema.getProperties().get("hasRector");
 		Assertions.assertNotNull(property);
 
@@ -288,11 +286,14 @@ public class RestrictionsTest {
 	}
 
 	/**
-	 * This test attempts to get the OAS representation of the exact cardinality of an ObjectProperty which is a functional property,
-	 * when properties may or may not be arrays, depending on cardinality.  Plus, list of required properties are set to be generated for schemas.
+	 * This test attempts to get the OAS representation of the exact cardinality of an ObjectProperty
+	 * which is a functional property, when properties may or may not be arrays, depending on
+	 * cardinality. Plus, list of required properties are set to be generated for schemas.
 	 */
 	@Test
-	public void testObjectExactCardinalityOfFunctionalPropertyWithRequiredPropertiesAndWithoutArraysGenerated() throws OWLOntologyCreationException, Exception {
+	public void
+			testObjectExactCardinalityOfFunctionalPropertyWithRequiredPropertiesAndWithoutArraysGenerated()
+					throws OWLOntologyCreationException, Exception {
 		// Set up the mapper with non-default values.
 		this.configData.setAlways_generate_arrays(false);
 		this.configData.setRequired_properties_from_cardinality(true);
@@ -306,11 +307,13 @@ public class RestrictionsTest {
 		Assertions.assertNotNull(schema);
 		Assertions.assertNotNull(schema.getProperties());
 
-		final var isRequired = schema.getRequired() != null && schema.getRequired().contains("hasRecord");
+		final var isRequired =
+				schema.getRequired() != null && schema.getRequired().contains("hasRecord");
 		Assertions.assertTrue(isRequired);
 
 		// Get the property to check object property exact cardinality.
-		// For exact cardinality, the class schema should have it marked as required when required properties are generated.
+		// For exact cardinality, the class schema should have it marked as required when required
+		// properties are generated.
 		final var property = (Schema) schema.getProperties().get("hasRecord");
 		Assertions.assertNotNull(property);
 
@@ -320,9 +323,10 @@ public class RestrictionsTest {
 		Assertions.assertEquals(property.getMaxItems(), property.getMinItems());
 		Assertions.assertEquals(expectedMinMaxResult, property.getMinItems());
 	}
-	
+
 	/**
-	 * This test attempts to get the OAS representation of the minimum cardinality of an ObjectProperty.
+	 * This test attempts to get the OAS representation of the minimum cardinality of an
+	 * ObjectProperty.
 	 */
 	@Test
 	public void testObjectMinCardinality() throws OWLOntologyCreationException, Exception {
@@ -343,9 +347,10 @@ public class RestrictionsTest {
 		Assertions.assertEquals("#/components/schemas/Course", items.get$ref());
 		Assertions.assertEquals(expectedResult, property.getMinItems());
 	}
-	
+
 	/**
-	 * This test attempts to get the OAS representation of the maximum cardinality of an ObjectProperty.
+	 * This test attempts to get the OAS representation of the maximum cardinality of an
+	 * ObjectProperty.
 	 */
 	@Test
 	public void testObjectMaxCardinality() throws OWLOntologyCreationException, Exception {
@@ -367,9 +372,7 @@ public class RestrictionsTest {
 		Assertions.assertEquals(expectedResult, property.getMaxItems());
 	}
 
-	/**
-	 * This test attempts to get the OAS representation of the complementOf of an ObjectProperty.
-	 */
+	/** This test attempts to get the OAS representation of the complementOf of an ObjectProperty. */
 	@Test
 	public void testObjectComplementOf() throws OWLOntologyCreationException, Exception {
 		// Expected value
@@ -381,29 +384,30 @@ public class RestrictionsTest {
 		Assertions.assertNotNull(schema.getNot());
 		Assertions.assertEquals(expectedResult, schema.getNot().get$ref());
 	}
-	
+
 	/**
 	 * This test attempts to get the OAS representation of the hasValue of an ObjectProperty.
-	 * 
-	 * This corresponds to a named individual (of a particular class).  Before version 3.1.0, OpenAPI does not support
-	 * the "$ref" at the same level of a default value.  For this reason, they are treated as separate items
-	 * under the "allOf" key (which is an array type).  The "$ref" value is the named individual's class and the "default" value is
-	 * the named individual's name.
+	 *
+	 * <p>This corresponds to a named individual (of a particular class). Before version 3.1.0,
+	 * OpenAPI does not support the "$ref" at the same level of a default value. For this reason, they
+	 * are treated as separate items under the "allOf" key (which is an array type). The "$ref" value
+	 * is the named individual's class and the "default" value is the named individual's name.
 	 */
 	@Test
 	public void testObjectHasValue() throws OWLOntologyCreationException, Exception {
 		// Expected value
-		// The short form of: "<https://w3id.org/example/resource/Department/ArtificialIntelligenceDepartment>"
+		// The short form of:
+		// "<https://w3id.org/example/resource/Department/ArtificialIntelligenceDepartment>"
 		// resolves to the default value of: "ArtificialIntelligenceDepartment".
-		final var  expectedResult = "ArtificialIntelligenceDepartment";
+		final var expectedResult = "ArtificialIntelligenceDepartment";
 
 		// Get the class schema and make sure it has properties.
-		final var  schema = this.mapper.getSchemas().get("ProfessorInArtificialIntelligence");
+		final var schema = this.mapper.getSchemas().get("ProfessorInArtificialIntelligence");
 		Assertions.assertNotNull(schema);
 		Assertions.assertNotNull(schema.getProperties());
 
 		// Get the property to check object property hasValue.
-		final var  property = (Schema) schema.getProperties().get("belongsTo");
+		final var property = (Schema) schema.getProperties().get("belongsTo");
 		Assertions.assertNotNull(property);
 
 		final var items = property.getItems();
@@ -414,7 +418,7 @@ public class RestrictionsTest {
 		Assertions.assertEquals(expectedResult, items.getDefault());
 		Assertions.assertTrue(items.getEnum().contains(expectedResult));
 	}
-	
+
 	/**
 	 * This test attempts to get the OAS representation of the oneOf restriction of an ObjectProperty.
 	 */
@@ -425,7 +429,8 @@ public class RestrictionsTest {
 		// Original full IRIs were:
 		// expectedResult.add("<https://w3id.org/example/resource/Degree/MS>");
 		// expectedResult.add("<https://w3id.org/example/resource/Degree/PhD>");
-		// Because these are individuals which may up the (sub)set of the Degree enum, we only need their short form name now:
+		// Because these are individuals which may up the (sub)set of the Degree enum, we only need
+		// their short form name now:
 		expectedResult.add("MS");
 		expectedResult.add("PhD");
 
@@ -445,18 +450,17 @@ public class RestrictionsTest {
 		Assertions.assertNotNull(enumValues);
 		Assertions.assertFalse(enumValues.isEmpty());
 
-		enumValues.forEach((enumValue) -> {
-			Assertions.assertTrue(expectedResult.contains(enumValue));
-			expectedResult.remove(enumValue);
-		});
+		enumValues.forEach(
+				(enumValue) -> {
+					Assertions.assertTrue(expectedResult.contains(enumValue));
+					expectedResult.remove(enumValue);
+				});
 
 		// Each value found should have been removed.  Now the expected result list should be empty.
 		Assertions.assertTrue(expectedResult.isEmpty());
 	}
 
-	/**
-	 * This test attempts to get the OAS representation of a FunctionalDataProperty.
-	 */
+	/** This test attempts to get the OAS representation of a FunctionalDataProperty. */
 	@Test
 	public void testFunctionalDataProperty() throws OWLOntologyCreationException, Exception {
 		// Expected value
@@ -472,7 +476,7 @@ public class RestrictionsTest {
 		Assertions.assertNotNull(property);
 		Assertions.assertEquals(expectedResult, property.getMaxItems());
 	}
-	
+
 	/**
 	 * This test attempts to get the OAS representation of the UnionOf restriction of a DataProperty.
 	 */
@@ -491,7 +495,7 @@ public class RestrictionsTest {
 		// Get the property to check data property unionOf.
 		final var property = (Schema) schema.getProperties().get("ects");
 		Assertions.assertNotNull(property);
-		
+
 		final var items = property.getItems();
 		Assertions.assertNotNull(items);
 
@@ -536,9 +540,10 @@ public class RestrictionsTest {
 			}
 		}
 	}
-	
+
 	/**
-	 * This test attempts to get the OAS representation of the SomeValuesFrom restriction of a DataProperty.
+	 * This test attempts to get the OAS representation of the SomeValuesFrom restriction of a
+	 * DataProperty.
 	 */
 	@Test
 	public void testDataSomeValuesFrom() throws OWLOntologyCreationException, Exception {
@@ -552,7 +557,8 @@ public class RestrictionsTest {
 		Assertions.assertNotNull(schema.getProperties());
 
 		// Get the property to check data property someValuesFrom.
-		// The "memberOfOtherDepartments" property of "ProfessorInArtificialIntelligence" has some values from an intersection of "xsd:nonNegativeInteger" and "xsd:nonPositiveInteger"
+		// The "memberOfOtherDepartments" property of "ProfessorInArtificialIntelligence" has some
+		// values from an intersection of "xsd:nonNegativeInteger" and "xsd:nonPositiveInteger"
 		// (That means it has an anyOf > allOf hierarchy)
 		// Both are integers (format: int32), differing only by their "minimum" and "maximum" values.
 		final var property = (Schema) schema.getProperties().get("memberOfOtherDepartments");
@@ -562,14 +568,16 @@ public class RestrictionsTest {
 		Assertions.assertNotNull(items);
 
 		// Always set nullable to false for owl:someValuesFrom
-    	// @see https://owl-to-oas.readthedocs.io/en/latest/mapping/#someValuesFromExample
+		// @see https://owl-to-oas.readthedocs.io/en/latest/mapping/#someValuesFromExample
 		Assertions.assertEquals(false, property.getNullable());
 
-		// Because the property has an intersection within someValuesFrom restriction, it occurs under the items > anyOf > allOf hierarchy.
+		// Because the property has an intersection within someValuesFrom restriction, it occurs under
+		// the items > anyOf > allOf hierarchy.
 		Assertions.assertNotNull(items.getAnyOf());
 		Assertions.assertEquals(1, items.getAnyOf().size());
 
-		// There should be exactly one anyOf item (which is a ComposedSchema containing two allOf items).
+		// There should be exactly one anyOf item (which is a ComposedSchema containing two allOf
+		// items).
 		final var allOfComposedSchema = (Schema) items.getAnyOf().get(0);
 		Assertions.assertNotNull(allOfComposedSchema);
 
@@ -584,11 +592,12 @@ public class RestrictionsTest {
 	}
 
 	/**
-	 * This test attempts to get the OAS representation of a DataSomeValuesFrom which includes another restriction.
-	 * e.g. IntersectionOf
+	 * This test attempts to get the OAS representation of a DataSomeValuesFrom which includes another
+	 * restriction. e.g. IntersectionOf
 	 */
 	@Test
-	public void testDataSomeValuesFrom_ComposedByRestriction() throws OWLOntologyCreationException, Exception {
+	public void testDataSomeValuesFrom_ComposedByRestriction()
+			throws OWLOntologyCreationException, Exception {
 		// Expected values
 		final var expectedResult = new ArrayList<String>();
 		expectedResult.add("integer");
@@ -614,12 +623,13 @@ public class RestrictionsTest {
 		}
 
 		// Always set nullable to false for owl:someValuesFrom
-    	// @see https://owl-to-oas.readthedocs.io/en/latest/mapping/#someValuesFromExample
+		// @see https://owl-to-oas.readthedocs.io/en/latest/mapping/#someValuesFromExample
 		Assertions.assertEquals(false, property.getNullable());
 	}
-	
+
 	/**
-	 * This test attempts to get the OAS representation of the AllValuesFrom restriction of a DataProperty.
+	 * This test attempts to get the OAS representation of the AllValuesFrom restriction of a
+	 * DataProperty.
 	 */
 	@Test
 	public void testDataAllValuesFrom() throws OWLOntologyCreationException, Exception {
@@ -636,12 +646,14 @@ public class RestrictionsTest {
 		Assertions.assertNotNull(property);
 		Assertions.assertNotNull(property.getItems());
 
-		// Because the property has an allValuesFrom restriction, it occurs under the items>allOf hierarchy.
+		// Because the property has an allValuesFrom restriction, it occurs under the items>allOf
+		// hierarchy.
 		Assertions.assertNotNull(property.getItems().getAllOf());
 		Assertions.assertEquals(1, property.getItems().getAllOf().size());
-		Assertions.assertEquals(expectedResult, ((Schema) property.getItems().getAllOf().get(0)).getType());
+		Assertions.assertEquals(
+				expectedResult, ((Schema) property.getItems().getAllOf().get(0)).getType());
 	}
-	
+
 	/**
 	 * This test attempts to get the OAS representation of the OneOf restriction of a DataProperty.
 	 */
@@ -663,7 +675,7 @@ public class RestrictionsTest {
 
 		final var items = property.getItems();
 		Assertions.assertNotNull(items);
-		
+
 		if (items instanceof ComposedSchema) {
 			final var itemsValue = ((ComposedSchema) items).getEnum();
 			for (int i = 0; i < itemsValue.size(); i++) {
@@ -671,7 +683,7 @@ public class RestrictionsTest {
 			}
 		}
 	}
-	
+
 	/**
 	 * This test attempts to get the OAS representation of the hasValue restriction of a DataProperty.
 	 */
@@ -688,17 +700,17 @@ public class RestrictionsTest {
 		// Get the property to check data property hasValue.
 		final var property = (Schema) schema.getProperties().get("nationality");
 		Assertions.assertNotNull(property);
-		
+
 		final var items = property.getItems();
 		Assertions.assertNotNull(items);
 		Assertions.assertEquals(expectedResult, items.getDefault());
 	}
-	
+
 	/**
 	 * This test attempts to get the OAS representation of the exact cardinality of a DataProperty.
 	 */
 	@Test
-	public void testDataExactCardinality() throws OWLOntologyCreationException,Exception {
+	public void testDataExactCardinality() throws OWLOntologyCreationException, Exception {
 		// Get the class schema and make sure it has properties.
 		final var schema = this.mapper.getSchemas().get("University");
 		Assertions.assertNotNull(schema);
@@ -712,7 +724,7 @@ public class RestrictionsTest {
 		Assertions.assertNotNull(property.getMinItems());
 		Assertions.assertEquals(property.getMaxItems(), property.getMinItems());
 	}
-	
+
 	/**
 	 * This test attempts to get the OAS representation of the minimum cardinality of a DataProperty.
 	 */
@@ -731,7 +743,7 @@ public class RestrictionsTest {
 		Assertions.assertNotNull(property);
 		Assertions.assertEquals(expectedResult, property.getMinItems());
 	}
-	
+
 	/**
 	 * This test attempts to get the OAS representation of the maximum cardinality of a DataProperty.
 	 */
@@ -750,12 +762,10 @@ public class RestrictionsTest {
 		Assertions.assertNotNull(property);
 		Assertions.assertEquals(expectedResult, property.getMaxItems());
 	}
-	
-	/**
-	 * This test attempts to get the OAS representation of the complementOf of a DataProperty.
-	 */
+
+	/** This test attempts to get the OAS representation of the complementOf of a DataProperty. */
 	@Test
-	public void testDataComplementOf() throws OWLOntologyCreationException,Exception {
+	public void testDataComplementOf() throws OWLOntologyCreationException, Exception {
 		// Expected values
 		final var expectedComplementTypeResult = "integer";
 		final var expectedComplementMinimumResult = BigDecimal.ZERO;
@@ -770,8 +780,9 @@ public class RestrictionsTest {
 		final var property = (Schema) schema.getProperties().get("numberOfProfessors");
 		Assertions.assertNotNull(property);
 
-		// The "numberOfProfessors" property has range "not xsd:nonNegativeInteger" and "Department" has no additional restrictions for the property.
-		// Therefore, we expect the property to *only* have a complement and its items should be null. 
+		// The "numberOfProfessors" property has range "not xsd:nonNegativeInteger" and "Department" has
+		// no additional restrictions for the property.
+		// Therefore, we expect the property to *only* have a complement and its items should be null.
 		Assertions.assertNull(property.getItems());
 		Assertions.assertNotNull(property.getNot());
 		Assertions.assertEquals(expectedComplementTypeResult, property.getNot().getType());
