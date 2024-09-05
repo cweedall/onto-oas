@@ -263,7 +263,7 @@ public class RestrictionsTest {
 		this.setupMapper();
 
 		// Expected value
-		final var expectedMinMaxResult = 1;
+		final Integer expectedMinMaxResult = null;
 
 		// Get the class schema and make sure it has properties.
 		final var schema = this.mapper.getSchemas().get("University");
@@ -279,11 +279,10 @@ public class RestrictionsTest {
 		// properties are generated.
 		final var property = (Schema) schema.getProperties().get("hasRector");
 		Assertions.assertNotNull(property);
+		Assertions.assertNotNull(property.get$ref());
 
-		final var items = property.getItems();
-		Assertions.assertNotNull(items);
-		Assertions.assertNotNull(items.get$ref());
-		Assertions.assertEquals(property.getMaxItems(), property.getMinItems());
+		// Because exactly 1, and NOT always generating arrays, min/max items should be null now.
+		Assertions.assertEquals(expectedMinMaxResult, property.getMaxItems());
 		Assertions.assertEquals(expectedMinMaxResult, property.getMinItems());
 	}
 
@@ -318,11 +317,10 @@ public class RestrictionsTest {
 		// properties are generated.
 		final var property = (Schema) schema.getProperties().get("hasRecord");
 		Assertions.assertNotNull(property);
+		Assertions.assertNotNull(property.get$ref());
 
-		final var items = property.getItems();
-		Assertions.assertNotNull(items);
-		Assertions.assertNotNull(items.get$ref());
-		Assertions.assertEquals(property.getMaxItems(), property.getMinItems());
+		// Because exactly 1, and NOT always generating arrays, min/max items should be null now.
+		Assertions.assertEquals(expectedMinMaxResult, property.getMaxItems());
 		Assertions.assertEquals(expectedMinMaxResult, property.getMinItems());
 	}
 
