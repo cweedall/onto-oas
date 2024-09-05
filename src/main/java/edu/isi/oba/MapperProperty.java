@@ -1,5 +1,7 @@
 package edu.isi.oba;
 
+import static edu.isi.oba.Oba.logger;
+
 import io.swagger.v3.oas.models.media.ComposedSchema;
 import io.swagger.v3.oas.models.media.Schema;
 import java.util.HashMap;
@@ -122,6 +124,9 @@ public class MapperProperty {
 	 */
 	public static void convertArrayToNonArrayPropertySchemas(
 			Schema classSchemaToConvert, Set<String> enumProperties, Set<String> functionalProperties) {
+		// Keep track of properties that need to be pluralized.  Key is updated/pluralized property
+		// name, and Schema value is the original schema.
+		final var convertedPropertySchemas = new HashMap<String, Schema>();
 		final Map<String, Schema> propertySchemas =
 				classSchemaToConvert.getProperties() == null
 						? new HashMap<>()
@@ -143,11 +148,9 @@ public class MapperProperty {
 							// We don't want to change object properties because the reference still needs to
 							// occur within the array of property items.
 							boolean isFunctionalObjProp =
-									isFunctional
-											&& itemsSchema != null
-											&& itemsSchema.get$ref()
-													!= null; // Not currently used, but placeholder in case it is needed
-							// later.
+									isFunctional && itemsSchema != null && itemsSchema.get$ref() != null;
+
+							// Not currently used, but placeholder in case it is needed later.
 							boolean isFunctionalDataProp =
 									isFunctional && (itemsSchema == null || itemsSchema.get$ref() == null);
 
@@ -155,11 +158,12 @@ public class MapperProperty {
 							// (should not be / false) or not functional (should be / true);
 							boolean shouldBeArray = !isFunctionalDataProp;
 
-							var isEnumObjectPropertyReference =
+							// var isEnumObjectPropertyReference =
+							var isEnumOrNonArrayObjPropReference =
 									(itemsSchema != null
 											&& itemsSchema.get$ref() != null
-											&& enumProperties != null
-											&& enumProperties.contains(propertyName));
+											&& ((enumProperties != null && enumProperties.contains(propertyName))
+													|| Objects.requireNonNullElse(propertySchema.getMaxItems(), -1) < 2));
 
 							if (shouldBeArray) {
 								shouldBeArray &=
@@ -177,8 +181,7 @@ public class MapperProperty {
 														< 1 // Weird edge case that someone may define minimum items as zero (or
 												// negative?), and should remain as array
 												|| itemsSchema != null
-														&& ((itemsSchema.get$ref() != null && !isEnumObjectPropertyReference)
-																|| (itemsSchema.getAllOf() != null
+														&& ((itemsSchema.getAllOf() != null
 																		&& !itemsSchema.getAllOf().isEmpty())
 																|| (itemsSchema.getAnyOf() != null
 																		&& !itemsSchema.getAnyOf().isEmpty())
@@ -191,7 +194,7 @@ public class MapperProperty {
 							// By default, everything is an array.  If this property is not, then convert it from
 							// an array to a single item.
 							if (!shouldBeArray) {
-								if (isEnumObjectPropertyReference) {
+								if (isEnumOrNonArrayObjPropReference) {
 									propertySchema.set$ref(itemsSchema.get$ref());
 								} else {
 									MapperProperty.setSchemaType(propertySchema, itemsSchema.getType());
@@ -209,7 +212,7 @@ public class MapperProperty {
 							// for an exact configuration of one.
 							// NOTE: These values should only be removed if the property is marked as required
 							// (via the configuration file).
-							//        The property *should* be marked required (if applicable) before calling this
+							// The property *should* be marked required (if applicable) before calling this
 							// method!
 							if (isFunctional
 									|| (!shouldBeArray
@@ -224,14 +227,47 @@ public class MapperProperty {
 									MapperProperty.setNullableValueForPropertySchema(propertySchema, true);
 								}
 							}
+
+							if (shouldBeArray) {
+								if (propertyName.equals(ObaUtils.getSingularOf(propertyName))) {
+									convertedPropertySchemas.put(ObaUtils.getPluralOf(propertyName), propertySchema);
+								}
+							} else {
+								if (!propertyName.equals(ObaUtils.getSingularOf(propertyName))) {
+									convertedPropertySchemas.put(
+											ObaUtils.getSingularOf(propertyName), propertySchema);
+								}
+							}
 						}
 					}
 				});
 
-		// Not using setProperties(), because it creates immutability which breaks unit tests.
-		propertySchemas.forEach(
-				(schemaName, schema) -> {
-					classSchemaToConvert.addProperty(schemaName, schema);
+		convertedPropertySchemas.forEach(
+				(newPropertySchemaName, originalSchema) -> {
+					// TODO: for now, only warn.  These should be off be default, but can be enabled with a
+					// new config file property
+					// propertySchemas.remove(originalSchema.getName());
+					// propertySchemas.put(newPropertySchemaName, originalSchema);
+
+					logger.warning("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+
+					if (newPropertySchemaName.equals(ObaUtils.getPluralOf(originalSchema.getName()))) {
+						logger.warning(
+								"!!! Property \""
+										+ originalSchema.getName()
+										+ "\" is an array.  Should it be \""
+										+ newPropertySchemaName
+										+ "\" instead?? !!!");
+					} else {
+						logger.warning(
+								"!!! Property \""
+										+ originalSchema.getName()
+										+ "\" is not an array.  Should it be \""
+										+ newPropertySchemaName
+										+ "\" instead?? !!!");
+					}
+
+					logger.warning("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
 				});
 	}
 
