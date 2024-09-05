@@ -1,4 +1,4 @@
-# Ontology-Based APIs (OBA) [![Test](https://github.com/KnowledgeCaptureAndDiscovery/OBA/actions/workflows/build.yaml/badge.svg)](https://github.com/KnowledgeCaptureAndDiscovery/OBA/actions/workflows/build.yaml) [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.6639554.svg)](https://doi.org/10.5281/zenodo.6639554)
+# Ontology-Based APIs (OBA) [![Test](https://github.com/cweedall/OBA2/actions/workflows/build.yaml/badge.svg)](https://github.com/cweedall/OBA2/actions/workflows/build.yaml) [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.6639554.svg)](https://doi.org/10.5281/zenodo.6639554)
 
 OBA reads ontologies (OWL) and generates an OpenAPI Specification (OAS). Using this definition, OBA creates a REST API server automatically.
 
@@ -19,12 +19,12 @@ Java versions higher than 11 are also available to use. Java 11 is simply the mi
 
 ### Downloading binary
 
-1. Go the [latest release](https://github.com/KnowledgeCaptureAndDiscovery/OBA/releases/latest)
+1. Go the [latest release](https://github.com/cweedall/OBA2/releases/latest)
 2. Download the file with extension .jar
 
 ### Building binary
 
-1. Clone the repository `git clone https://github.com/KnowledgeCaptureAndDiscovery/OBA.git`
+1. Clone the repository `git clone https://github.com/cweedall/OBA2.git`
 2. Install it using `mvn package`
 3. The binary is available in the `target` directory
 

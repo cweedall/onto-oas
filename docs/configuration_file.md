@@ -4,10 +4,10 @@ OBA supports configuring your documentation builds with a YAML file.
 
 Below is an example YAML file which may require some changes for your project's configuration:
 
-You can find examples in [GitHub](https://github.com/KnowledgeCaptureAndDiscovery/OBA/tree/master/examples)
+You can find examples in [GitHub](https://github.com/cweedall/OBA2/tree/master/examples)
 
 !!! info
-If you experience any issues when using OBA, or if you would like us to support additional exciting features, please open an issue on our [GitHub repository](https://github.com/KnowledgeCaptureAndDiscovery/OBA/issues).
+If you experience any issues when using OBA, or if you would like us to support additional exciting features, please open an issue on our [GitHub repository](https://github.com/cweedall/OBA2/issues).
 
 ```yaml
 #Name of the project
