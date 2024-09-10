@@ -34,6 +34,7 @@ import org.semanticweb.owlapi.model.OWLDataRestriction;
 import org.semanticweb.owlapi.model.OWLDataSomeValuesFrom;
 import org.semanticweb.owlapi.model.OWLDataUnionOf;
 import org.semanticweb.owlapi.model.OWLDatatype;
+import org.semanticweb.owlapi.model.OWLEntity;
 import org.semanticweb.owlapi.model.OWLEquivalentClassesAxiom;
 import org.semanticweb.owlapi.model.OWLIndividual;
 import org.semanticweb.owlapi.model.OWLLiteral;
@@ -278,6 +279,10 @@ public class ObjectVisitor implements OWLObjectVisitor {
 		// set up this Visitor class with its basic details.
 		if (this.baseClass == null) {
 			this.initializeBaseClass(ce);
+
+			// There is a possibility that the owl:thing for the ontology contains a universal property.
+			// While generally rare, this might be some type of identifier, such as a GUID.
+			this.owlThing.accept(this);
 		}
 
 		// Avoid cycles and accept visits from super classes for the purpose of getting all properties.
@@ -436,6 +441,22 @@ public class ObjectVisitor implements OWLObjectVisitor {
 										if (!shouldSkipVisits) {
 											// Proceed with the visit.
 											ax.getSuperClass().accept(this);
+
+											// There are cases where property description/annotations have not been
+											// processed yet.
+											// Check each entity here to be safe.
+											ax.getSuperClass()
+													.objectPropertiesInSignature()
+													.forEach(
+															(entity) -> {
+																this.setDescriptionReadOnlyWriteOnlyFromAnnotations(entity);
+															});
+											ax.getSuperClass()
+													.dataPropertiesInSignature()
+													.forEach(
+															(entity) -> {
+																this.setDescriptionReadOnlyWriteOnlyFromAnnotations(entity);
+															});
 										}
 
 										// Clear out the property name.
@@ -455,6 +476,61 @@ public class ObjectVisitor implements OWLObjectVisitor {
 									eqClsAx.accept(this);
 								});
 			}
+		}
+	}
+
+	/**
+	 * For an OWLEntity (that is an object/data property), check its description and annotations. If
+	 * it has either, update the property schema with description and/or write/read only annotation
+	 * flags.
+	 *
+	 * @param entity an {@link OWLEntity} which should be an {@link OWLDataProperty} or {@link
+	 *     OWLObjectProperty}
+	 */
+	private void setDescriptionReadOnlyWriteOnlyFromAnnotations(OWLEntity entity) {
+		if (entity.isOWLDataProperty() || entity.isOWLObjectProperty()) {
+			EntitySearcher.getAnnotations(entity, this.ontologyOfBaseClass)
+					.forEach(
+							annotation -> {
+								var propertySchema =
+										this.classSchema.getProperties() == null
+												? null
+												: (Schema)
+														this.classSchema.getProperties().get(entity.getIRI().getShortForm());
+
+								if (propertySchema.getDescription() == null
+										|| propertySchema.getDescription().isBlank()) {
+									final var propertyDescription =
+											ObaUtils.getDescription(
+													entity,
+													this.ontologies,
+													this.configData.getConfigFlagValue(CONFIG_FLAG.DEFAULT_DESCRIPTIONS));
+
+									MapperObjectProperty.setSchemaDescription(propertySchema, propertyDescription);
+								}
+
+								// If property contains the annotation property (name is specified in configuration
+								// file) indicating it is read-only, then set value on the schema.
+								final var readOnlyAnnotation =
+										this.configData.getSchema_property_read_only_annotation();
+								if (readOnlyAnnotation != null
+										&& !readOnlyAnnotation.isBlank()
+										&& readOnlyAnnotation.equals(
+												annotation.getProperty().getIRI().getShortForm())) {
+									MapperObjectProperty.setReadOnlyValueForPropertySchema(propertySchema, true);
+								}
+
+								// If property contains the annotation property (name is specified in configuration
+								// file) indicating it is write-only, then set value on the schema.
+								final var writeOnlyAnnotation =
+										this.configData.getSchema_property_write_only_annotation();
+								if (writeOnlyAnnotation != null
+										&& !writeOnlyAnnotation.isBlank()
+										&& writeOnlyAnnotation.equals(
+												annotation.getProperty().getIRI().getShortForm())) {
+									MapperObjectProperty.setWriteOnlyValueForPropertySchema(propertySchema, true);
+								}
+							});
 		}
 	}
 
@@ -795,7 +871,7 @@ public class ObjectVisitor implements OWLObjectVisitor {
 								}
 							}
 
-							// Loop through each object (sub)property and generate its schema
+							// Loop through each data (sub)property and generate its schema
 							for (final var dp : dataProperties) {
 								final var propertyName = dp.getIRI().getShortForm();
 								this.propertyNames.add(propertyName);
