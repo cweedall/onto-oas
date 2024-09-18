@@ -226,7 +226,7 @@ public class ObjectVisitor implements OWLObjectVisitor {
 			// If there are required properties, they may have changes (i.e. pluralized or singularized).
 			// Make sure to clear and re-populate the Set/List.  (Primiarily done to keep everything in
 			// alphabetical order)
-			if (!this.requiredProperties.isEmpty()) {
+			if (!this.requiredProperties.isEmpty() && this.classSchema.getRequired() != null) {
 				this.requiredProperties.clear();
 				this.requiredProperties.addAll(
 						(Set<String>) this.classSchema.getRequired().stream().collect(Collectors.toSet()));
@@ -794,8 +794,7 @@ public class ObjectVisitor implements OWLObjectVisitor {
 				.subObjectProperties(
 						this.reasoner.getTopObjectPropertyNode().getRepresentativeElement(),
 						InferenceDepth.DIRECT)
-				.filter(
-						objPropExpr -> !objPropExpr.isBottomEntity() /*&& objPropExpr.isOWLObjectProperty()*/)
+				.filter(objPropExpr -> !objPropExpr.isBottomEntity() && objPropExpr.isOWLObjectProperty())
 				.forEach(
 						(objPropExpr) -> {
 							var isOwlClassDomainOfObjProp = false;
@@ -831,16 +830,13 @@ public class ObjectVisitor implements OWLObjectVisitor {
 							for (final var objPropRangeAx :
 									this.ontologyOfBaseClass.getObjectPropertyRangeAxioms(objPropExpr)) {
 								final var range = objPropRangeAx.getRange();
+
+								// Only handle ranges which are OWLClass objects
 								if (range.isOWLClass()) {
 									objPropRanges.add(range.asOWLClass());
-								} else if (range instanceof OWLObjectUnionOf) {
-									for (final var rangeOperand : ((OWLObjectUnionOf) range).getOperands()) {
-										objPropRanges.add(rangeOperand.asOWLClass());
-									}
-								} else if (range instanceof OWLObjectIntersectionOf) {
-									for (final var rangeOperand : ((OWLObjectIntersectionOf) range).getOperands()) {
-										objPropRanges.add(rangeOperand.asOWLClass());
-									}
+								} else if (range instanceof OWLObjectUnionOf
+										|| range instanceof OWLObjectIntersectionOf) {
+									// This will be ignored temporarily, until the object property schema is created
 								} else {
 									logger.severe(
 											"\t  The object property range axiom \""
@@ -859,6 +855,24 @@ public class ObjectVisitor implements OWLObjectVisitor {
 								// Save object property schema to class's schema.
 								objPropertiesMap.put(
 										propertyName, this.getObjectPropertySchema(objPropExpr, objPropRanges));
+
+								// Keep track of the property name for the accept() call in the FOR loop below.
+								this.currentlyProcessedPropertyName = propertyName;
+
+								for (final var objPropRangeAx :
+										this.ontologyOfBaseClass.getObjectPropertyRangeAxioms(objPropExpr)) {
+									final var range = objPropRangeAx.getRange();
+
+									this.currentlyProcessedPropertyName = propertyName;
+
+									// For complex ranges which are unions or intersections, treat like a restriction.
+									if (range instanceof OWLObjectUnionOf
+											|| range instanceof OWLObjectIntersectionOf) {
+										range.accept(this);
+									}
+								}
+
+								this.currentlyProcessedPropertyName = null;
 							}
 
 							// ==========================================================================================
@@ -870,8 +884,7 @@ public class ObjectVisitor implements OWLObjectVisitor {
 									.subObjectProperties(objPropExpr, InferenceDepth.ALL)
 									.filter(
 											subObjPropExpr ->
-													!subObjPropExpr
-															.isBottomEntity() /*&& subObjPropExpr.isOWLObjectProperty()*/)
+													!subObjPropExpr.isBottomEntity() && subObjPropExpr.isOWLObjectProperty())
 									.forEach(
 											(subObjPropExpr) -> {
 												var isOwlClassDomainOfSubObjProp = false;
@@ -917,11 +930,10 @@ public class ObjectVisitor implements OWLObjectVisitor {
 																((OWLObjectUnionOf) range).getOperands()) {
 															subObjPropRanges.add(rangeOperand.asOWLClass());
 														}
-													} else if (range instanceof OWLObjectIntersectionOf) {
-														for (final var rangeOperand :
-																((OWLObjectIntersectionOf) range).getOperands()) {
-															subObjPropRanges.add(rangeOperand.asOWLClass());
-														}
+													} else if (range instanceof OWLObjectUnionOf
+															|| range instanceof OWLObjectIntersectionOf) {
+														// This will be ignored temporarily, until the object property schema is
+														// created
 													} else {
 														logger.severe(
 																"\t  The object property range axiom \""
@@ -942,6 +954,25 @@ public class ObjectVisitor implements OWLObjectVisitor {
 													objPropertiesMap.put(
 															propertyName,
 															this.getObjectPropertySchema(subObjPropExpr, subObjPropRanges));
+
+													// Keep track of the property name for the accept() call in the FOR loop
+													// below.
+													this.currentlyProcessedPropertyName = propertyName;
+
+													for (final var subObjPropRangeAx :
+															this.ontologyOfBaseClass.getObjectPropertyRangeAxioms(
+																	subObjPropExpr)) {
+														final var range = subObjPropRangeAx.getRange();
+
+														// For complex ranges which are unions or intersections, treat like a
+														// restriction.
+														if (range instanceof OWLObjectUnionOf
+																|| range instanceof OWLObjectIntersectionOf) {
+															range.accept(this);
+														}
+													}
+
+													this.currentlyProcessedPropertyName = null;
 												}
 											});
 							// ==========================================================================================
