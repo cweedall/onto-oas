@@ -78,6 +78,12 @@ public class MapperObjectProperty extends MapperProperty {
 		MapperProperty.setNullableValueForPropertySchema(objectSchema, true);
 
 		objectSchema.addEnumItemObject(enumItem);
+
+		// This has no effect currently.  The intention is to support YAML anchors in the future.
+		// However, the Jackson XML library which is being used for serialization does not currently
+		// support YAML anchors properly.
+		objectSchema.set$anchor(
+				ObaUtils.pascalCaseToKebabCase(objectSchema.getName()).toUpperCase() + "-ENUM");
 	}
 
 	/**
