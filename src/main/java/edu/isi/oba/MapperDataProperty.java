@@ -244,6 +244,8 @@ class MapperDataProperty extends MapperProperty {
 					return "double";
 				} else if ("double".equals(scrubbedDatatype)) {
 					return "double";
+				} else if ("decimal".equals(scrubbedDatatype)) {
+					return "double";
 				} else {
 					return "number";
 				}

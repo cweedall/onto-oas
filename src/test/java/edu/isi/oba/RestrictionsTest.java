@@ -11,6 +11,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.List;
 import java.util.logging.ConsoleHandler;
 import java.util.logging.Level;
 import java.util.logging.LogManager;
@@ -48,6 +49,7 @@ public class RestrictionsTest {
 		this.configData.setAlways_generate_arrays(true);
 		this.configData.setDefault_descriptions(true);
 		this.configData.setDefault_properties(true);
+		this.configData.setFix_singular_plural_property_names(false);
 		this.configData.setFollow_references(true);
 		this.configData.setRequired_properties_from_cardinality(false);
 
@@ -279,7 +281,19 @@ public class RestrictionsTest {
 		// properties are generated.
 		final var property = (Schema) schema.getProperties().get("hasRector");
 		Assertions.assertNotNull(property);
-		Assertions.assertNotNull(property.get$ref());
+
+		final List<Schema> allOfItems = property.getAllOf();
+		Assertions.assertNotNull(allOfItems);
+
+		var foundNotNullReference = false;
+		for (Schema allOfItem : allOfItems) {
+			if (allOfItem.get$ref() != null) {
+				foundNotNullReference = true;
+			}
+		}
+
+		// There should be one item in the allOf group with a $ref.
+		Assertions.assertTrue(foundNotNullReference);
 
 		// Because exactly 1, and NOT always generating arrays, min/max items should be null now.
 		Assertions.assertEquals(expectedMinMaxResult, property.getMaxItems());
@@ -317,7 +331,19 @@ public class RestrictionsTest {
 		// properties are generated.
 		final var property = (Schema) schema.getProperties().get("hasRecord");
 		Assertions.assertNotNull(property);
-		Assertions.assertNotNull(property.get$ref());
+
+		final List<Schema> allOfItems = property.getAllOf();
+		Assertions.assertNotNull(allOfItems);
+
+		var foundNotNullReference = false;
+		for (Schema allOfItem : allOfItems) {
+			if (allOfItem.get$ref() != null) {
+				foundNotNullReference = true;
+			}
+		}
+
+		// There should be one item in the allOf group with a $ref.
+		Assertions.assertTrue(foundNotNullReference);
 
 		// Because exactly 1, and NOT always generating arrays, min/max items should be null now.
 		Assertions.assertEquals(expectedMinMaxResult, property.getMaxItems());
@@ -413,10 +439,10 @@ public class RestrictionsTest {
 		final var items = property.getItems();
 		Assertions.assertNotNull(items);
 		Assertions.assertNotNull(items.getDefault());
-		Assertions.assertNotNull(items.getEnum());
-		Assertions.assertFalse(items.getEnum().isEmpty());
 		Assertions.assertEquals(expectedResult, items.getDefault());
-		Assertions.assertTrue(items.getEnum().contains(expectedResult));
+		// The belongsTo has a default value for ProfessorInArtificialIntelligence,
+		// but there is no enum.
+		Assertions.assertNull(items.getEnum());
 	}
 
 	/**
