@@ -355,8 +355,6 @@ public class MapperProperty {
 								&& classSchemaToConvert.getRequired().contains(originalSchema.getName())) {
 							classSchemaToConvert.getRequired().remove(originalSchema.getName());
 							classSchemaToConvert.getRequired().add(newPropertySchemaName);
-						} else {
-							classSchemaToConvert.getRequired().add(newPropertySchemaName);
 						}
 
 						logger.warning("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");

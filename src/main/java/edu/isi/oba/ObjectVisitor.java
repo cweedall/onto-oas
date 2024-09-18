@@ -226,11 +226,15 @@ public class ObjectVisitor implements OWLObjectVisitor {
 			// If there are required properties, they may have changes (i.e. pluralized or singularized).
 			// Make sure to clear and re-populate the Set/List.  (Primiarily done to keep everything in
 			// alphabetical order)
-			if (!this.requiredProperties.isEmpty() && this.classSchema.getRequired() != null) {
+			if (!this.requiredProperties.isEmpty()) {
 				this.requiredProperties.clear();
-				this.requiredProperties.addAll(
-						(Set<String>) this.classSchema.getRequired().stream().collect(Collectors.toSet()));
-				this.classSchema.setRequired(this.requiredProperties.stream().collect(Collectors.toList()));
+
+				if (this.classSchema.getRequired() != null && !this.classSchema.getRequired().isEmpty()) {
+					this.requiredProperties.addAll(
+							(Set<String>) this.classSchema.getRequired().stream().collect(Collectors.toSet()));
+					this.classSchema.setRequired(
+							this.requiredProperties.stream().collect(Collectors.toList()));
+				}
 			}
 		}
 
