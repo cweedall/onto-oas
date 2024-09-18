@@ -338,7 +338,7 @@ public class MapperProperty {
 								}
 							}
 
-							if (!isFunctional && minItems < 1) {
+							if (!isFunctional && minItems < 1 && classSchemaToConvert.getRequired() != null) {
 								classSchemaToConvert.getRequired().remove(propertyName);
 							}
 						}
@@ -351,8 +351,11 @@ public class MapperProperty {
 						propertySchemas.remove(originalSchema.getName());
 						propertySchemas.put(newPropertySchemaName, originalSchema);
 
-						if (classSchemaToConvert.getRequired().contains(originalSchema.getName())) {
+						if (classSchemaToConvert.getRequired() != null
+								&& classSchemaToConvert.getRequired().contains(originalSchema.getName())) {
 							classSchemaToConvert.getRequired().remove(originalSchema.getName());
+							classSchemaToConvert.getRequired().add(newPropertySchemaName);
+						} else {
 							classSchemaToConvert.getRequired().add(newPropertySchemaName);
 						}
 
