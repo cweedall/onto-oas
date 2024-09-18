@@ -50,7 +50,11 @@ class Mapper {
 
 		Set<String> configOntologies = this.configData.getOntologies();
 		String destinationDir =
-				this.configData.getOutput_dir() + File.separator + this.configData.getName();
+				this.configData.getOutput_dir()
+						+ File.separator
+						+ this.configData
+								.getName()
+								.replaceAll("[.\\+\\*\\?\\^\\$\\(\\)\\[\\]\\{\\}\\|\\\\\\s]", "_");
 		File outputDir = new File(destinationDir);
 		if (!outputDir.exists()) {
 			outputDir.mkdirs();

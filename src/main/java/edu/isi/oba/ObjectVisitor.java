@@ -180,16 +180,34 @@ public class ObjectVisitor implements OWLObjectVisitor {
 		// Need to either change it to "type: object" OR add empty items list (i.e. "items: {}").
 		// Using the former approach because 1) it renders in Swagger UI correctly and 2) unclear if
 		// empty items plus complement is a valid use case.
-		final var classProperties = this.classSchema == null ? null : this.classSchema.getProperties();
+		final Map<String, Schema> classProperties =
+				this.classSchema == null ? null : this.classSchema.getProperties();
 		if (classProperties != null) {
 			classProperties
 					.values()
 					.forEach(
 							(propertySchema) -> {
-								if (((Schema) propertySchema).getItems() == null) {
-									MapperProperty.setSchemaType((Schema) propertySchema, "object");
+								final var propSchema = (Schema) propertySchema;
+								final var itemsSchema = propSchema.getItems();
+								if (propSchema.getItems() == null) {
+									MapperProperty.setSchemaType(propSchema, "object");
+								} else {
+									// If a property has a default value AND an enum list with only one element, then
+									// remove the enum list.
+									final var enumList = itemsSchema.getEnum();
+									if (enumList != null
+											&& enumList.size() == 1
+											&& itemsSchema.getDefault() != null) {
+										itemsSchema.setEnum(null);
+									}
 								}
 							});
+		}
+
+		// Enums are already set up.  They should also never have required properties (even if
+		// inherited somehow).
+		if (this.classSchema.getEnum() != null) {
+			this.requiredProperties.clear();
 		}
 
 		// Generate the required properties for the class, if applicable.
@@ -200,7 +218,24 @@ public class ObjectVisitor implements OWLObjectVisitor {
 		// Convert non-array property items, if applicable.
 		if (!this.configData.getConfigFlagValue(CONFIG_FLAG.ALWAYS_GENERATE_ARRAYS)) {
 			MapperProperty.convertArrayToNonArrayPropertySchemas(
-					this.classSchema, this.enumProperties, this.functionalProperties);
+					this.classSchema,
+					this.enumProperties,
+					this.functionalProperties,
+					this.configData.getConfigFlagValue(CONFIG_FLAG.FIX_SINGULAR_PLURAL_PROPERTY_NAMES));
+
+			// If there are required properties, they may have changes (i.e. pluralized or singularized).
+			// Make sure to clear and re-populate the Set/List.  (Primiarily done to keep everything in
+			// alphabetical order)
+			if (!this.requiredProperties.isEmpty()) {
+				this.requiredProperties.clear();
+
+				if (this.classSchema.getRequired() != null && !this.classSchema.getRequired().isEmpty()) {
+					this.requiredProperties.addAll(
+							(Set<String>) this.classSchema.getRequired().stream().collect(Collectors.toSet()));
+					this.classSchema.setRequired(
+							this.requiredProperties.stream().collect(Collectors.toList()));
+				}
+			}
 		}
 
 		// If following references AND use inheritance references (for the class), we do not want to
@@ -546,26 +581,18 @@ public class ObjectVisitor implements OWLObjectVisitor {
 
 		propertySchemas.forEach(
 				(propertyName, propertySchema) -> {
-					propertySchema.getMinItems();
-
-					// If min/max values are both 1, it is required and not nullable.
-					// If only the max value is 1, then it is a functional property which is required but
-					// nullable.
-					// TODO: determine whether setting max items value to 1 BUT NOT setting property as
-					// functional should be treated differently.
-					if (propertySchema.getMaxItems() != null && propertySchema.getMaxItems() == 1) {
-						if (propertySchema.getMinItems() != null && propertySchema.getMinItems() == 1) {
-							MapperProperty.setNullableValueForPropertySchema(propertySchema, false);
-						} else {
-							MapperProperty.setNullableValueForPropertySchema(propertySchema, true);
-						}
-
-						this.requiredProperties.add(propertyName);
-					}
-
+					// If min value is 1, it is required and not nullable.
+					// Otherwise, it is nullable.  Functional properties can be nullable while also being
+					// required.
 					if (propertySchema.getMinItems() != null && propertySchema.getMinItems() > 0) {
 						MapperProperty.setNullableValueForPropertySchema(propertySchema, false);
 						this.requiredProperties.add(propertyName);
+					} else {
+						MapperProperty.setNullableValueForPropertySchema(propertySchema, true);
+
+						if (this.functionalProperties.contains(propertyName)) {
+							this.requiredProperties.add(propertyName);
+						}
 					}
 				});
 
@@ -702,7 +729,9 @@ public class ObjectVisitor implements OWLObjectVisitor {
 			// If property is functional, set the schema accordingly.
 			if (EntitySearcher.isFunctional(
 					op, Collections.singleton(this.ontologyOfBaseClass).stream())) {
+				logger.info("\t\tProperty is functional.  Therefore, required with a max of 1 item.");
 				this.functionalProperties.add(propertyName);
+				this.requiredProperties.add(propertyName);
 				MapperObjectProperty.setFunctionalForPropertySchema(objPropertySchema);
 			}
 
@@ -764,6 +793,7 @@ public class ObjectVisitor implements OWLObjectVisitor {
 		final var objPropertiesMap = new HashMap<String, Schema>();
 
 		// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		// Loop through all top-level object properties of this class's ontology.
 		this.reasoner
 				.subObjectProperties(
 						this.reasoner.getTopObjectPropertyNode().getRepresentativeElement(),
@@ -771,28 +801,89 @@ public class ObjectVisitor implements OWLObjectVisitor {
 				.filter(objPropExpr -> !objPropExpr.isBottomEntity() && objPropExpr.isOWLObjectProperty())
 				.forEach(
 						(objPropExpr) -> {
-							final var objPropDomains = new HashSet<OWLClass>();
-							this.reasoner
-									.objectPropertyDomains(objPropExpr, InferenceDepth.DIRECT)
-									.filter(objPropDomain -> owlClass.equals(objPropDomain))
-									.forEach(objPropDomains::add);
+							var isOwlClassDomainOfObjProp = false;
+
+							// Check property contains this owlClass as a domain.
+							for (final var objPropDomainAx :
+									this.ontologyOfBaseClass.getObjectPropertyDomainAxioms(objPropExpr)) {
+								final var domain = objPropDomainAx.getDomain();
+								if (domain.isOWLClass()) {
+									if (owlClass.equals(domain)) {
+										isOwlClassDomainOfObjProp = true;
+									}
+								} else if (domain instanceof OWLObjectUnionOf) {
+									for (final var domainOperand : ((OWLObjectUnionOf) domain).getOperands()) {
+										if (owlClass.equals(domainOperand)) {
+											isOwlClassDomainOfObjProp = true;
+										}
+									}
+								} else {
+									logger.severe(
+											"\t  The object property domain axiom \""
+													+ objPropDomainAx
+													+ "\" has an unknown domain type \""
+													+ domain
+													+ "\" !!");
+								}
+							}
 
 							final var objPropRanges = new HashSet<OWLClass>();
-							this.reasoner
-									.objectPropertyRanges(objPropExpr, InferenceDepth.DIRECT)
-									.forEach(objPropRanges::add);
+
+							// Keep track of all property ranges.  Even if the super-property has no domain, the
+							// ranges can be inherited by sub-properties which have this owlClass as a domain.
+							for (final var objPropRangeAx :
+									this.ontologyOfBaseClass.getObjectPropertyRangeAxioms(objPropExpr)) {
+								final var range = objPropRangeAx.getRange();
+
+								// Only handle ranges which are OWLClass objects
+								if (range.isOWLClass()) {
+									objPropRanges.add(range.asOWLClass());
+								} else if (range instanceof OWLObjectUnionOf
+										|| range instanceof OWLObjectIntersectionOf) {
+									// This will be ignored temporarily, until the object property schema is created
+								} else {
+									logger.severe(
+											"\t  The object property range axiom \""
+													+ objPropRangeAx
+													+ "\" has an unknown range type \""
+													+ range
+													+ "\" !!");
+								}
+							}
 
 							// If this (sub-)property (under owl:topObjectProperty) has a domain of the current
 							// owlClass, then get its schema.
-							if (!objPropDomains.isEmpty()) {
+							if (isOwlClassDomainOfObjProp) {
 								final var propertyName = objPropExpr.asOWLObjectProperty().getIRI().getShortForm();
 
 								// Save object property schema to class's schema.
 								objPropertiesMap.put(
 										propertyName, this.getObjectPropertySchema(objPropExpr, objPropRanges));
+
+								// Keep track of the property name for the accept() call in the FOR loop below.
+								this.currentlyProcessedPropertyName = propertyName;
+
+								for (final var objPropRangeAx :
+										this.ontologyOfBaseClass.getObjectPropertyRangeAxioms(objPropExpr)) {
+									final var range = objPropRangeAx.getRange();
+
+									this.currentlyProcessedPropertyName = propertyName;
+
+									// For complex ranges which are unions or intersections, treat like a restriction.
+									if (range instanceof OWLObjectUnionOf
+											|| range instanceof OWLObjectIntersectionOf) {
+										range.accept(this);
+									}
+								}
+
+								this.currentlyProcessedPropertyName = null;
 							}
 
-							// Loop through all subproperties of this property.
+							// ==========================================================================================
+							// Junky workaround to use variable within the stream() below.
+							final var isOwlClassDomainOfObjPropFinal = isOwlClassDomainOfObjProp;
+
+							// Loop through all sub-properties of this property.
 							this.reasoner
 									.subObjectProperties(objPropExpr, InferenceDepth.ALL)
 									.filter(
@@ -800,33 +891,95 @@ public class ObjectVisitor implements OWLObjectVisitor {
 													!subObjPropExpr.isBottomEntity() && subObjPropExpr.isOWLObjectProperty())
 									.forEach(
 											(subObjPropExpr) -> {
-												// Check subproperty's domain(s) and inherit from its super-property.
-												final var subObjPropDomains = new HashSet<OWLClass>();
-												this.reasoner
-														.objectPropertyDomains(subObjPropExpr, InferenceDepth.DIRECT)
-														.filter(objPropDomain -> owlClass.equals(objPropDomain))
-														.forEach(subObjPropDomains::add);
-												subObjPropDomains.addAll(objPropDomains);
+												var isOwlClassDomainOfSubObjProp = false;
 
-												// Check subproperty's range(s) and inherit from its super-property.
+												// Check sub-property's domain(s) and inherit from its super-property.
+												// Check property contains this owlClass as a domain.
+												for (final var subObjPropDomainAx :
+														this.ontologyOfBaseClass.getObjectPropertyDomainAxioms(
+																subObjPropExpr)) {
+													final var domain = subObjPropDomainAx.getDomain();
+													if (domain.isOWLClass()) {
+														if (owlClass.equals(domain)) {
+															isOwlClassDomainOfSubObjProp = true;
+														}
+													} else if (domain instanceof OWLObjectUnionOf) {
+														for (final var domainOperand :
+																((OWLObjectUnionOf) domain).getOperands()) {
+															if (owlClass.equals(domainOperand)) {
+																isOwlClassDomainOfSubObjProp = true;
+															}
+														}
+													} else {
+														logger.severe(
+																"\t  The object property domain axiom \""
+																		+ subObjPropDomainAx
+																		+ "\" has an unknown domain type \""
+																		+ domain
+																		+ "\" !!");
+													}
+												}
+
 												final var subObjPropRanges = new HashSet<OWLClass>();
-												this.reasoner
-														.objectPropertyRanges(subObjPropExpr, InferenceDepth.DIRECT)
-														.forEach(subObjPropRanges::add);
 												subObjPropRanges.addAll(objPropRanges);
 
-												// If this (sub-)property has a domain of the current owlClass, then get its
-												// schema.
-												if (!subObjPropDomains.isEmpty()) {
-													final var subPropertyName =
+												// Check sub-property's range(s) and inherit from its super-property.
+												for (final var subObjPropRangeAx :
+														this.ontologyOfBaseClass.getObjectPropertyRangeAxioms(subObjPropExpr)) {
+													final var range = subObjPropRangeAx.getRange();
+													if (range.isOWLClass()) {
+														subObjPropRanges.add(range.asOWLClass());
+													} else if (range instanceof OWLObjectUnionOf) {
+														for (final var rangeOperand :
+																((OWLObjectUnionOf) range).getOperands()) {
+															subObjPropRanges.add(rangeOperand.asOWLClass());
+														}
+													} else if (range instanceof OWLObjectUnionOf
+															|| range instanceof OWLObjectIntersectionOf) {
+														// This will be ignored temporarily, until the object property schema is
+														// created
+													} else {
+														logger.severe(
+																"\t  The object property range axiom \""
+																		+ subObjPropRangeAx
+																		+ "\" has an unknown range type \""
+																		+ range
+																		+ "\" !!");
+													}
+												}
+
+												// If this (sub-)property (under owl:topObjectProperty) has a domain of the
+												// current owlClass, then get its schema.
+												if (isOwlClassDomainOfSubObjProp || isOwlClassDomainOfObjPropFinal) {
+													final var propertyName =
 															subObjPropExpr.asOWLObjectProperty().getIRI().getShortForm();
 
 													// Save object property schema to class's schema.
 													objPropertiesMap.put(
-															subPropertyName,
+															propertyName,
 															this.getObjectPropertySchema(subObjPropExpr, subObjPropRanges));
+
+													// Keep track of the property name for the accept() call in the FOR loop
+													// below.
+													this.currentlyProcessedPropertyName = propertyName;
+
+													for (final var subObjPropRangeAx :
+															this.ontologyOfBaseClass.getObjectPropertyRangeAxioms(
+																	subObjPropExpr)) {
+														final var range = subObjPropRangeAx.getRange();
+
+														// For complex ranges which are unions or intersections, treat like a
+														// restriction.
+														if (range instanceof OWLObjectUnionOf
+																|| range instanceof OWLObjectIntersectionOf) {
+															range.accept(this);
+														}
+													}
+
+													this.currentlyProcessedPropertyName = null;
 												}
 											});
+							// ==========================================================================================
 						});
 		// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -942,7 +1095,10 @@ public class ObjectVisitor implements OWLObjectVisitor {
 										// If property is functional, set the schema accordingly.
 										if (EntitySearcher.isFunctional(
 												dp, Collections.singleton(this.ontologyOfBaseClass).stream())) {
+											logger.info(
+													"\t\tProperty is functional.  Therefore, required with a max of 1 item.");
 											this.functionalProperties.add(propertyName);
+											this.requiredProperties.add(propertyName);
 											MapperDataProperty.setFunctionalForPropertySchema(dataPropertySchema);
 										}
 

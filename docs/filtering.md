@@ -63,6 +63,9 @@ always_generate_arrays: true
 
 ## Enable/disable generation of list of required properties for a schema, if the the cardinality indicates it is required (e.g. exactly 1)
 required_properties_from_cardinality: false
+
+## Enable/disable automatic schema property singularization/pluralization based on current spelling and whether the property is an array or not.
+fix_singular_plural_property_names: false
 ```
 
 The result is available at: [DBPedia Music](https://app.swaggerhub.com/apis/mosoriob/dbpedia-music/v1.3.0)
@@ -332,14 +335,14 @@ components:
     YourClass:
       properties:
         propertyA:
+          maxItems: 1
+          minItems: 1
           items:
-            maxItems: 1
-            minItems: 1
             type: string
           type: array
         propertyB:
+          maxItems: 3
           items:
-            maxItems: 3
             type: string
           type: array
       type: object
@@ -355,8 +358,8 @@ components:
         propertyA:
           type: array
         propertyB:
+          maxItems: 3
           items:
-            maxItems: 3
             type: string
           type: array
       type: object
@@ -372,14 +375,14 @@ components:
     YourClass:
       properties:
         propertyA:
+          maxItems: 1
+          minItems: 1
           items:
-            maxItems: 1
-            minItems: 1
             type: string
           type: array
         propertyB:
+          maxItems: 3
           items:
-            maxItems: 3
             type: string
           type: array
       type: object
@@ -393,17 +396,67 @@ components:
     YourClass:
       properties:
         propertyA:
+          maxItems: 1
+          minItems: 1
           items:
-            maxItems: 1
-            minItems: 1
             type: string
           type: array
         propertyB:
+          maxItems: 3
           items:
-            maxItems: 3
             type: string
           type: array
       type: object
       required:
         - propertyA
+```
+
+### Singularization/pluralization of property names, when property is a non-array or array, respectively.
+
+#### NOTE: singularization and pluralization _only_ work for English currently.
+
+API naming conventions recommend that a property with a single value, regardless of nullability, have be spelled as a singular noun. Conversely, if the property requires or allows an array of values, the property name should be spelled as a plural noun. For example, a `color` property should only have one value as a `string` type while a `colors` property should allow an array of multiple values as a `string` type.
+
+There may be cases where the ontology maintains naming conventions which differ from API naming conventions. Or, there may be cases where the property name in the ontology was mistyped, or perhaps changed from singular to plura or vice-versa. In either case, enabling the `fix_singular_plural_property_names` option will compare the property name against the possible/required number of values and rename the property if it does not match. For example, if the ontology specifies a `colors` property but the axiom dictates that the `colors` property have exactly one item (i.e. minimum cardinality of 1 and maximum cardinality of 1), then the property will be renamed to `color` and output a warning message that the change occurred.
+
+By default, OBA does not generate the property names, for example:
+
+```yaml
+components:
+  schemas:
+    YourClass:
+      properties:
+        colors:
+          items:
+            maxItems: 1
+            minItems: 1
+            type: string
+          type: array
+        moreThanOneThing:
+          minItems: 3
+          items:
+            type: string
+          type: array
+      type: object
+```
+
+By setting the `fix_singular_plural_property_names` value to `true`, the above example becomes:
+
+```yaml
+components:
+  schemas:
+    YourClass:
+      properties:
+        color:
+          maxItems: 1
+          minItems: 1
+          items:
+            type: string
+          type: array
+        moreThanOneThings:
+          minItems: 3
+          items:
+            type: string
+          type: array
+      type: object
 ```

@@ -15,6 +15,7 @@ public class YamlConfig {
 					put(CONFIG_FLAG.ALWAYS_GENERATE_ARRAYS, true);
 					put(CONFIG_FLAG.DEFAULT_DESCRIPTIONS, true);
 					put(CONFIG_FLAG.DEFAULT_PROPERTIES, true);
+					put(CONFIG_FLAG.FIX_SINGULAR_PLURAL_PROPERTY_NAMES, false);
 					put(CONFIG_FLAG.FOLLOW_REFERENCES, true);
 					put(CONFIG_FLAG.GENERATE_JSON_FILE, false);
 					put(CONFIG_FLAG.PATH_DELETE, false);
@@ -170,6 +171,15 @@ public class YamlConfig {
 
 	public void setAlways_generate_arrays(Boolean always_generate_arrays) {
 		this.configFlags.put(CONFIG_FLAG.ALWAYS_GENERATE_ARRAYS, always_generate_arrays);
+	}
+
+	public Boolean getFix_singular_plural_property_names() {
+		return this.configFlags.get(CONFIG_FLAG.FIX_SINGULAR_PLURAL_PROPERTY_NAMES);
+	}
+
+	public void setFix_singular_plural_property_names(Boolean fix_singular_plural_property_names) {
+		this.configFlags.put(
+				CONFIG_FLAG.FIX_SINGULAR_PLURAL_PROPERTY_NAMES, fix_singular_plural_property_names);
 	}
 
 	public Boolean getFollow_references() {

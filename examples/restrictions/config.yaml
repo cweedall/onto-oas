@@ -1,8 +1,8 @@
 ontologies:
-  - examples/restrictions/example.owl
-name: Restrictions example
+  - ./examples/restrictions/example.owl
+name: Restrictions example ., +, *, ?, ^, $, (, ), [, ], {, }, |, \
 
-output_dir: examples/restrictions/ObjectVisitorTest
+output_dir: ./examples/restrictions/ObjectVisitorTest
 
 openapi:
   openapi: 3.0.1

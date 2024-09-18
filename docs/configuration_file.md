@@ -70,6 +70,9 @@ always_generate_arrays: true
 
 ## Enable/disable generation of list of required properties for a schema, if the the cardinality indicates it is required (e.g. exactly 1)
 required_properties_from_cardinality: false
+
+## Enable/disable automatic schema property singularization/pluralization based on current spelling and whether the property is an array or not.
+fix_singular_plural_property_names: false
 ```
 
 ## Supported settings
@@ -388,6 +391,22 @@ For more information, go to [filtering classes](filtering.md#required_properties
 
 ```yaml
 required_properties_from_cardinality: true
+```
+
+### fix_singular_plural_property_names
+
+Enable/disable automatic schema property singularization/pluralization based on current spelling and whether the property is an array or not.
+
+| Field         | Value     |
+| ------------- | --------- |
+| **Required:** | `false`   |
+| **Type:**     | `Boolean` |
+| **Default:**  | `False`   |
+
+For more information, go to [filtering classes](filtering.md#fix_singular_plural_property_names)
+
+```yaml
+fix_singular_plural_property_names: true
 ```
 
 ## auth

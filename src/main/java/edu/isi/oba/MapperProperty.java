@@ -3,6 +3,7 @@ package edu.isi.oba;
 import static edu.isi.oba.Oba.logger;
 
 import io.swagger.v3.oas.models.media.ComposedSchema;
+import io.swagger.v3.oas.models.media.ObjectSchema;
 import io.swagger.v3.oas.models.media.Schema;
 import java.util.HashMap;
 import java.util.List;
@@ -10,8 +11,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import org.semanticweb.owlapi.model.OWLLiteral;
-
-// import io.swagger.v3.oas.models.media.*;
 
 /**
  * Class for taking an existing {@link Schema} and updating in ways that are generic/shared between
@@ -123,7 +122,10 @@ public class MapperProperty {
 	 * @return a {@link Schema} with all possible non-array properties converted.
 	 */
 	public static void convertArrayToNonArrayPropertySchemas(
-			Schema classSchemaToConvert, Set<String> enumProperties, Set<String> functionalProperties) {
+			Schema classSchemaToConvert,
+			Set<String> enumProperties,
+			Set<String> functionalProperties,
+			Boolean fixSingularPluralPropertyNames) {
 		// Keep track of properties that need to be pluralized.  Key is updated/pluralized property
 		// name, and Schema value is the original schema.
 		final var convertedPropertySchemas = new HashMap<String, Schema>();
@@ -142,6 +144,11 @@ public class MapperProperty {
 						final var itemsSchema = propertySchema.getItems();
 
 						if (itemsSchema != null) {
+							final var maxItems = Objects.requireNonNullElse(propertySchema.getMaxItems(), -1);
+							final var hasMaxItems = (propertySchema.getMaxItems() != null);
+							final var minItems = Objects.requireNonNullElse(propertySchema.getMinItems(), -1);
+							final var hasMinItems = (propertySchema.getMinItems() != null);
+
 							boolean isFunctional =
 									functionalProperties != null && functionalProperties.contains(propertyName);
 
@@ -158,44 +165,88 @@ public class MapperProperty {
 							// (should not be / false) or not functional (should be / true);
 							boolean shouldBeArray = !isFunctionalDataProp;
 
-							// var isEnumObjectPropertyReference =
-							var isEnumOrNonArrayObjPropReference =
-									(itemsSchema != null
-											&& itemsSchema.get$ref() != null
-											&& ((enumProperties != null && enumProperties.contains(propertyName))
-													|| Objects.requireNonNullElse(propertySchema.getMaxItems(), -1) < 2));
+							final var hasObjPropReference = itemsSchema != null && itemsSchema.get$ref() != null;
+
+							final var isEnumObjPropReference =
+									hasObjPropReference
+											&& enumProperties != null
+											&& enumProperties.contains(propertyName);
+
+							final var isArrayObjPropReference =
+									hasObjPropReference
+											&& (!(hasMaxItems || hasMinItems) || minItems > 1 || maxItems > 1);
 
 							if (shouldBeArray) {
-								shouldBeArray &=
-										(Objects.requireNonNullElse(propertySchema.getMinItems(), -1) > 0
-												|| Objects.requireNonNullElse(propertySchema.getMaxItems(), -1) > 1);
+								shouldBeArray &= (minItems > 0 || maxItems > 1);
 
-								shouldBeArray &=
-										!(Objects.requireNonNullElse(propertySchema.getMinItems(), -1) == 1
-												&& Objects.requireNonNullElse(propertySchema.getMaxItems(), -1) == 1);
+								shouldBeArray &= !(minItems == 1 && maxItems == 1);
 
 								// Keep as array (even if only one item exists), if there is a single reference or
 								// allOf/anyOf/oneOf/enum composed schemas are contained within the property's item.
 								shouldBeArray |=
-										Objects.requireNonNullElse(propertySchema.getMinItems(), -1)
-														< 1 // Weird edge case that someone may define minimum items as zero (or
-												// negative?), and should remain as array
-												|| itemsSchema != null
-														&& ((itemsSchema.getAllOf() != null
-																		&& !itemsSchema.getAllOf().isEmpty())
-																|| (itemsSchema.getAnyOf() != null
-																		&& !itemsSchema.getAnyOf().isEmpty())
-																|| (itemsSchema.getOneOf() != null
-																		&& !itemsSchema.getOneOf().isEmpty())
-																|| (itemsSchema.getEnum() != null
-																		&& !itemsSchema.getEnum().isEmpty()));
+										itemsSchema != null
+												&& (isArrayObjPropReference
+														|| (itemsSchema.getAllOf() != null && !itemsSchema.getAllOf().isEmpty())
+														|| (itemsSchema.getAnyOf() != null && !itemsSchema.getAnyOf().isEmpty())
+														|| (itemsSchema.getOneOf() != null
+																&& !itemsSchema.getOneOf().isEmpty()));
 							}
 
 							// By default, everything is an array.  If this property is not, then convert it from
 							// an array to a single item.
 							if (!shouldBeArray) {
-								if (isEnumOrNonArrayObjPropReference) {
-									propertySchema.set$ref(itemsSchema.get$ref());
+								if (isEnumObjPropReference || hasObjPropReference) {
+									propertySchema.setType(null);
+
+									// Copy ref to allOf item.
+									final var objRefSchema = new ObjectSchema();
+									objRefSchema.set$ref(itemsSchema.get$ref());
+									propertySchema.addAllOfItem(objRefSchema);
+
+									/**
+									 * The next values should exist and override whatever value the object reference
+									 * has. That is why the allOf structure is being used.
+									 */
+
+									// Copy readOnly value to allOf item, if applicable.
+									if (propertySchema.getReadOnly() != null) {
+										final var isReadOnlySchema = new Schema();
+										isReadOnlySchema.setReadOnly(propertySchema.getReadOnly());
+										propertySchema.addAllOfItem(isReadOnlySchema);
+										propertySchema.setReadOnly(null);
+									}
+
+									// Copy writeOnly value to allOf item, if applicable.
+									if (propertySchema.getWriteOnly() != null) {
+										final var isWriteOnlySchema = new Schema();
+										isWriteOnlySchema.setWriteOnly(propertySchema.getWriteOnly());
+										propertySchema.addAllOfItem(isWriteOnlySchema);
+										propertySchema.setWriteOnly(null);
+									}
+
+									// Copy nullable value to allOf item, if applicable.
+									if (propertySchema.getNullable() != null) {
+										final var isNullableSchema = new Schema();
+										isNullableSchema.setNullable(propertySchema.getNullable());
+										propertySchema.addAllOfItem(isNullableSchema);
+										propertySchema.setNullable(null);
+									}
+
+									// Copy default value to allOf item, if applicable.
+									if (propertySchema.getDefault() != null) {
+										final var defaultValueSchema = new Schema();
+										defaultValueSchema.setDefault(propertySchema.getDefault());
+										propertySchema.addAllOfItem(defaultValueSchema);
+										propertySchema.setDefault(null);
+									}
+
+									// Copy description to allOf item, if applicable.
+									if (propertySchema.getDescription() != null) {
+										final var descriptionSchema = new Schema();
+										descriptionSchema.setDescription(propertySchema.getDescription());
+										propertySchema.addAllOfItem(descriptionSchema);
+										propertySchema.setDescription(null);
+									}
 								} else {
 									MapperProperty.setSchemaType(propertySchema, itemsSchema.getType());
 									MapperProperty.setSchemaFormat(propertySchema, itemsSchema.getFormat());
@@ -206,6 +257,17 @@ public class MapperProperty {
 
 								// Now clear out the original items.
 								propertySchema.setItems(null);
+
+								// Keep track of property names that are plural, but should be singular.
+								if (propertyName.equals(ObaUtils.getPluralOf(propertyName))) {
+									convertedPropertySchemas.put(
+											ObaUtils.getSingularOf(propertyName), propertySchema);
+								}
+							} else {
+								// Keep track of property names that are singular, but should be plural.
+								if (!propertyName.equals(ObaUtils.getPluralOf(propertyName))) {
+									convertedPropertySchemas.put(ObaUtils.getPluralOf(propertyName), propertySchema);
+								}
 							}
 
 							// Because non-arrays are allowed by the configuration, we do not need min/max items
@@ -218,57 +280,104 @@ public class MapperProperty {
 									|| (!shouldBeArray
 											&& classSchemaToConvert.getRequired() != null
 											&& classSchemaToConvert.getRequired().contains(propertyName))) {
-								if (Objects.requireNonNullElse(propertySchema.getMinItems(), -1) == 1
-										&& Objects.requireNonNullElse(propertySchema.getMaxItems(), -1) == 1) {
-									propertySchema.setMaxItems(null);
-									propertySchema.setMinItems(null);
-								} else if (Objects.requireNonNullElse(propertySchema.getMaxItems(), -1) == 1) {
-									propertySchema.setMaxItems(null);
+
+								if (maxItems == 1) {
+									if (minItems == 1) {
+										propertySchema.setMaxItems(null);
+										propertySchema.setMinItems(null);
+									} else {
+										propertySchema.setMaxItems(null);
+
+										// Setting nullable can be done on the schema ONLY IF there is not an allOf
+										// sub-property.
+										// In the latter case, add the nullable value to one of the allOf entries.
+										if (propertySchema.getAllOf() != null) {
+											var containsNullableSchema = false;
+
+											for (final var allOfItem : propertySchema.getAllOf()) {
+												((Schema) allOfItem).setNullable(true);
+												containsNullableSchema = true;
+											}
+
+											if (!containsNullableSchema) {
+												final var isNullableSchema = new Schema();
+												isNullableSchema.setNullable(true);
+												propertySchema.addAllOfItem(isNullableSchema);
+												propertySchema.setNullable(null); // Just in case
+											}
+										} else {
+											MapperProperty.setNullableValueForPropertySchema(propertySchema, true);
+										}
+									}
+								}
+							}
+
+							if (!shouldBeArray && minItems < 1 && maxItems == 1) {
+								propertySchema.setMinItems(null);
+								propertySchema.setMaxItems(null);
+
+								// Setting nullable can be done on the schema ONLY IF there is not an allOf
+								// sub-property.
+								// In the latter case, add the nullable value to one of the allOf entries.
+								if (propertySchema.getAllOf() != null) {
+									var containsNullableSchema = false;
+
+									for (final var allOfItem : propertySchema.getAllOf()) {
+										((Schema) allOfItem).setNullable(true);
+										containsNullableSchema = true;
+									}
+
+									if (!containsNullableSchema) {
+										final var isNullableSchema = new Schema();
+										isNullableSchema.setNullable(true);
+										propertySchema.addAllOfItem(isNullableSchema);
+										propertySchema.setNullable(null); // Just in case
+									}
+								} else {
 									MapperProperty.setNullableValueForPropertySchema(propertySchema, true);
 								}
 							}
 
-							if (shouldBeArray) {
-								if (propertyName.equals(ObaUtils.getSingularOf(propertyName))) {
-									convertedPropertySchemas.put(ObaUtils.getPluralOf(propertyName), propertySchema);
-								}
-							} else {
-								if (!propertyName.equals(ObaUtils.getSingularOf(propertyName))) {
-									convertedPropertySchemas.put(
-											ObaUtils.getSingularOf(propertyName), propertySchema);
-								}
+							if (!isFunctional && minItems < 1 && classSchemaToConvert.getRequired() != null) {
+								classSchemaToConvert.getRequired().remove(propertyName);
 							}
 						}
 					}
 				});
 
-		convertedPropertySchemas.forEach(
-				(newPropertySchemaName, originalSchema) -> {
-					// TODO: for now, only warn.  These should be off be default, but can be enabled with a
-					// new config file property
-					// propertySchemas.remove(originalSchema.getName());
-					// propertySchemas.put(newPropertySchemaName, originalSchema);
+		if (fixSingularPluralPropertyNames != null && fixSingularPluralPropertyNames.booleanValue()) {
+			convertedPropertySchemas.forEach(
+					(newPropertySchemaName, originalSchema) -> {
+						propertySchemas.remove(originalSchema.getName());
+						propertySchemas.put(newPropertySchemaName, originalSchema);
 
-					logger.warning("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+						if (classSchemaToConvert.getRequired() != null
+								&& classSchemaToConvert.getRequired().contains(originalSchema.getName())) {
+							classSchemaToConvert.getRequired().remove(originalSchema.getName());
+							classSchemaToConvert.getRequired().add(newPropertySchemaName);
+						}
 
-					if (newPropertySchemaName.equals(ObaUtils.getPluralOf(originalSchema.getName()))) {
-						logger.warning(
-								"!!! Property \""
-										+ originalSchema.getName()
-										+ "\" is an array.  Should it be \""
-										+ newPropertySchemaName
-										+ "\" instead?? !!!");
-					} else {
-						logger.warning(
-								"!!! Property \""
-										+ originalSchema.getName()
-										+ "\" is not an array.  Should it be \""
-										+ newPropertySchemaName
-										+ "\" instead?? !!!");
-					}
+						logger.warning("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
 
-					logger.warning("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-				});
+						if (newPropertySchemaName.equals(ObaUtils.getPluralOf(originalSchema.getName()))) {
+							logger.warning(
+									"!!! Property \""
+											+ originalSchema.getName()
+											+ "\" is an array.  Should it be \""
+											+ newPropertySchemaName
+											+ "\" instead?? !!!");
+						} else {
+							logger.warning(
+									"!!! Property \""
+											+ originalSchema.getName()
+											+ "\" is not an array.  Should it be \""
+											+ newPropertySchemaName
+											+ "\" instead?? !!!");
+						}
+
+						logger.warning("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+					});
+		}
 	}
 
 	/**
