@@ -16,6 +16,7 @@ import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.semanticweb.owlapi.model.AxiomType;
+import org.semanticweb.owlapi.model.OWLAxiom;
 import org.semanticweb.owlapi.model.OWLBooleanClassExpression;
 import org.semanticweb.owlapi.model.OWLClass;
 import org.semanticweb.owlapi.model.OWLClassExpression;
@@ -492,6 +493,9 @@ public class ObjectVisitor implements OWLObjectVisitor {
 															(entity) -> {
 																this.setDescriptionReadOnlyWriteOnlyFromAnnotations(entity);
 															});
+
+											// Also check the subClass axioms for annotations specifying read/write only.
+											this.setReadOnlyWriteOnlyFromAxiomAnnotations(ax);
 										}
 
 										// Clear out the property name.
@@ -540,8 +544,7 @@ public class ObjectVisitor implements OWLObjectVisitor {
 													entity,
 													this.ontologies,
 													this.configData.getConfigFlagValue(CONFIG_FLAG.DEFAULT_DESCRIPTIONS));
-
-									MapperObjectProperty.setSchemaDescription(propertySchema, propertyDescription);
+									MapperProperty.setSchemaDescription(propertySchema, propertyDescription);
 								}
 
 								// If property contains the annotation property (name is specified in configuration
@@ -552,7 +555,7 @@ public class ObjectVisitor implements OWLObjectVisitor {
 										&& !readOnlyAnnotation.isBlank()
 										&& readOnlyAnnotation.equals(
 												annotation.getProperty().getIRI().getShortForm())) {
-									MapperObjectProperty.setReadOnlyValueForPropertySchema(propertySchema, true);
+									MapperProperty.setReadOnlyValueForPropertySchema(propertySchema, true);
 								}
 
 								// If property contains the annotation property (name is specified in configuration
@@ -563,10 +566,53 @@ public class ObjectVisitor implements OWLObjectVisitor {
 										&& !writeOnlyAnnotation.isBlank()
 										&& writeOnlyAnnotation.equals(
 												annotation.getProperty().getIRI().getShortForm())) {
-									MapperObjectProperty.setWriteOnlyValueForPropertySchema(propertySchema, true);
+									MapperProperty.setWriteOnlyValueForPropertySchema(propertySchema, true);
 								}
 							});
 		}
+	}
+
+	/**
+	 * For an OWLAxiom, check its annotations. If has a read/write one then update the property schema
+	 * with write/read only annotation flags.
+	 *
+	 * @param axiom an {@link OWLAxiom}
+	 */
+	private void setReadOnlyWriteOnlyFromAxiomAnnotations(OWLAxiom axiom) {
+		axiom
+				.annotations()
+				.forEach(
+						annotation -> {
+							var propertySchema =
+									this.classSchema.getProperties() == null
+											? null
+											: (Schema)
+													this.classSchema.getProperties().get(this.currentlyProcessedPropertyName);
+
+							if (propertySchema != null) {
+								// If property contains the annotation property (name is specified in configuration
+								// file) indicating it is read-only, then set value on the schema.
+								final var readOnlyAnnotation =
+										this.configData.getSchema_property_read_only_annotation();
+								if (readOnlyAnnotation != null
+										&& !readOnlyAnnotation.isBlank()
+										&& readOnlyAnnotation.equals(
+												annotation.getProperty().getIRI().getShortForm())) {
+									MapperProperty.setReadOnlyValueForPropertySchema(propertySchema, true);
+								}
+
+								// If property contains the annotation property (name is specified in configuration
+								// file) indicating it is write-only, then set value on the schema.
+								final var writeOnlyAnnotation =
+										this.configData.getSchema_property_write_only_annotation();
+								if (writeOnlyAnnotation != null
+										&& !writeOnlyAnnotation.isBlank()
+										&& writeOnlyAnnotation.equals(
+												annotation.getProperty().getIRI().getShortForm())) {
+									MapperProperty.setWriteOnlyValueForPropertySchema(propertySchema, true);
+								}
+							}
+						});
 	}
 
 	/**
