@@ -192,9 +192,21 @@ class MapperDataProperty extends MapperProperty {
 	private static Schema getTypeSchema(String owlDatatype) {
 		switch (MapperDataProperty.getDataType(owlDatatype)) {
 			case STRING_TYPE:
-				return new StringSchema();
+				final var stringSchema = new StringSchema();
+				MapperDataProperty.setSchemaFormat(
+						stringSchema,
+						MapperDataProperty.getFormatForDatatype(owlDatatype).isBlank()
+								? null
+								: MapperDataProperty.getFormatForDatatype(owlDatatype));
+				return stringSchema;
 			case NUMBER_TYPE:
-				return new NumberSchema();
+				final var numberSchema = new NumberSchema();
+				MapperDataProperty.setSchemaFormat(
+						numberSchema,
+						MapperDataProperty.getFormatForDatatype(owlDatatype).isBlank()
+								? null
+								: MapperDataProperty.getFormatForDatatype(owlDatatype));
+				return numberSchema;
 			case INTEGER_TYPE:
 				final var integerSchema = new IntegerSchema();
 				if ("nonNegativeInteger".equals(MapperDataProperty.getScrubbedDataType(owlDatatype))
@@ -205,10 +217,16 @@ class MapperDataProperty extends MapperProperty {
 					integerSchema.setMaximum(BigDecimal.ZERO);
 				}
 
+				MapperDataProperty.setSchemaFormat(
+						integerSchema,
+						MapperDataProperty.getFormatForDatatype(owlDatatype).isBlank()
+								? null
+								: MapperDataProperty.getFormatForDatatype(owlDatatype));
 				return integerSchema;
 			case BOOLEAN_TYPE:
 				return new BooleanSchema();
 			case DATETIME_TYPE:
+				// The Swagger OAS automatically sets this schema to "type: string" and "format: date-time".
 				return new DateTimeSchema();
 			default:
 				logger.warning("datatype mapping failed: " + owlDatatype);
@@ -579,6 +597,7 @@ class MapperDataProperty extends MapperProperty {
 		final var itemsSchema = propertySchema.getItems();
 		if (itemsSchema == null) {
 			final var dataTypeSchema = MapperDataProperty.getTypeSchema(dataRangeType);
+			// MapperDataProperty.setf
 			propertySchema.setItems(dataTypeSchema);
 		}
 
