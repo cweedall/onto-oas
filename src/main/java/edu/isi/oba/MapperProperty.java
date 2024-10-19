@@ -9,6 +9,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import org.semanticweb.owlapi.model.OWLLiteral;
 
@@ -86,6 +87,9 @@ public class MapperProperty {
 	 */
 	public static void setReadOnlyValueForPropertySchema(Schema propertySchema, Boolean isReadOnly) {
 		propertySchema.setReadOnly(isReadOnly);
+
+		// If property is read-only, then it doesn't need a nullable value.
+		propertySchema.setNullable(null);
 	}
 
 	/**
@@ -295,8 +299,11 @@ public class MapperProperty {
 											var containsNullableSchema = false;
 
 											for (final var allOfItem : propertySchema.getAllOf()) {
-												((Schema) allOfItem).setNullable(true);
-												containsNullableSchema = true;
+												containsNullableSchema |=
+														Optional.ofNullable(((Schema) allOfItem).getNullable()).orElse(false);
+												if (containsNullableSchema) {
+													((Schema) allOfItem).setNullable(true);
+												}
 											}
 
 											if (!containsNullableSchema) {
@@ -323,8 +330,11 @@ public class MapperProperty {
 									var containsNullableSchema = false;
 
 									for (final var allOfItem : propertySchema.getAllOf()) {
-										((Schema) allOfItem).setNullable(true);
-										containsNullableSchema = true;
+										containsNullableSchema |=
+												Optional.ofNullable(((Schema) allOfItem).getNullable()).orElse(false);
+										if (containsNullableSchema) {
+											((Schema) allOfItem).setNullable(true);
+										}
 									}
 
 									if (!containsNullableSchema) {
@@ -341,6 +351,10 @@ public class MapperProperty {
 							if (!isFunctional && minItems < 1 && classSchemaToConvert.getRequired() != null) {
 								classSchemaToConvert.getRequired().remove(propertyName);
 							}
+						}
+
+						if (propertySchema.getReadOnly() != null && propertySchema.getNullable() != null) {
+							MapperProperty.setNullableValueForPropertySchema(propertySchema, null);
 						}
 					}
 				});

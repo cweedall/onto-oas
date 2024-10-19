@@ -335,7 +335,6 @@ public class MapperObjectProperty extends MapperProperty {
 		MapperProperty.addMinCardinalityToPropertySchema(propertySchema, cardinalityInt);
 
 		final var objSchema = new ObjectSchema();
-		MapperProperty.setSchemaType(objSchema, "object");
 		objSchema.set$ref(objectRange);
 		propertySchema.setItems(objSchema);
 	}
@@ -353,7 +352,6 @@ public class MapperObjectProperty extends MapperProperty {
 		MapperProperty.addMaxCardinalityToPropertySchema(propertySchema, cardinalityInt);
 
 		final var objSchema = new ObjectSchema();
-		MapperProperty.setSchemaType(objSchema, "object");
 		objSchema.set$ref(objectRange);
 		propertySchema.setItems(objSchema);
 	}
@@ -371,7 +369,6 @@ public class MapperObjectProperty extends MapperProperty {
 		propertySchema.setMaxItems(cardinalityInt);
 
 		final var objSchema = new ObjectSchema();
-		MapperProperty.setSchemaType(objSchema, "object");
 		objSchema.set$ref(objectRange);
 		propertySchema.setItems(objSchema);
 	}
@@ -396,7 +393,6 @@ public class MapperObjectProperty extends MapperProperty {
 		for (OWLClassExpression e : ce.getOperands()) {
 			if (e.isOWLClass()) {
 				final var objSchema = new ObjectSchema();
-				MapperProperty.setSchemaType(objSchema, "object");
 
 				if (allowReferences) {
 					objSchema.set$ref(e.asOWLClass().getIRI().getShortForm());
