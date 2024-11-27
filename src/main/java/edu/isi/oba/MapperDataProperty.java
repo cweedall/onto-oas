@@ -10,6 +10,7 @@ import io.swagger.v3.oas.models.media.NumberSchema;
 import io.swagger.v3.oas.models.media.Schema;
 import io.swagger.v3.oas.models.media.StringSchema;
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -692,18 +693,44 @@ class MapperDataProperty extends MapperProperty {
 			itemsSchema = dataPropertySchema.getItems();
 		}
 
-		// Only add anyOf value if there are no enum values.
-		if (itemsSchema.getEnum() == null || itemsSchema.getEnum().isEmpty()) {
-			// Only add anyOf value if the value is not already included.
-			if (itemsSchema.getTypes() == null
-					|| !itemsSchema.getTypes().contains(complexDataRangeSchema.getTypes())) {
-				for (final var type : (Set<String>) complexDataRangeSchema.getTypes()) {
-					itemsSchema.addType(type);
+		// Only add anyOf value if the value is not already included.
+		final var allOfItems = complexDataRangeSchema.getAllOf();
+		if (allOfItems != null) {
+			for (final var allOfItem : allOfItems) {
+				final var itemsSchemaAllOf =
+						itemsSchema.getAllOf() == null ? new ArrayList() : itemsSchema.getAllOf();
+				if (!itemsSchemaAllOf.contains(allOfItem)) {
+					itemsSchemaAllOf.add(allOfItem);
 				}
-
-				dataPropertySchema.setItems(itemsSchema);
-				MapperProperty.setSchemaType(dataPropertySchema, "array");
+				itemsSchema.setAllOf(itemsSchemaAllOf);
 			}
+			;
+
+			MapperProperty.setSchemaType(itemsSchema, null);
+			MapperProperty.setSchemaFormat(itemsSchema, null);
+
+			dataPropertySchema.setItems(itemsSchema);
+			MapperProperty.setSchemaType(dataPropertySchema, "array");
+		}
+
+		// Only add anyOf value if the value is not already included.
+		final var anyOfItems = complexDataRangeSchema.getAnyOf();
+		if (anyOfItems != null) {
+			for (final var anyOfItem : anyOfItems) {
+				final var itemsSchemaAnyOf =
+						itemsSchema.getAnyOf() == null ? new ArrayList() : itemsSchema.getAnyOf();
+				if (itemsSchemaAnyOf == null || !itemsSchemaAnyOf.contains(anyOfItem)) {
+					itemsSchemaAnyOf.add(anyOfItem);
+				}
+				itemsSchema.setAnyOf(itemsSchemaAnyOf);
+			}
+			;
+
+			MapperProperty.setSchemaType(itemsSchema, null);
+			MapperProperty.setSchemaFormat(itemsSchema, null);
+
+			dataPropertySchema.setItems(itemsSchema);
+			MapperProperty.setSchemaType(dataPropertySchema, "array");
 		}
 	}
 

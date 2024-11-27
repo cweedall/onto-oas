@@ -584,8 +584,7 @@ public class RestrictionsTest {
 
 		// Get the property to check data property someValuesFrom.
 		// The "memberOfOtherDepartments" property of "ProfessorInArtificialIntelligence" has some
-		// values from an intersection of "xsd:nonNegativeInteger" and "xsd:nonPositiveInteger"
-		// (That means it has an anyOf > allOf hierarchy)
+		// values from an intersection (allOf) of "xsd:nonNegativeInteger" and "xsd:nonPositiveInteger".
 		// Both are integers (format: int32), differing only by their "minimum" and "maximum" values.
 		final var property = (Schema) schema.getProperties().get("memberOfOtherDepartments");
 		Assertions.assertNotNull(property);
@@ -597,24 +596,15 @@ public class RestrictionsTest {
 		// @see https://owl-to-oas.readthedocs.io/en/latest/mapping/#someValuesFromExample
 		Assertions.assertEquals(false, property.getNullable());
 
-		// Because the property has an intersection within someValuesFrom restriction, it occurs under
-		// the items > anyOf > allOf hierarchy.
-		Assertions.assertNotNull(items.getAnyOf());
-		Assertions.assertEquals(1, items.getAnyOf().size());
+		// The property has an intersection within someValuesFrom restriction, so want allOf.
+		final var allOfList = items.getAllOf();
+		Assertions.assertNotNull(allOfList);
+		Assertions.assertEquals(2, allOfList.size());
 
-		// There should be exactly one anyOf item (which is a ComposedSchema containing two allOf
-		// items).
-		final var allOfComposedSchema = (Schema) items.getAnyOf().get(0);
-		Assertions.assertNotNull(allOfComposedSchema);
-
-		final var allOfSchemas = allOfComposedSchema.getAllOf();
-		Assertions.assertNotNull(allOfSchemas);
-		Assertions.assertNotNull(allOfSchemas.get(0));
-		Assertions.assertNotNull(allOfSchemas.get(1));
-		Assertions.assertEquals(expectedTypeResult, ((Schema) allOfSchemas.get(0)).getType());
-		Assertions.assertEquals(expectedTypeResult, ((Schema) allOfSchemas.get(1)).getType());
-		Assertions.assertEquals(expectedFormatResult, ((Schema) allOfSchemas.get(0)).getFormat());
-		Assertions.assertEquals(expectedFormatResult, ((Schema) allOfSchemas.get(1)).getFormat());
+		Assertions.assertEquals(expectedTypeResult, ((Schema) allOfList.get(0)).getType());
+		Assertions.assertEquals(expectedTypeResult, ((Schema) allOfList.get(1)).getType());
+		Assertions.assertEquals(expectedFormatResult, ((Schema) allOfList.get(0)).getFormat());
+		Assertions.assertEquals(expectedFormatResult, ((Schema) allOfList.get(1)).getFormat());
 	}
 
 	/**
