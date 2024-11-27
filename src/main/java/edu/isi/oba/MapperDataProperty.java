@@ -10,15 +10,18 @@ import io.swagger.v3.oas.models.media.NumberSchema;
 import io.swagger.v3.oas.models.media.Schema;
 import io.swagger.v3.oas.models.media.StringSchema;
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.semanticweb.owlapi.model.OWLAnnotation;
 import org.semanticweb.owlapi.model.OWLDataIntersectionOf;
 import org.semanticweb.owlapi.model.OWLDataRange;
 import org.semanticweb.owlapi.model.OWLDataUnionOf;
 import org.semanticweb.owlapi.model.OWLDatatype;
+import org.semanticweb.owlapi.model.OWLFacetRestriction;
 import org.semanticweb.owlapi.model.OWLLiteral;
 import org.semanticweb.owlapi.model.OWLNaryDataRange;
 
@@ -84,6 +87,39 @@ class MapperDataProperty extends MapperProperty {
 	public static final String INTEGER_TYPE = "integer";
 	public static final String BOOLEAN_TYPE = "boolean";
 	public static final String DATETIME_TYPE = "dateTime";
+
+	/**
+	 * Set the example for a property's {@link Schema}.
+	 *
+	 * @param propertySchema a (data / object) property {@link Schema}.
+	 * @param isReadOnly a string value indicating the example.
+	 */
+	public static void setExampleValueForPropertySchema(
+			Schema propertySchema, OWLAnnotation exampleValueAnnotation) {
+
+		final var exampleValueAnnotationLiteralValue = exampleValueAnnotation.getValue().literalValue();
+		if (exampleValueAnnotationLiteralValue.isPresent()) {
+			final var exampleValueDatatype = exampleValueAnnotationLiteralValue.get().getDatatype();
+			final var exampleValueData = exampleValueAnnotationLiteralValue.get().getLiteral();
+			switch (MapperDataProperty.getDataType(exampleValueDatatype)) {
+				case STRING_TYPE:
+					propertySchema.setExample(String.valueOf(exampleValueData));
+					break;
+				case NUMBER_TYPE:
+					propertySchema.setExample(Double.valueOf(exampleValueData));
+					break;
+				case INTEGER_TYPE:
+					propertySchema.setExample(Integer.valueOf(exampleValueData));
+					break;
+				case BOOLEAN_TYPE:
+					propertySchema.setExample(Boolean.valueOf(exampleValueData));
+					break;
+				default:
+					// Treat as a String type, if unknown
+					propertySchema.setExample(String.valueOf(exampleValueData));
+			}
+		}
+	}
 
 	/**
 	 * Create a data property {@link Schema}.
@@ -310,8 +346,6 @@ class MapperDataProperty extends MapperProperty {
 	 * @param dataRangeType a {@link String} value indicating the data range type.
 	 */
 	public static void addAnyOfDataPropertySchema(Schema dataPropertySchema, String dataRangeType) {
-		// Always set nullable to false for owl:someValuesFrom
-		// @see https://owl-to-oas.readthedocs.io/en/latest/mapping/#someValuesFromExample
 		MapperProperty.setNullableValueForPropertySchema(dataPropertySchema, false);
 
 		Schema itemsSchema = null;
@@ -347,8 +381,6 @@ class MapperDataProperty extends MapperProperty {
 	 */
 	public static void addAnyOfDataPropertySchema(
 			Schema dataPropertySchema, Schema complexDataRangeSchema) {
-		// Always set nullable to false for owl:someValuesFrom
-		// @see https://owl-to-oas.readthedocs.io/en/latest/mapping/#someValuesFromExample
 		MapperProperty.setNullableValueForPropertySchema(dataPropertySchema, false);
 
 		Schema itemsSchema = null;
@@ -602,6 +634,116 @@ class MapperDataProperty extends MapperProperty {
 		}
 
 		MapperProperty.setSchemaType(propertySchema, "array");
+	}
+
+	/**
+	 * Add an someValuesFrom value to an data property {@link Schema}.
+	 *
+	 * @param dataPropertySchema an data property {@link Schema}.
+	 * @param dataRangeType a {@link String} value indicating the data range type.
+	 */
+	public static void addSomeValuesFromToDataPropertySchema(
+			Schema dataPropertySchema, String dataRangeType) {
+		// Always set nullable to false for owl:someValuesFrom
+		// @see https://owl-to-oas.readthedocs.io/en/latest/mapping/#someValuesFromExample
+		MapperProperty.setNullableValueForPropertySchema(dataPropertySchema, false);
+
+		Schema itemsSchema = null;
+
+		if (dataPropertySchema.getItems() == null) {
+			itemsSchema = new ComposedSchema();
+		} else {
+			itemsSchema = dataPropertySchema.getItems();
+		}
+
+		// Only add anyOf value if there are no enum values.
+		if (itemsSchema.getEnum() == null || itemsSchema.getEnum().isEmpty()) {
+			// Only add anyOf value if the value is not already included.
+			if (itemsSchema.getType() == null || !itemsSchema.getType().equals(dataRangeType)) {
+				final var dataTypeSchema = MapperDataProperty.getTypeSchema(dataRangeType);
+
+				itemsSchema.addType(dataRangeType);
+				MapperProperty.setSchemaType(itemsSchema, null);
+
+				dataPropertySchema.setItems(itemsSchema);
+				MapperProperty.setSchemaType(dataPropertySchema, "array");
+			}
+		}
+	}
+
+	/**
+	 * Add an someValuesFrom value to an data property {@link Schema}. NOTE: the complex data range
+	 * schema (intended to be union of / intersection of) should be generated via
+	 * getComplexDataComposedSchema() before calling this method.
+	 *
+	 * @param dataPropertySchema an data property {@link Schema}.
+	 * @param complexDataRangeSchema a {@link Schema} containing one or more data range types.
+	 */
+	public static void addSomeValuesFromToDataPropertySchema(
+			Schema dataPropertySchema, Schema complexDataRangeSchema) {
+		// Always set nullable to false for owl:someValuesFrom
+		// @see https://owl-to-oas.readthedocs.io/en/latest/mapping/#someValuesFromExample
+		MapperProperty.setNullableValueForPropertySchema(dataPropertySchema, false);
+
+		Schema itemsSchema = null;
+
+		if (dataPropertySchema.getItems() == null) {
+			itemsSchema = new ComposedSchema();
+		} else {
+			itemsSchema = dataPropertySchema.getItems();
+		}
+
+		// Only add anyOf value if the value is not already included.
+		final var allOfItems = complexDataRangeSchema.getAllOf();
+		if (allOfItems != null) {
+			for (final var allOfItem : allOfItems) {
+				final var itemsSchemaAllOf =
+						itemsSchema.getAllOf() == null ? new ArrayList() : itemsSchema.getAllOf();
+				if (!itemsSchemaAllOf.contains(allOfItem)) {
+					itemsSchemaAllOf.add(allOfItem);
+				}
+				itemsSchema.setAllOf(itemsSchemaAllOf);
+			}
+			;
+
+			MapperProperty.setSchemaType(itemsSchema, null);
+			MapperProperty.setSchemaFormat(itemsSchema, null);
+
+			dataPropertySchema.setItems(itemsSchema);
+			MapperProperty.setSchemaType(dataPropertySchema, "array");
+		}
+
+		// Only add anyOf value if the value is not already included.
+		final var anyOfItems = complexDataRangeSchema.getAnyOf();
+		if (anyOfItems != null) {
+			for (final var anyOfItem : anyOfItems) {
+				final var itemsSchemaAnyOf =
+						itemsSchema.getAnyOf() == null ? new ArrayList() : itemsSchema.getAnyOf();
+				if (itemsSchemaAnyOf == null || !itemsSchemaAnyOf.contains(anyOfItem)) {
+					itemsSchemaAnyOf.add(anyOfItem);
+				}
+				itemsSchema.setAnyOf(itemsSchemaAnyOf);
+			}
+			;
+
+			MapperProperty.setSchemaType(itemsSchema, null);
+			MapperProperty.setSchemaFormat(itemsSchema, null);
+
+			dataPropertySchema.setItems(itemsSchema);
+			MapperProperty.setSchemaType(dataPropertySchema, "array");
+		}
+	}
+
+	/**
+	 * Add a pattern to the property's {@link Schema}.
+	 *
+	 * @param propertySchema a data property {@link Schema}.
+	 * @param facetRestriction a {@link OWLFacetRestriction} value indicating the datatype and
+	 *     restriction for it.
+	 */
+	public static void addDatatypeRestrictionToPropertySchema(
+			Schema propertySchema, OWLFacetRestriction facetRestriction) {
+		propertySchema.setPattern(facetRestriction.getFacetValue().getLiteral());
 	}
 
 	/**

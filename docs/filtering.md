@@ -46,6 +46,16 @@ classes:
   - http://dbpedia.org/ontology/Genre
   - http://dbpedia.org/ontology/Band
 
+## OpenAPI processing
+### Configuration details for property annotations from the ontology.
+property_annotations:
+  ### Define an annotation property which indicates a boolean value whether the object/data property is read-only.
+  read_only_flag_name: isReadOnly
+  ### Define an annotation property which indicates a boolean value whether the object/data property is write-only.
+  write_only_flag_name: isWriteOnly
+  ### Define an annotation property which indicates a value (e.g. string, boolean, integer) which should be used for the "example" value for a schema's property.
+  example_value_name: exampleValue
+
 ## REFERENCES
 ### Enable/disable schema references.  This can be recursive and cause multiple depths/levels of reference.
 follow_references: false
