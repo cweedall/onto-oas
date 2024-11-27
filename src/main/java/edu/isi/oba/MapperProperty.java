@@ -176,7 +176,7 @@ public class MapperProperty {
 											&& enumProperties != null
 											&& enumProperties.contains(propertyName);
 
-							final var isArrayObjPropReference =
+							var isArrayObjPropReference =
 									hasObjPropReference
 											&& (!(hasMaxItems || hasMinItems) || minItems > 1 || maxItems > 1);
 
@@ -194,6 +194,16 @@ public class MapperProperty {
 														|| (itemsSchema.getAnyOf() != null && !itemsSchema.getAnyOf().isEmpty())
 														|| (itemsSchema.getOneOf() != null
 																&& !itemsSchema.getOneOf().isEmpty()));
+
+								// Edge case that's difficult to account for.  If minItems = 0 and maxItems is not
+								// defined (on the property schema), then we want to treat this as a
+								// "someValuesFrom" situation.  Basically, not minItems/maxItems defined on the
+								// schema and keep it as type: array and a reference in the items schema.
+								if (minItems == 0 && !hasMaxItems) {
+									shouldBeArray = true;
+									isArrayObjPropReference = true;
+									propertySchema.setMinItems(null);
+								}
 							}
 
 							// By default, everything is an array.  If this property is not, then convert it from
