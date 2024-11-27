@@ -35,6 +35,7 @@ import org.semanticweb.owlapi.model.OWLDataRestriction;
 import org.semanticweb.owlapi.model.OWLDataSomeValuesFrom;
 import org.semanticweb.owlapi.model.OWLDataUnionOf;
 import org.semanticweb.owlapi.model.OWLDatatype;
+import org.semanticweb.owlapi.model.OWLDatatypeRestriction;
 import org.semanticweb.owlapi.model.OWLEntity;
 import org.semanticweb.owlapi.model.OWLEquivalentClassesAxiom;
 import org.semanticweb.owlapi.model.OWLIndividual;
@@ -1783,22 +1784,59 @@ public class ObjectVisitor implements OWLObjectVisitor {
 				MapperDataProperty.addAllOfDataPropertySchema(currentPropertySchema, complexDataRange);
 			}
 		} else {
-			final var dataRestrictionRange = ce.asOWLDatatype().getIRI().getShortForm();
+			if (ce instanceof OWLDatatypeRestriction) {
+				final var restrictionDatatype = ((OWLDatatypeRestriction) ce).getDatatype();
+				for (final var facet : ((OWLDatatypeRestriction) ce).getFacetRestrictions()) {
+					final var dataRestrictionRange = restrictionDatatype.getIRI().getShortForm();
 
-			// Update current property schema with the appropriate restriction datatype/value.
-			if (dr instanceof OWLDataSomeValuesFrom) {
-				MapperDataProperty.addAnyOfDataPropertySchema(currentPropertySchema, dataRestrictionRange);
-			} else if (dr instanceof OWLDataAllValuesFrom) {
-				MapperDataProperty.addAllOfDataPropertySchema(currentPropertySchema, dataRestrictionRange);
-			} else if (dr instanceof OWLDataMinCardinality) {
-				MapperDataProperty.addMinCardinalityToPropertySchema(
-						currentPropertySchema, restrictionValue, dataRestrictionRange);
-			} else if (dr instanceof OWLDataMaxCardinality) {
-				MapperDataProperty.addMaxCardinalityToPropertySchema(
-						currentPropertySchema, restrictionValue, dataRestrictionRange);
-			} else if (dr instanceof OWLDataExactCardinality) {
-				MapperDataProperty.addExactCardinalityToPropertySchema(
-						currentPropertySchema, restrictionValue, dataRestrictionRange);
+					if (dataRestrictionRange != null) {
+						// Update current property schema with the appropriate restriction datatype/value.
+						if (dr instanceof OWLDataSomeValuesFrom) {
+							MapperDataProperty.addSomeValuesFromToDataPropertySchema(
+									currentPropertySchema, dataRestrictionRange);
+						} else if (dr instanceof OWLDataAllValuesFrom) {
+							MapperDataProperty.addAllOfDataPropertySchema(
+									currentPropertySchema, dataRestrictionRange);
+						} else if (dr instanceof OWLDataMinCardinality) {
+							MapperDataProperty.addMinCardinalityToPropertySchema(
+									currentPropertySchema, restrictionValue, dataRestrictionRange);
+						} else if (dr instanceof OWLDataMaxCardinality) {
+							MapperDataProperty.addMaxCardinalityToPropertySchema(
+									currentPropertySchema, restrictionValue, dataRestrictionRange);
+						} else if (dr instanceof OWLDataExactCardinality) {
+							MapperDataProperty.addExactCardinalityToPropertySchema(
+									currentPropertySchema, restrictionValue, dataRestrictionRange);
+						}
+
+						MapperDataProperty.addDatatypeRestrictionToPropertySchema(currentPropertySchema, facet);
+					} else {
+						logger.severe(
+								"\t   Invalid datatype restriction range (i.e. null).  Verify it is valid in the"
+										+ " ontology.");
+						logger.severe("");
+					}
+				}
+
+			} else {
+				final var dataRestrictionRange = ce.asOWLDatatype().getIRI().getShortForm();
+
+				// Update current property schema with the appropriate restriction datatype/value.
+				if (dr instanceof OWLDataSomeValuesFrom) {
+					MapperDataProperty.addSomeValuesFromToDataPropertySchema(
+							currentPropertySchema, dataRestrictionRange);
+				} else if (dr instanceof OWLDataAllValuesFrom) {
+					MapperDataProperty.addAllOfDataPropertySchema(
+							currentPropertySchema, dataRestrictionRange);
+				} else if (dr instanceof OWLDataMinCardinality) {
+					MapperDataProperty.addMinCardinalityToPropertySchema(
+							currentPropertySchema, restrictionValue, dataRestrictionRange);
+				} else if (dr instanceof OWLDataMaxCardinality) {
+					MapperDataProperty.addMaxCardinalityToPropertySchema(
+							currentPropertySchema, restrictionValue, dataRestrictionRange);
+				} else if (dr instanceof OWLDataExactCardinality) {
+					MapperDataProperty.addExactCardinalityToPropertySchema(
+							currentPropertySchema, restrictionValue, dataRestrictionRange);
+				}
 			}
 		}
 	}

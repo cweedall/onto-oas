@@ -20,6 +20,7 @@ import org.semanticweb.owlapi.model.OWLDataIntersectionOf;
 import org.semanticweb.owlapi.model.OWLDataRange;
 import org.semanticweb.owlapi.model.OWLDataUnionOf;
 import org.semanticweb.owlapi.model.OWLDatatype;
+import org.semanticweb.owlapi.model.OWLFacetRestriction;
 import org.semanticweb.owlapi.model.OWLLiteral;
 import org.semanticweb.owlapi.model.OWLNaryDataRange;
 
@@ -704,6 +705,18 @@ class MapperDataProperty extends MapperProperty {
 				MapperProperty.setSchemaType(dataPropertySchema, "array");
 			}
 		}
+	}
+
+	/**
+	 * Add a pattern to the property's {@link Schema}.
+	 *
+	 * @param propertySchema a data property {@link Schema}.
+	 * @param facetRestriction a {@link OWLFacetRestriction} value indicating the datatype and
+	 *     restriction for it.
+	 */
+	public static void addDatatypeRestrictionToPropertySchema(
+			Schema propertySchema, OWLFacetRestriction facetRestriction) {
+		propertySchema.setPattern(facetRestriction.getFacetValue().getLiteral());
 	}
 
 	/**
