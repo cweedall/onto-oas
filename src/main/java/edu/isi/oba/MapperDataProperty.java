@@ -310,8 +310,6 @@ class MapperDataProperty extends MapperProperty {
 	 * @param dataRangeType a {@link String} value indicating the data range type.
 	 */
 	public static void addAnyOfDataPropertySchema(Schema dataPropertySchema, String dataRangeType) {
-		// Always set nullable to false for owl:someValuesFrom
-		// @see https://owl-to-oas.readthedocs.io/en/latest/mapping/#someValuesFromExample
 		MapperProperty.setNullableValueForPropertySchema(dataPropertySchema, false);
 
 		Schema itemsSchema = null;
@@ -347,8 +345,6 @@ class MapperDataProperty extends MapperProperty {
 	 */
 	public static void addAnyOfDataPropertySchema(
 			Schema dataPropertySchema, Schema complexDataRangeSchema) {
-		// Always set nullable to false for owl:someValuesFrom
-		// @see https://owl-to-oas.readthedocs.io/en/latest/mapping/#someValuesFromExample
 		MapperProperty.setNullableValueForPropertySchema(dataPropertySchema, false);
 
 		Schema itemsSchema = null;
@@ -602,6 +598,78 @@ class MapperDataProperty extends MapperProperty {
 		}
 
 		MapperProperty.setSchemaType(propertySchema, "array");
+	}
+
+	/**
+	 * Add an someValuesFrom value to an data property {@link Schema}.
+	 *
+	 * @param dataPropertySchema an data property {@link Schema}.
+	 * @param dataRangeType a {@link String} value indicating the data range type.
+	 */
+	public static void addSomeValuesFromToDataPropertySchema(
+			Schema dataPropertySchema, String dataRangeType) {
+		// Always set nullable to false for owl:someValuesFrom
+		// @see https://owl-to-oas.readthedocs.io/en/latest/mapping/#someValuesFromExample
+		MapperProperty.setNullableValueForPropertySchema(dataPropertySchema, false);
+
+		Schema itemsSchema = null;
+
+		if (dataPropertySchema.getItems() == null) {
+			itemsSchema = new ComposedSchema();
+		} else {
+			itemsSchema = dataPropertySchema.getItems();
+		}
+
+		// Only add anyOf value if there are no enum values.
+		if (itemsSchema.getEnum() == null || itemsSchema.getEnum().isEmpty()) {
+			// Only add anyOf value if the value is not already included.
+			if (itemsSchema.getType() == null || !itemsSchema.getType().equals(dataRangeType)) {
+				final var dataTypeSchema = MapperDataProperty.getTypeSchema(dataRangeType);
+
+				itemsSchema.addType(dataRangeType);
+				MapperProperty.setSchemaType(itemsSchema, null);
+
+				dataPropertySchema.setItems(itemsSchema);
+				MapperProperty.setSchemaType(dataPropertySchema, "array");
+			}
+		}
+	}
+
+	/**
+	 * Add an someValuesFrom value to an data property {@link Schema}. NOTE: the complex data range
+	 * schema (intended to be union of / intersection of) should be generated via
+	 * getComplexDataComposedSchema() before calling this method.
+	 *
+	 * @param dataPropertySchema an data property {@link Schema}.
+	 * @param complexDataRangeSchema a {@link Schema} containing one or more data range types.
+	 */
+	public static void addSomeValuesFromToDataPropertySchema(
+			Schema dataPropertySchema, Schema complexDataRangeSchema) {
+		// Always set nullable to false for owl:someValuesFrom
+		// @see https://owl-to-oas.readthedocs.io/en/latest/mapping/#someValuesFromExample
+		MapperProperty.setNullableValueForPropertySchema(dataPropertySchema, false);
+
+		Schema itemsSchema = null;
+
+		if (dataPropertySchema.getItems() == null) {
+			itemsSchema = new ComposedSchema();
+		} else {
+			itemsSchema = dataPropertySchema.getItems();
+		}
+
+		// Only add anyOf value if there are no enum values.
+		if (itemsSchema.getEnum() == null || itemsSchema.getEnum().isEmpty()) {
+			// Only add anyOf value if the value is not already included.
+			if (itemsSchema.getTypes() == null
+					|| !itemsSchema.getTypes().contains(complexDataRangeSchema.getTypes())) {
+				for (final var type : (Set<String>) complexDataRangeSchema.getTypes()) {
+					itemsSchema.addType(type);
+				}
+
+				dataPropertySchema.setItems(itemsSchema);
+				MapperProperty.setSchemaType(dataPropertySchema, "array");
+			}
+		}
 	}
 
 	/**

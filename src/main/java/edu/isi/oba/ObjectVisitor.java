@@ -537,36 +537,40 @@ public class ObjectVisitor implements OWLObjectVisitor {
 												: (Schema)
 														this.classSchema.getProperties().get(entity.getIRI().getShortForm());
 
-								if (propertySchema.getDescription() == null
-										|| propertySchema.getDescription().isBlank()) {
-									final var propertyDescription =
-											ObaUtils.getDescription(
-													entity,
-													this.ontologies,
-													this.configData.getConfigFlagValue(CONFIG_FLAG.DEFAULT_DESCRIPTIONS));
-									MapperProperty.setSchemaDescription(propertySchema, propertyDescription);
-								}
+								if (propertySchema != null) {
+									if (propertySchema.getDescription() == null
+											|| propertySchema.getDescription().isBlank()) {
+										final var propertyDescription =
+												ObaUtils.getDescription(
+														entity,
+														this.ontologies,
+														this.configData.getConfigFlagValue(CONFIG_FLAG.DEFAULT_DESCRIPTIONS));
+										MapperProperty.setSchemaDescription(propertySchema, propertyDescription);
+									}
 
-								// If property contains the annotation property (name is specified in configuration
-								// file) indicating it is read-only, then set value on the schema.
-								final var readOnlyAnnotation =
-										this.configData.getSchema_property_read_only_annotation();
-								if (readOnlyAnnotation != null
-										&& !readOnlyAnnotation.isBlank()
-										&& readOnlyAnnotation.equals(
-												annotation.getProperty().getIRI().getShortForm())) {
-									MapperProperty.setReadOnlyValueForPropertySchema(propertySchema, true);
-								}
+									// If property contains the annotation property (name is specified in
+									// configuration
+									// file) indicating it is read-only, then set value on the schema.
+									final var readOnlyAnnotation =
+											this.configData.getSchema_property_read_only_annotation();
+									if (readOnlyAnnotation != null
+											&& !readOnlyAnnotation.isBlank()
+											&& readOnlyAnnotation.equals(
+													annotation.getProperty().getIRI().getShortForm())) {
+										MapperProperty.setReadOnlyValueForPropertySchema(propertySchema, true);
+									}
 
-								// If property contains the annotation property (name is specified in configuration
-								// file) indicating it is write-only, then set value on the schema.
-								final var writeOnlyAnnotation =
-										this.configData.getSchema_property_write_only_annotation();
-								if (writeOnlyAnnotation != null
-										&& !writeOnlyAnnotation.isBlank()
-										&& writeOnlyAnnotation.equals(
-												annotation.getProperty().getIRI().getShortForm())) {
-									MapperProperty.setWriteOnlyValueForPropertySchema(propertySchema, true);
+									// If property contains the annotation property (name is specified in
+									// configuration
+									// file) indicating it is write-only, then set value on the schema.
+									final var writeOnlyAnnotation =
+											this.configData.getSchema_property_write_only_annotation();
+									if (writeOnlyAnnotation != null
+											&& !writeOnlyAnnotation.isBlank()
+											&& writeOnlyAnnotation.equals(
+													annotation.getProperty().getIRI().getShortForm())) {
+										MapperProperty.setWriteOnlyValueForPropertySchema(propertySchema, true);
+									}
 								}
 							});
 		}
@@ -1528,7 +1532,7 @@ public class ObjectVisitor implements OWLObjectVisitor {
 							this.configData.getConfigFlagValue(CONFIG_FLAG.FOLLOW_REFERENCES));
 
 			if (or instanceof OWLObjectSomeValuesFrom) {
-				MapperObjectProperty.addAnyOfToObjectPropertySchema(
+				MapperObjectProperty.addSomeValuesFromToObjectPropertySchema(
 						currentPropertySchema, complexObjectRange);
 			} else if (or instanceof OWLObjectAllValuesFrom) {
 				MapperObjectProperty.addAllOfToObjectPropertySchema(
@@ -1546,7 +1550,7 @@ public class ObjectVisitor implements OWLObjectVisitor {
 
 			// Update current property schema with the appropriate restriction range/value.
 			if (or instanceof OWLObjectSomeValuesFrom) {
-				MapperObjectProperty.addAnyOfToObjectPropertySchema(
+				MapperObjectProperty.addSomeValuesFromToObjectPropertySchema(
 						currentPropertySchema, objRestrictionRange);
 			} else if (or instanceof OWLObjectAllValuesFrom) {
 				MapperObjectProperty.addAllOfToObjectPropertySchema(
@@ -1732,7 +1736,8 @@ public class ObjectVisitor implements OWLObjectVisitor {
 					MapperDataProperty.getComplexDataComposedSchema((OWLNaryDataRange) ce);
 
 			if (dr instanceof OWLDataSomeValuesFrom) {
-				MapperDataProperty.addAnyOfDataPropertySchema(currentPropertySchema, complexDataRange);
+				MapperDataProperty.addSomeValuesFromToDataPropertySchema(
+						currentPropertySchema, complexDataRange);
 			} else if (dr instanceof OWLDataAllValuesFrom) {
 				MapperDataProperty.addAllOfDataPropertySchema(currentPropertySchema, complexDataRange);
 			}

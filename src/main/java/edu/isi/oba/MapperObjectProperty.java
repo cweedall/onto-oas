@@ -107,8 +107,6 @@ public class MapperObjectProperty extends MapperProperty {
 	 * @param anyOfItem a {@link String} value (i.e. OWLClass' short form name) to add
 	 */
 	public static void addAnyOfToObjectPropertySchema(Schema objectPropertySchema, String anyOfItem) {
-		// Always set nullable to false for owl:someValuesFrom
-		// @see https://owl-to-oas.readthedocs.io/en/latest/mapping/#someValuesFromExample
 		MapperProperty.setNullableValueForPropertySchema(objectPropertySchema, false);
 
 		Schema itemsSchema = null;
@@ -371,6 +369,99 @@ public class MapperObjectProperty extends MapperProperty {
 		final var objSchema = new ObjectSchema();
 		objSchema.set$ref(objectRange);
 		propertySchema.setItems(objSchema);
+	}
+
+	/**
+	 * Add an someValuesFrom value to an object property {@link Schema}.
+	 *
+	 * @param objectPropertySchema an object property {@link Schema}.
+	 * @param someValuesFromItem a {@link String} value (i.e. OWLClass' short form name) to add
+	 */
+	public static void addSomeValuesFromToObjectPropertySchema(
+			Schema objectPropertySchema, String someValuesFromItem) {
+		// Always set nullable to false for owl:someValuesFrom
+		// @see https://owl-to-oas.readthedocs.io/en/latest/mapping/#someValuesFromExample
+		MapperProperty.setNullableValueForPropertySchema(objectPropertySchema, false);
+
+		Schema itemsSchema = null;
+
+		if (objectPropertySchema.getItems() == null) {
+			itemsSchema = new ComposedSchema();
+		} else {
+			itemsSchema = objectPropertySchema.getItems();
+
+			// oneOf takes priority over (and cannot co-occur with) allOf/anyOf.
+			itemsSchema.setAllOf(null);
+			itemsSchema.setAnyOf(null);
+		}
+
+		// Only add anyOf value if there are no enum values.
+		if (itemsSchema.getEnum() == null || itemsSchema.getEnum().isEmpty()) {
+			// Only add anyOf value if the value is not already included.
+			if (itemsSchema.getAnyOf() == null || !itemsSchema.getAnyOf().contains(someValuesFromItem)) {
+				// There are cases where the property has a range (i.e. the items schema has a ref), but
+				// class restrictions have been added which further restrict it with an anyOf.
+				// So, we need to unset the items reference first.
+				if (itemsSchema.get$ref() != null) {
+					itemsSchema.set$ref(null);
+				}
+
+				final var objSchema = new ObjectSchema();
+				objSchema.set$ref(someValuesFromItem);
+
+				itemsSchema.set$ref(someValuesFromItem);
+
+				MapperProperty.setSchemaType(itemsSchema, null);
+
+				objectPropertySchema.setItems(itemsSchema);
+				MapperProperty.setSchemaType(objectPropertySchema, "array");
+			}
+		}
+	}
+
+	/**
+	 * Add an someValuesFrom value to an object property {@link Schema}.
+	 *
+	 * @param objectPropertySchema an object property {@link Schema}.
+	 * @param complexObjRangeSchema a {@link Schema} containing one or more object range references.
+	 */
+	public static void addSomeValuesFromToObjectPropertySchema(
+			Schema objectPropertySchema, Schema complexObjRangeSchema) {
+		// Always set nullable to false for owl:someValuesFrom
+		// @see https://owl-to-oas.readthedocs.io/en/latest/mapping/#someValuesFromExample
+		MapperProperty.setNullableValueForPropertySchema(objectPropertySchema, false);
+
+		Schema itemsSchema = null;
+
+		if (objectPropertySchema.getItems() == null) {
+			itemsSchema = new ComposedSchema();
+		} else {
+			itemsSchema = objectPropertySchema.getItems();
+
+			// oneOf takes priority over (and cannot co-occur with) allOf/anyOf.
+			itemsSchema.setAllOf(null);
+			itemsSchema.setAnyOf(null);
+		}
+
+		// Only add anyOf value if there are no enum values.
+		if (itemsSchema.getEnum() == null || itemsSchema.getEnum().isEmpty()) {
+			// Only add anyOf value if the value is not already included.
+			if (itemsSchema.getAnyOf() == null
+					|| !itemsSchema.getAnyOf().contains(complexObjRangeSchema)) {
+				// There are cases where the property has a range (i.e. the items schema has a ref), but
+				// class restrictions have been added which further restrict it with an anyOf.
+				// So, we need to unset the items reference first.
+				if (itemsSchema.get$ref() != null) {
+					itemsSchema.set$ref(null);
+				}
+
+				itemsSchema.addAnyOfItem(complexObjRangeSchema);
+				MapperProperty.setSchemaType(itemsSchema, null);
+
+				objectPropertySchema.setItems(itemsSchema);
+				MapperProperty.setSchemaType(objectPropertySchema, "array");
+			}
+		}
 	}
 
 	/**
