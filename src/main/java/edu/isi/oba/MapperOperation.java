@@ -52,21 +52,28 @@ class MapperOperation {
 		String ref_text = "#/components/schemas/" + this.schemaName;
 		schema = new Schema().$ref(ref_text);
 
+		var descriptionText = "The ID of the [" + this.schemaName + "](" + this.schemaURI + ") to be ";
+
 		switch (method) {
 			case GET:
 				setOperationGet();
+				descriptionText += "retrieved.";
 				break;
 			case PATCH:
 				setOperationPatch();
+				descriptionText += "updated.";
 				break;
 			case PUT:
 				setOperationPut();
+				descriptionText += "updated.";
 				break;
 			case POST:
 				setOperationPost();
+				descriptionText += "updated.";
 				break;
 			case DELETE:
 				setOperationDelete();
+				descriptionText += "deleted.";
 				break;
 			default:
 				break;
@@ -75,8 +82,7 @@ class MapperOperation {
 		if (Cardinality.SINGULAR.equals(cardinality)) {
 			parameters.add(
 					new PathParameter()
-							.description(
-									"The ID of the [" + this.schemaName + "](" + this.schemaURI + ") to be retrieved")
+							.description(descriptionText)
 							.name("id")
 							.required(true)
 							.schema(new StringSchema()));

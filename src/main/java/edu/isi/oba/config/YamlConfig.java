@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 public class YamlConfig {
@@ -42,8 +43,7 @@ public class YamlConfig {
 	public Map<String, List<RelationConfig>> relations;
 	private LinkedHashMap<String, PathItem> custom_paths = null;
 	public Set<String> classes;
-	private String readOnlyAnnotation = null;
-	private String writeOnlyAnnotation = null;
+	public PropertyAnnotationConfig property_annotations;
 
 	public Boolean getEnable_get_paths() {
 		return this.configFlags.get(CONFIG_FLAG.PATH_GET);
@@ -248,20 +248,22 @@ public class YamlConfig {
 		this.auth = auth;
 	}
 
-	public String getSchema_property_read_only_annotation() {
-		return this.readOnlyAnnotation;
+	/**
+	 * The property annotations may be null (because it doesn't exist in the config file). We wrap it
+	 * within an {@link Optional} for determining whether a value exists.
+	 *
+	 * @return a {@link PropertyAnnotationConfig} parameterized {@link Optional}
+	 */
+	public Optional<PropertyAnnotationConfig> getProperty_annotations() {
+		if (this.property_annotations != null) {
+			return Optional.ofNullable(this.property_annotations);
+		} else {
+			return Optional.empty();
+		}
 	}
 
-	public void setSchema_property_read_only_annotation(String readOnlyAnnotation) {
-		this.readOnlyAnnotation = readOnlyAnnotation;
-	}
-
-	public String getSchema_property_write_only_annotation() {
-		return this.writeOnlyAnnotation;
-	}
-
-	public void setSchema_property_write_only_annotation(String writeOnlyAnnotation) {
-		this.writeOnlyAnnotation = writeOnlyAnnotation;
+	public void setProperty_annotations(PropertyAnnotationConfig property_annotations) {
+		this.property_annotations = property_annotations;
 	}
 
 	/**
