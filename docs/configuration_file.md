@@ -53,6 +53,16 @@ classes:
   - http://dbpedia.org/ontology/Genre
   - http://dbpedia.org/ontology/Band
 
+## OpenAPI processing
+### Configuration details for property annotations from the ontology.
+property_annotations:
+  ### Define an annotation property which indicates a boolean value whether the object/data property is read-only.
+  read_only_flag_name: isReadOnly
+  ### Define an annotation property which indicates a boolean value whether the object/data property is write-only.
+  write_only_flag_name: isWriteOnly
+  ### Define an annotation property which indicates a value (e.g. string, boolean, integer) which should be used for the "example" value for a schema's property.
+  example_value_name: exampleValue
+
 ## REFERENCES
 ### Enable/disable schema references.  This can be recursive and cause multiple depths/levels of reference.
 follow_references: false
@@ -447,4 +457,64 @@ To authenticate a service account and authorize it to access Firebase services, 
 ```
 firebase:
   key: google_key
+```
+
+## OpenAPI processing
+
+The ontology can be customized to include details relevant for the OpenAPI specification and how the specification should be configured. These are things that cannot necessarily be determined directly from the ontology, such as whether a data property should be read-only or write-only.
+
+### property_annotations
+
+Example
+
+```yaml
+property_annotations:
+  read_only_flag_name: isReadOnly
+  write_only_flag_name: isWriteOnly
+  example_value_name: exampleValue
+```
+
+### property_annotations.read_only_flag_name
+
+The annotation property name which indicates whether a property is read-only or not. This indicates whether it appears _only_ in GET operations.
+
+| Field         | Value    |
+| ------------- | -------- |
+| **Required:** | `false`  |
+| **Type:**     | `string` |
+
+Example:
+
+```yaml
+read_only_flag_name: isReadOnly
+```
+
+### property_annotations.write_only_flag_name
+
+The annotation property name which indicates whether a property is write-only or not. This indicates whether it appears _only_ in PUT/POST operations.
+
+| Field         | Value    |
+| ------------- | -------- |
+| **Required:** | `false`  |
+| **Type:**     | `string` |
+
+Example:
+
+```yaml
+write_only_flag_name: isWriteOnly
+```
+
+### property_annotations.example_value_name
+
+The annotation property name which specifies a specific value to be used for the `example` in the OpenAPI schema's property.
+
+| Field         | Value    |
+| ------------- | -------- |
+| **Required:** | `false`  |
+| **Type:**     | `string` |
+
+Example:
+
+```yaml
+example_value_name: exampleValue
 ```

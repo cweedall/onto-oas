@@ -15,6 +15,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.semanticweb.owlapi.model.OWLAnnotation;
 import org.semanticweb.owlapi.model.OWLDataIntersectionOf;
 import org.semanticweb.owlapi.model.OWLDataRange;
 import org.semanticweb.owlapi.model.OWLDataUnionOf;
@@ -84,6 +85,39 @@ class MapperDataProperty extends MapperProperty {
 	public static final String INTEGER_TYPE = "integer";
 	public static final String BOOLEAN_TYPE = "boolean";
 	public static final String DATETIME_TYPE = "dateTime";
+
+	/**
+	 * Set the example for a property's {@link Schema}.
+	 *
+	 * @param propertySchema a (data / object) property {@link Schema}.
+	 * @param isReadOnly a string value indicating the example.
+	 */
+	public static void setExampleValueForPropertySchema(
+			Schema propertySchema, OWLAnnotation exampleValueAnnotation) {
+
+		final var exampleValueAnnotationLiteralValue = exampleValueAnnotation.getValue().literalValue();
+		if (exampleValueAnnotationLiteralValue.isPresent()) {
+			final var exampleValueDatatype = exampleValueAnnotationLiteralValue.get().getDatatype();
+			final var exampleValueData = exampleValueAnnotationLiteralValue.get().getLiteral();
+			switch (MapperDataProperty.getDataType(exampleValueDatatype)) {
+				case STRING_TYPE:
+					propertySchema.setExample(String.valueOf(exampleValueData));
+					break;
+				case NUMBER_TYPE:
+					propertySchema.setExample(Double.valueOf(exampleValueData));
+					break;
+				case INTEGER_TYPE:
+					propertySchema.setExample(Integer.valueOf(exampleValueData));
+					break;
+				case BOOLEAN_TYPE:
+					propertySchema.setExample(Boolean.valueOf(exampleValueData));
+					break;
+				default:
+					// Treat as a String type, if unknown
+					propertySchema.setExample(String.valueOf(exampleValueData));
+			}
+		}
+	}
 
 	/**
 	 * Create a data property {@link Schema}.
