@@ -645,6 +645,20 @@ public class ObjectVisitor implements OWLObjectVisitor {
 												annotation.getProperty().getIRI().getShortForm())) {
 									MapperProperty.setWriteOnlyValueForPropertySchema(propertySchema, true);
 								}
+
+								// If property contains the annotation property (name is specified in
+								// configuration file) indicating what the example value is for a data property,
+								// then set value on the schema.
+								final var exampleValueAnnotation =
+										isPropertyAnnotationsPresent
+												? propertyAnnotations.get().getExample_value_name()
+												: null;
+								if (exampleValueAnnotation != null
+										&& !exampleValueAnnotation.isBlank()
+										&& exampleValueAnnotation.equals(
+												annotation.getProperty().getIRI().getShortForm())) {
+									MapperDataProperty.setExampleValueForPropertySchema(propertySchema, annotation);
+								}
 							}
 						});
 	}
@@ -1226,6 +1240,26 @@ public class ObjectVisitor implements OWLObjectVisitor {
 													> 0) {
 												MapperDataProperty.setWriteOnlyValueForPropertySchema(
 														dataPropertySchema, true);
+											}
+										}
+
+										// If property contains the annotation property (name is specified in
+										// configuration file) indicating what the example value is for a data property,
+										// then set value on the schema.
+										final var exampleValueAnnotation =
+												isPropertyAnnotationsPresent
+														? propertyAnnotations.get().getExample_value_name()
+														: null;
+										if (exampleValueAnnotation != null && !exampleValueAnnotation.isBlank()) {
+											for (final var annotation :
+													EntitySearcher.getAnnotations(dp, this.ontologyOfBaseClass)
+															.filter(
+																	annotation ->
+																			exampleValueAnnotation.equals(
+																					annotation.getProperty().getIRI().getShortForm()))
+															.collect(Collectors.toSet())) {
+												MapperDataProperty.setExampleValueForPropertySchema(
+														dataPropertySchema, annotation);
 											}
 										}
 
