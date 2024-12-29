@@ -5,11 +5,11 @@ import static edu.isi.oba.Oba.logger;
 import io.swagger.v3.oas.models.media.ComposedSchema;
 import io.swagger.v3.oas.models.media.ObjectSchema;
 import io.swagger.v3.oas.models.media.Schema;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.Set;
 import org.semanticweb.owlapi.model.OWLLiteral;
 
@@ -303,24 +303,33 @@ public class MapperProperty {
 										propertySchema.setMaxItems(null);
 
 										// Setting nullable can be done on the schema ONLY IF there is not an allOf
-										// sub-property.
-										// In the latter case, add the nullable value to one of the allOf entries.
-										if (propertySchema.getAllOf() != null) {
+										// sub-property.  In the latter case, add the nullable value to one of the allOf
+										// entries.
+										final var propSchemaAllOfList = propertySchema.getAllOf();
+										if (propSchemaAllOfList != null) {
 											var containsNullableSchema = false;
 
-											for (final var allOfItem : propertySchema.getAllOf()) {
-												containsNullableSchema |=
-														Optional.ofNullable(((Schema) allOfItem).getNullable()).orElse(false);
-												if (containsNullableSchema) {
-													((Schema) allOfItem).setNullable(true);
+											for (final var allOfItem : new ArrayList<>(propSchemaAllOfList)) {
+												final var schemaNullableValue = ((Schema) allOfItem).getNullable();
+												if (schemaNullableValue != null) {
+													containsNullableSchema |= Boolean.valueOf(schemaNullableValue);
+
+													if (containsNullableSchema) {
+														propSchemaAllOfList.remove(allOfItem);
+														final var isNullableSchema = new Schema();
+														MapperProperty.setNullableValueForPropertySchema(
+																isNullableSchema, true);
+														propertySchema.addAllOfItem(isNullableSchema);
+													}
 												}
 											}
 
 											if (!containsNullableSchema) {
 												final var isNullableSchema = new Schema();
-												isNullableSchema.setNullable(true);
+												MapperProperty.setNullableValueForPropertySchema(isNullableSchema, true);
 												propertySchema.addAllOfItem(isNullableSchema);
-												propertySchema.setNullable(null); // Just in case
+												MapperProperty.setNullableValueForPropertySchema(
+														propertySchema, null); // Just in case
 											}
 										} else {
 											MapperProperty.setNullableValueForPropertySchema(propertySchema, true);
@@ -334,24 +343,32 @@ public class MapperProperty {
 								propertySchema.setMaxItems(null);
 
 								// Setting nullable can be done on the schema ONLY IF there is not an allOf
-								// sub-property.
-								// In the latter case, add the nullable value to one of the allOf entries.
-								if (propertySchema.getAllOf() != null) {
+								// sub-property.  In the latter case, add the nullable value to one of the allOf
+								// entries.
+								final var propSchemaAllOfList = propertySchema.getAllOf();
+								if (propSchemaAllOfList != null) {
 									var containsNullableSchema = false;
 
-									for (final var allOfItem : propertySchema.getAllOf()) {
-										containsNullableSchema |=
-												Optional.ofNullable(((Schema) allOfItem).getNullable()).orElse(false);
-										if (containsNullableSchema) {
-											((Schema) allOfItem).setNullable(true);
+									for (final var allOfItem : new ArrayList<>(propSchemaAllOfList)) {
+										final var schemaNullableValue = ((Schema) allOfItem).getNullable();
+										if (schemaNullableValue != null) {
+											containsNullableSchema |= Boolean.valueOf(schemaNullableValue);
+
+											if (containsNullableSchema) {
+												propSchemaAllOfList.remove(allOfItem);
+												final var isNullableSchema = new Schema();
+												MapperProperty.setNullableValueForPropertySchema(isNullableSchema, true);
+												propertySchema.addAllOfItem(isNullableSchema);
+											}
 										}
 									}
 
 									if (!containsNullableSchema) {
 										final var isNullableSchema = new Schema();
-										isNullableSchema.setNullable(true);
+										MapperProperty.setNullableValueForPropertySchema(isNullableSchema, true);
 										propertySchema.addAllOfItem(isNullableSchema);
-										propertySchema.setNullable(null); // Just in case
+										MapperProperty.setNullableValueForPropertySchema(
+												propertySchema, null); // Just in case
 									}
 								} else {
 									MapperProperty.setNullableValueForPropertySchema(propertySchema, true);
