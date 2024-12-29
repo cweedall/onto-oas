@@ -1,5 +1,5 @@
 ontologies:
-  #- http://purl.org/net/p-plan
+  #- http://purl.org/net/p-plan # Regularly unreachable...
   - https://www.opmw.org/p-plan.owl
 name: p-plan
 output_dir: outputs

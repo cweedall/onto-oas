@@ -5,6 +5,8 @@ import static edu.isi.oba.Oba.logger;
 import io.swagger.v3.oas.models.media.ComposedSchema;
 import io.swagger.v3.oas.models.media.ObjectSchema;
 import io.swagger.v3.oas.models.media.Schema;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -82,6 +84,8 @@ public class MapperObjectProperty extends MapperProperty {
 		// This has no effect currently.  The intention is to support YAML anchors in the future.
 		// However, the Jackson XML library which is being used for serialization does not currently
 		// support YAML anchors properly.
+		// objectSchema.set$dynamicAnchor(
+		// 		ObaUtils.pascalCaseToKebabCase(objectSchema.getName()).toUpperCase() + "-ENUM");
 		objectSchema.set$anchor(
 				ObaUtils.pascalCaseToKebabCase(objectSchema.getName()).toUpperCase() + "-ENUM");
 	}
@@ -210,15 +214,17 @@ public class MapperObjectProperty extends MapperProperty {
 
 		// Only add allOf value if there are no enum values.
 		if (itemsSchema.getEnum() == null || itemsSchema.getEnum().isEmpty()) {
-			// Only add allOf value if the value is not already included.
-			if (itemsSchema.getAllOf() == null || !itemsSchema.getAllOf().contains(allOfItem)) {
-				// There are cases where the property has a range (i.e. the items schema has a ref), but
-				// class restrictions have been added which further restrict it with an allOf.
-				// So, we need to unset the items reference first.
-				if (itemsSchema.get$ref() != null) {
-					itemsSchema.set$ref(null);
-				}
 
+			final var allOfItems =
+					itemsSchema.getAllOf() == null ? new ArrayList() : itemsSchema.getAllOf();
+			final var allOfReferences = new HashSet<String>();
+
+			for (final var allOfSchema : allOfItems) {
+				allOfReferences.add(((Schema) allOfSchema).get$ref());
+			}
+
+			// Only add allOf value if the value is not already included.
+			if (allOfReferences.isEmpty() || !allOfReferences.contains(allOfItem)) {
 				final var objSchema = new ObjectSchema();
 				objSchema.set$ref(allOfItem);
 
