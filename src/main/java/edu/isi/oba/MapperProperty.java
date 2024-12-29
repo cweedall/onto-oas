@@ -210,7 +210,7 @@ public class MapperProperty {
 							// an array to a single item.
 							if (!shouldBeArray) {
 								if (isEnumObjPropReference || hasObjPropReference) {
-									propertySchema.setType(null);
+									MapperProperty.setSchemaType(propertySchema, null);
 
 									// Copy ref to allOf item.
 									final var objRefSchema = new ObjectSchema();
