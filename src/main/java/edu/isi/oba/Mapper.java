@@ -27,6 +27,7 @@ import org.semanticweb.owlapi.model.OWLOntology;
 import org.semanticweb.owlapi.model.OWLOntologyCreationException;
 import org.semanticweb.owlapi.model.OWLOntologyLoaderConfiguration;
 import org.semanticweb.owlapi.model.OWLOntologyManager;
+import org.semanticweb.owlapi.reasoner.structural.StructuralReasonerFactory;
 
 class Mapper {
 	private final Map<IRI, String> schemaNames = new HashMap<>(); // URI-names of the schemas
@@ -69,6 +70,27 @@ class Mapper {
 		this.configData.setOntologies(ontologyPaths);
 		this.ontologies = this.manager.ontologies().collect(Collectors.toSet());
 
+		final var reasonerFactory = new StructuralReasonerFactory();
+
+		// Before any data processing, loop through all the ontologies and fail if any are inconsistent.
+		this.ontologies.stream()
+				.forEach(
+						(ontology) -> {
+							final var reasoner = reasonerFactory.createReasoner(ontology);
+							if (!reasoner.isConsistent()) {
+								logger.severe(
+										"Please fix errors with inconsistent ontology.  IRI:  "
+												+ ontology.getOntologyID());
+								System.exit(1);
+							}
+
+							final var format = ontology.getFormat();
+							if (format == null) {
+								logger.severe("No ontology format found.  Unable to proceed.");
+								System.exit(1);
+							}
+						});
+
 		// Set the allowed classes for the OpenAPI based on configuration file.  If no restrictions set,
 		// all classes are added from each ontology.
 		this.allowedClasses.addAll(this.getClassesAllowedByYamlConfig());
@@ -92,7 +114,7 @@ class Mapper {
 		return this.manager;
 	}
 
-	private Schema getSchema(OWLClass cls) {
+	private Schema getSchema(OWLClass cls, OWLOntology ontology) {
 		logger.info("=======================================================================");
 		logger.info("##############################################");
 		logger.info("###  Beginning schema mapping for class:");
@@ -100,8 +122,10 @@ class Mapper {
 		logger.info("##############################################");
 
 		// Convert from OWL Class to OpenAPI Schema.
-		final var objVisitor = new ObjectVisitor(this.ontologies, this.configData);
-		cls.accept(objVisitor);
+		// final var objVisitor = new ObjectVisitor(ontology, this.configData);
+		// cls.accept(objVisitor);
+		final var objVisitor = new ObjectVisitor(this.configData);
+		objVisitor.visit(ontology, cls);
 
 		final var mappedSchema = objVisitor.getClassSchema();
 
@@ -109,12 +133,20 @@ class Mapper {
 		// to the set of allowed classes.
 		this.allowedClasses.addAll(objVisitor.getAllReferencedClasses());
 
-		// Create the OpenAPI schema
-		logger.info("");
-		logger.info("--->  SAVING SCHEMA:  \"" + mappedSchema.getName() + "\"");
-		logger.info("=======================================================================");
-		logger.info("");
-		this.schemas.put(mappedSchema.getName(), mappedSchema);
+		// Ignore schema, if null.  Otherwise, save it.
+		if (mappedSchema == null) {
+			logger.info("");
+			logger.info("--->  IGNORING EMPTY/UNREFERENCED CLASS:  \"" + cls.getIRI() + "\"");
+			logger.info("=======================================================================");
+			logger.info("");
+		} else {
+			// Create the OpenAPI schema
+			logger.info("");
+			logger.info("--->  SAVING SCHEMA:  \"" + mappedSchema.getName() + "\"");
+			logger.info("=======================================================================");
+			logger.info("");
+			this.schemas.put(mappedSchema.getName(), mappedSchema);
+		}
 
 		return mappedSchema;
 	}
@@ -170,55 +202,78 @@ class Mapper {
 						this.configData.getConfigFlags(),
 						this.configData.getAuth() == null ? false : this.configData.getAuth().getEnable());
 
+		final var processedClasses = new HashSet<IRI>();
 		for (OWLOntology ontology : this.ontologies) {
 			final var format = ontology.getFormat();
 			if (format == null) {
 				logger.severe("No ontology format found.  Unable to proceed.");
 				System.exit(1);
 			} else {
-				String defaultOntologyPrefixIRI = format.asPrefixOWLDocumentFormat().getDefaultPrefix();
-				if (defaultOntologyPrefixIRI == null) {
-					logger.severe("Unable to find the default prefix for the ontology.  Unable to proceed.");
-					System.exit(1);
-				}
-
-				// Make a copy of the original allowed classes.  Use it for comparison, until this working
-				// copy and the allowed classes are equal.
-				var workingAllowedClasses = new HashSet<OWLClass>(this.allowedClasses);
-
-				// Add allowed classes to OpenAPI (i.e. remove classes without default ontology
-				ontology
-						.classesInSignature()
-						.filter(
-								owlClass -> owlClass.getIRI() != null && workingAllowedClasses.contains(owlClass))
+				format
+						.asPrefixOWLDocumentFormat()
+						.getPrefixName2PrefixMap()
 						.forEach(
-								(owlClass) -> {
-									this.addOwlclassToOpenAPI(
-											pathGenerator, ontology, defaultOntologyPrefixIRI, owlClass, true);
+								(prefixName, prefix) -> {
+									if (prefixName == null) {
+										logger.severe(
+												"Unable to proceed.  Prefix name for prefix:  \""
+														+ prefix
+														+ "\" is invalid.");
+										System.exit(1);
+									} else if (prefix == null) {
+										logger.severe(
+												"Unable to proceed.  Prefix for prefix name:  \""
+														+ prefixName
+														+ "\" is invalid.");
+										System.exit(1);
+									}
+
+									// Make a copy of the original allowed classes.  Use it for comparison, until this
+									// working
+									// copy and the allowed classes are equal.
+									var workingAllowedClasses = new HashSet<OWLClass>(this.allowedClasses);
+
+									// Add allowed classes to OpenAPI (i.e. remove classes without default ontology
+									ontology
+											.classesInSignature()
+											.filter(
+													owlClass ->
+															owlClass.getIRI() != null
+																	&& !processedClasses.contains(owlClass.getIRI())
+																	&& workingAllowedClasses.contains(owlClass))
+											.forEach(
+													(owlClass) -> {
+														processedClasses.add(owlClass.getIRI());
+														this.addOwlclassToOpenAPI(pathGenerator, owlClass, ontology);
+													});
+
+									// After allowed classes have been schema-fied, repeat for all the referenced
+									// classes.  If this is not done, the OpenAPI spec may contain references to
+									// schemas which do not exist (because they were not explicitly in the allow
+									// list).  Looping is done until no new references have been added from the
+									// schema-fication process.
+									while (!this.allowedClasses.equals(workingAllowedClasses)) {
+										workingAllowedClasses.addAll(this.allowedClasses);
+
+										ontology
+												.classesInSignature()
+												.filter(
+														owlClass ->
+																workingAllowedClasses.contains(owlClass)
+																		&& !processedClasses.contains(owlClass.getIRI())
+																		&& !this.schemas
+																				.keySet()
+																				.contains(owlClass.getIRI().getShortForm()))
+												.forEach(
+														(owlClass) -> {
+															processedClasses.add(owlClass.getIRI());
+															this.addOwlclassToOpenAPI(pathGenerator, owlClass, ontology);
+														});
+									}
+
+									// Add all the allowed classes to the map of schema names/IRIs.
+									this.setSchemaNames(this.allowedClasses);
 								});
-
-				// After allowed classes have been schema-fied, repeat for all the referenced classes.
-				// If this is not done, the OpenAPI spec may contain references to schemas which do not
-				// exist (because they were not explicitly in the allow list).
-				// Looping is done until no new references have been added from the schema-fication process.
-				while (!this.allowedClasses.equals(workingAllowedClasses)) {
-					workingAllowedClasses.addAll(this.allowedClasses);
-
-					ontology
-							.classesInSignature()
-							.filter(
-									owlClass ->
-											workingAllowedClasses.contains(owlClass)
-													&& !this.schemas.keySet().contains(owlClass.getIRI().getShortForm()))
-							.forEach(
-									(owlClass) -> {
-										this.addOwlclassToOpenAPI(
-												pathGenerator, ontology, defaultOntologyPrefixIRI, owlClass, true);
-									});
-				}
-
-				// Add all the allowed classes to the map of schema names/IRIs.
-				this.setSchemaNames(this.allowedClasses);
 			}
 		}
 
@@ -242,16 +297,12 @@ class Mapper {
 	}
 
 	private void addOwlclassToOpenAPI(
-			PathGenerator pathGenerator,
-			OWLOntology ontology,
-			String defaultOntologyPrefixIRI,
-			OWLClass cls,
-			Boolean isTopLevel) {
+			PathGenerator pathGenerator, OWLClass cls, OWLOntology ontology) {
 		try {
-			final var mappedSchema = this.getSchema(cls);
+			final var mappedSchema = this.getSchema(cls, ontology);
 
 			// Add the OpenAPI paths
-			if (isTopLevel && this.getClassesAllowedByYamlConfig().contains(cls)) {
+			if (this.getClassesAllowedByYamlConfig().contains(cls)) {
 				this.addPath(pathGenerator, mappedSchema, cls.getIRI());
 			}
 		} catch (Exception e) {
