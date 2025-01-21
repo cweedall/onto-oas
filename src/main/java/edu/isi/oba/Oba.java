@@ -69,6 +69,13 @@ class Oba {
 			Mapper mapper = new Mapper(config_data);
 			mapper.createSchemas();
 
+			try {
+				MarkdownWriter.writeMarkdownFile(config_data, mapper);
+			} catch (Exception e) {
+				logger.severe("Error while creating/writing markdown file: " + e.getLocalizedMessage());
+				e.printStackTrace();
+			}
+
 			LinkedHashMap<String, PathItem> custom_paths = config_data.getCustom_paths();
 			OpenAPI openapi_base = config_data.getOpenapi();
 

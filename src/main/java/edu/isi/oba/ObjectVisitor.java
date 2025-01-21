@@ -13,11 +13,13 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.semanticweb.owlapi.model.AxiomType;
 import org.semanticweb.owlapi.model.ClassExpressionType;
+import org.semanticweb.owlapi.model.OWLAnnotation;
 import org.semanticweb.owlapi.model.OWLAxiom;
 import org.semanticweb.owlapi.model.OWLBooleanClassExpression;
 import org.semanticweb.owlapi.model.OWLClass;
@@ -92,6 +94,9 @@ public class ObjectVisitor implements OWLObjectVisitor {
 	private final Set<OWLClass> referencedClasses = new HashSet<>();
 	private final Set<OWLClass> processedClasses = new HashSet<>();
 	private final Set<OWLClass> processedRestrictionClasses = new HashSet<>();
+
+	// Map markdown annotation keys to a Map of class/property name keys with their annotation values.
+	private final Map<String, Map<String, String>> markdownGenerationMap = new TreeMap<>();
 
 	// Used to keep track of a property being visited.  Necessary for complex visits which can involve
 	// recursion, because the property name is not passable.
@@ -191,12 +196,15 @@ public class ObjectVisitor implements OWLObjectVisitor {
 				basicClassSchema,
 				ObaUtils.getDescription(
 						this.baseClass,
-						Set.of(this.baseClassOntology),
+						this.baseClassOntology,
 						this.configData.getConfigFlagValue(CONFIG_FLAG.DEFAULT_DESCRIPTIONS)));
 		MapperProperty.setSchemaType(basicClassSchema, "object");
 
 		if (this.configData.getConfigFlagValue(CONFIG_FLAG.DEFAULT_PROPERTIES)) {
-			// Not using setProperties(), because it creates immutability which breaks unit tests.
+			/**
+			 * Not using {@link Schema#setProperties()}, because it creates immutability which breaks unit
+			 * tests.
+			 */
 			this.getDefaultProperties()
 					.forEach(
 							(schemaName, schema) -> {
@@ -378,14 +386,6 @@ public class ObjectVisitor implements OWLObjectVisitor {
 							isRangeForObjectProperty = true;
 						}
 					}
-
-					/*for (final var objPropDomainAx :
-							this.baseClassOntology.getObjectPropertyDomainAxioms(
-									op.asObjectPropertyExpression())) {
-						if (objPropDomainAx.getClassesInSignature().contains(refClass)) {
-							isRangeForObjectProperty = true;
-						}
-					}*/
 				}
 			}
 
@@ -431,6 +431,9 @@ public class ObjectVisitor implements OWLObjectVisitor {
 		// 	this.classSchema = null;
 		// }
 
+		// Create map of markdown content once the schema and referenced items are fully determined.
+		this.setMarkdownContentFromAxiomAnnotations();
+
 		return this.classSchema;
 	}
 
@@ -442,6 +445,17 @@ public class ObjectVisitor implements OWLObjectVisitor {
 	 */
 	public Set<OWLClass> getAllReferencedClasses() {
 		return this.referencedClasses;
+	}
+
+	/**
+	 * Get all the classes referenced directly or indirectly (potentially through inheritance) by the
+	 * base class.
+	 *
+	 * @return a {@link Map} containing annotation mappings to mappings of property name and
+	 *     annotation value.
+	 */
+	public Map<String, Map<String, String>> getMarkdownMappings() {
+		return this.markdownGenerationMap;
 	}
 
 	/**
@@ -691,55 +705,56 @@ public class ObjectVisitor implements OWLObjectVisitor {
 										final var propertyDescription =
 												ObaUtils.getDescription(
 														entity,
-														Set.of(this.baseClassOntology),
+														this.baseClassOntology,
 														this.configData.getConfigFlagValue(CONFIG_FLAG.DEFAULT_DESCRIPTIONS));
 										MapperProperty.setSchemaDescription(propertySchema, propertyDescription);
 									}
 
-									final var propertyAnnotations = this.configData.getProperty_annotations();
-									final var isPropertyAnnotationsPresent = propertyAnnotations.isPresent();
+									final var annotationConfig = this.configData.getAnnotation_config();
+									if (annotationConfig.isPresent()) {
+										final var annotationPropertyName =
+												annotation.getProperty().getIRI().getShortForm();
 
-									// If property contains the annotation property (name is specified in
-									// configuration
-									// file) indicating it is read-only, then set value on the schema.
-									final var readOnlyAnnotation =
-											isPropertyAnnotationsPresent
-													? propertyAnnotations.get().getRead_only_flag_name()
-													: null;
-									if (readOnlyAnnotation != null
-											&& !readOnlyAnnotation.isBlank()
-											&& readOnlyAnnotation.equals(
-													annotation.getProperty().getIRI().getShortForm())) {
-										MapperProperty.setReadOnlyValueForPropertySchema(propertySchema, true);
-									}
+										final var propertyAnnotations =
+												annotationConfig.get().getProperty_annotations();
 
-									// If property contains the annotation property (name is specified in
-									// configuration
-									// file) indicating it is write-only, then set value on the schema.
-									final var writeOnlyAnnotation =
-											isPropertyAnnotationsPresent
-													? propertyAnnotations.get().getWrite_only_flag_name()
-													: null;
-									if (writeOnlyAnnotation != null
-											&& !writeOnlyAnnotation.isBlank()
-											&& writeOnlyAnnotation.equals(
-													annotation.getProperty().getIRI().getShortForm())) {
-										MapperProperty.setWriteOnlyValueForPropertySchema(propertySchema, true);
-									}
+										if (propertyAnnotations.isPresent()) {
+											// If property contains the annotation property (name is specified in
+											// configuration
+											// file) indicating it is read-only, then set value on the schema.
+											final var readOnlyAnnotation =
+													propertyAnnotations.get().getRead_only_flag_name();
+											if (readOnlyAnnotation != null
+													&& !readOnlyAnnotation.isBlank()
+													&& readOnlyAnnotation.equals(annotationPropertyName)) {
+												MapperProperty.setReadOnlyValueForPropertySchema(propertySchema, true);
+											}
 
-									// If property contains the annotation property (name is specified in
-									// configuration file) indicating what the example value is for a data property,
-									// then set value on the schema.
-									final var exampleValueAnnotation =
-											isPropertyAnnotationsPresent
-													? propertyAnnotations.get().getExample_value_name()
-													: null;
-									if (entity.isOWLDataProperty()
-											&& exampleValueAnnotation != null
-											&& !exampleValueAnnotation.isBlank()
-											&& exampleValueAnnotation.equals(
-													annotation.getProperty().getIRI().getShortForm())) {
-										MapperDataProperty.setExampleValueForPropertySchema(propertySchema, annotation);
+											// If property contains the annotation property (name is specified in
+											// configuration
+											// file) indicating it is write-only, then set value on the schema.
+											final var writeOnlyAnnotation =
+													propertyAnnotations.get().getWrite_only_flag_name();
+											if (writeOnlyAnnotation != null
+													&& !writeOnlyAnnotation.isBlank()
+													&& writeOnlyAnnotation.equals(annotationPropertyName)) {
+												MapperProperty.setWriteOnlyValueForPropertySchema(propertySchema, true);
+											}
+
+											// If property contains the annotation property (name is specified in
+											// configuration file) indicating what the example value is for a data
+											// property,
+											// then set value on the schema.
+											final var exampleValueAnnotation =
+													propertyAnnotations.get().getExample_value_name();
+											if (entity.isOWLDataProperty()
+													&& exampleValueAnnotation != null
+													&& !exampleValueAnnotation.isBlank()
+													&& exampleValueAnnotation.equals(annotationPropertyName)) {
+												MapperDataProperty.setExampleValueForPropertySchema(
+														propertySchema, annotation);
+											}
+										}
 									}
 								}
 							});
@@ -764,50 +779,226 @@ public class ObjectVisitor implements OWLObjectVisitor {
 													this.classSchema.getProperties().get(this.currentlyProcessedPropertyName);
 
 							if (propertySchema != null) {
-								final var propertyAnnotations = this.configData.getProperty_annotations();
-								final var isPropertyAnnotationsPresent = propertyAnnotations.isPresent();
+								final var annotationConfig = this.configData.getAnnotation_config();
+								if (annotationConfig.isPresent()) {
+									final var annotationPropertyName =
+											annotation.getProperty().getIRI().getShortForm();
 
-								// If property contains the annotation property (name is specified in configuration
-								// file) indicating it is read-only, then set value on the schema.
-								final var readOnlyAnnotation =
-										isPropertyAnnotationsPresent
-												? propertyAnnotations.get().getRead_only_flag_name()
-												: null;
-								if (readOnlyAnnotation != null
-										&& !readOnlyAnnotation.isBlank()
-										&& readOnlyAnnotation.equals(
-												annotation.getProperty().getIRI().getShortForm())) {
-									MapperProperty.setReadOnlyValueForPropertySchema(propertySchema, true);
-								}
+									final var propertyAnnotations = annotationConfig.get().getProperty_annotations();
 
-								// If property contains the annotation property (name is specified in configuration
-								// file) indicating it is write-only, then set value on the schema.
-								final var writeOnlyAnnotation =
-										isPropertyAnnotationsPresent
-												? propertyAnnotations.get().getWrite_only_flag_name()
-												: null;
-								if (writeOnlyAnnotation != null
-										&& !writeOnlyAnnotation.isBlank()
-										&& writeOnlyAnnotation.equals(
-												annotation.getProperty().getIRI().getShortForm())) {
-									MapperProperty.setWriteOnlyValueForPropertySchema(propertySchema, true);
-								}
+									if (propertyAnnotations.isPresent()) {
 
-								// If property contains the annotation property (name is specified in
-								// configuration file) indicating what the example value is for a data property,
-								// then set value on the schema.
-								final var exampleValueAnnotation =
-										isPropertyAnnotationsPresent
-												? propertyAnnotations.get().getExample_value_name()
-												: null;
-								if (exampleValueAnnotation != null
-										&& !exampleValueAnnotation.isBlank()
-										&& exampleValueAnnotation.equals(
-												annotation.getProperty().getIRI().getShortForm())) {
-									MapperDataProperty.setExampleValueForPropertySchema(propertySchema, annotation);
+										// If property contains the annotation property (name is specified in
+										// configuration
+										// file) indicating it is read-only, then set value on the schema.
+										final var readOnlyAnnotation =
+												propertyAnnotations.get().getRead_only_flag_name();
+										if (readOnlyAnnotation != null
+												&& !readOnlyAnnotation.isBlank()
+												&& readOnlyAnnotation.equals(annotationPropertyName)) {
+											MapperProperty.setReadOnlyValueForPropertySchema(propertySchema, true);
+										}
+
+										// If property contains the annotation property (name is specified in
+										// configuration
+										// file) indicating it is write-only, then set value on the schema.
+										final var writeOnlyAnnotation =
+												propertyAnnotations.get().getWrite_only_flag_name();
+										if (writeOnlyAnnotation != null
+												&& !writeOnlyAnnotation.isBlank()
+												&& writeOnlyAnnotation.equals(annotationPropertyName)) {
+											MapperProperty.setWriteOnlyValueForPropertySchema(propertySchema, true);
+										}
+
+										// If property contains the annotation property (name is specified in
+										// configuration file) indicating what the example value is for a data property,
+										// then set value on the schema.
+										final var exampleValueAnnotation =
+												propertyAnnotations.get().getExample_value_name();
+										if (exampleValueAnnotation != null
+												&& !exampleValueAnnotation.isBlank()
+												&& exampleValueAnnotation.equals(annotationPropertyName)) {
+											MapperDataProperty.setExampleValueForPropertySchema(
+													propertySchema, annotation);
+										}
+									}
 								}
 							}
 						});
+	}
+
+	/**
+	 * Add annotation value to map for tracking markdown content.
+	 *
+	 * @param annotation an {@link OWLAnnotation} with the name of the markdown annotation and its
+	 *     value.
+	 * @param entity an {@link OWLEntity} with the class/property associated with the annotation.
+	 */
+	private void addMarkdownAnnotationsToMap(OWLAnnotation annotation, String annotationMappedTo) {
+		final var annotationConfig = this.configData.getAnnotation_config();
+		if (annotationConfig.isPresent()) {
+			final var annotationPropertyName = annotation.getProperty().getIRI().getShortForm();
+
+			final var markdownGenAnnotations =
+					annotationConfig.get().getMarkdown_generation_annotations();
+			if (markdownGenAnnotations.isPresent()) {
+				final var markdownGenAnnotationSet = markdownGenAnnotations.get();
+				if (markdownGenAnnotationSet != null && !markdownGenAnnotationSet.isEmpty()) {
+					for (final var entry : markdownGenAnnotationSet) {
+						final var markdownAnnotationName = entry.getAnnotation_name();
+
+						if (annotationPropertyName.equals(markdownAnnotationName)) {
+							final var markdownAnnotationLiteralValue = annotation.getValue().literalValue();
+							final var markdownAnnotationValue =
+									markdownAnnotationLiteralValue.isPresent()
+											? markdownAnnotationLiteralValue.get().getLiteral()
+											: "";
+
+							var propMarkdownValueMap = this.markdownGenerationMap.get(markdownAnnotationName);
+							if (propMarkdownValueMap == null) {
+								propMarkdownValueMap = new TreeMap<>();
+								this.markdownGenerationMap.put(markdownAnnotationName, propMarkdownValueMap);
+							}
+
+							propMarkdownValueMap.put(annotationMappedTo, markdownAnnotationValue);
+						}
+					}
+				}
+			}
+		}
+	}
+
+	/**
+	 * Add markdown content from annotations (which are defined in the configuration file) for all
+	 * classes and object/data properties.
+	 *
+	 * @param axiom an {@link OWLAxiom}
+	 */
+	private void setMarkdownContentFromAxiomAnnotations() {
+		for (final var refClass : this.referencedClasses) {
+			final var refClassName = refClass.getIRI().getShortForm();
+
+			// Get markdown annotations from classes.
+			EntitySearcher.getAnnotationObjects(refClass, this.baseClassOntology)
+					.forEach(
+							(annotation) -> {
+								this.addMarkdownAnnotationsToMap(annotation, refClassName);
+							});
+
+			// Get markdown annotations from data properties.
+			this.baseClassOntology
+					.axioms(AxiomType.DATA_PROPERTY_DOMAIN)
+					.filter(
+							dataPropDomainAx ->
+									dataPropDomainAx.getDomain().getClassesInSignature().contains(refClass))
+					.forEach(
+							(dataPropDomainAx) -> {
+								dataPropDomainAx
+										.dataPropertiesInSignature()
+										.forEach(
+												(dataProp) -> {
+													EntitySearcher.getAnnotationObjects(dataProp, this.baseClassOntology)
+															.forEach(
+																	(annotation) -> {
+																		this.addMarkdownAnnotationsToMap(
+																				annotation,
+																				refClassName + "#" + dataProp.getIRI().getShortForm());
+																	});
+												});
+							});
+
+			// Get markdown annotations from object properties.
+			this.baseClassOntology
+					.axioms(AxiomType.OBJECT_PROPERTY_DOMAIN)
+					.filter(
+							objPropDomainAx ->
+									objPropDomainAx.getDomain().getClassesInSignature().contains(refClass))
+					.forEach(
+							(objPropDomainAx) -> {
+								objPropDomainAx
+										.objectPropertiesInSignature()
+										.forEach(
+												(objProp) -> {
+													EntitySearcher.getAnnotationObjects(objProp, this.baseClassOntology)
+															.forEach(
+																	(annotation) -> {
+																		this.addMarkdownAnnotationsToMap(
+																				annotation,
+																				refClassName + "#" + objProp.getIRI().getShortForm());
+																	});
+												});
+							});
+
+			// Get annotations from subclass axioms/restrictions.
+			this.baseClassOntology
+					.subClassAxiomsForSubClass(refClass)
+					.forEach(
+							(axiom) -> {
+								axiom
+										.annotations()
+										.forEach(
+												(annotation) -> {
+													axiom
+															.components()
+															.filter(component -> component instanceof OWLRestriction)
+															.forEach(
+																	(component) -> {
+																		if (component instanceof OWLObjectRestriction) {
+																			this.addMarkdownAnnotationsToMap(
+																					annotation,
+																					refClassName
+																							+ "#"
+																							+ ((OWLObjectRestriction) component)
+																									.getProperty()
+																									.asOWLObjectProperty()
+																									.getIRI()
+																									.getShortForm());
+																		} else if (component instanceof OWLDataRestriction) {
+																			this.addMarkdownAnnotationsToMap(
+																					annotation,
+																					refClassName
+																							+ "#"
+																							+ ((OWLDataRestriction) component)
+																									.getProperty()
+																									.asOWLDataProperty()
+																									.getIRI()
+																									.getShortForm());
+																		} else {
+																			logger.info(
+																					"===  Failed while attempting to add markdown annotations"
+																							+ " for:  "
+																							+ component);
+																		}
+																	});
+												});
+
+								axiom
+										.dataPropertiesInSignature()
+										.forEach(
+												(dataProp) -> {
+													EntitySearcher.getAnnotationObjects(dataProp, this.baseClassOntology)
+															.forEach(
+																	(annotation) -> {
+																		this.addMarkdownAnnotationsToMap(
+																				annotation,
+																				refClassName + "#" + dataProp.getIRI().getShortForm());
+																	});
+												});
+
+								axiom
+										.objectPropertiesInSignature()
+										.forEach(
+												(objProp) -> {
+													EntitySearcher.getAnnotationObjects(objProp, this.baseClassOntology)
+															.forEach(
+																	(annotation) -> {
+																		this.addMarkdownAnnotationsToMap(
+																				annotation,
+																				refClassName + "#" + objProp.getIRI().getShortForm());
+																	});
+												});
+							});
+		}
 	}
 
 	/**
@@ -951,7 +1142,7 @@ public class ObjectVisitor implements OWLObjectVisitor {
 			final var propertyDescription =
 					ObaUtils.getDescription(
 							op,
-							Set.of(this.baseClassOntology),
+							this.baseClassOntology,
 							this.configData.getConfigFlagValue(CONFIG_FLAG.DEFAULT_DESCRIPTIONS));
 
 			// Workaround for handling unionOf/intersectionOf/oneOf cases which may be set already above.
@@ -975,37 +1166,40 @@ public class ObjectVisitor implements OWLObjectVisitor {
 				MapperObjectProperty.setFunctionalForPropertySchema(objPropertySchema);
 			}
 
-			final var propertyAnnotations = this.configData.getProperty_annotations();
-			final var isPropertyAnnotationsPresent = propertyAnnotations.isPresent();
+			final var annotationConfig = this.configData.getAnnotation_config();
+			if (annotationConfig.isPresent()) {
+				final var propertyAnnotations = annotationConfig.get().getProperty_annotations();
 
-			// If property contains the annotation property (name is specified in configuration file)
-			// indicating it is read-only, then set value on the schema.
-			final var readOnlyAnnotation =
-					isPropertyAnnotationsPresent ? propertyAnnotations.get().getRead_only_flag_name() : null;
-			if (readOnlyAnnotation != null && !readOnlyAnnotation.isBlank()) {
-				if (EntitySearcher.getAnnotations(op, this.baseClassOntology)
-								.filter(
-										annotation ->
-												readOnlyAnnotation.equals(annotation.getProperty().getIRI().getShortForm()))
-								.count()
-						> 0) {
-					MapperObjectProperty.setReadOnlyValueForPropertySchema(objPropertySchema, true);
-				}
-			}
+				if (propertyAnnotations.isPresent()) {
+					// If property contains the annotation property (name is specified in configuration file)
+					// indicating it is read-only, then set value on the schema.
+					final var readOnlyAnnotation = propertyAnnotations.get().getRead_only_flag_name();
+					if (readOnlyAnnotation != null && !readOnlyAnnotation.isBlank()) {
+						if (EntitySearcher.getAnnotations(op, this.baseClassOntology)
+										.filter(
+												annotation ->
+														readOnlyAnnotation.equals(
+																annotation.getProperty().getIRI().getShortForm()))
+										.count()
+								> 0) {
+							MapperObjectProperty.setReadOnlyValueForPropertySchema(objPropertySchema, true);
+						}
+					}
 
-			// If property contains the annotation property (name is specified in configuration file)
-			// indicating it is write-only, then set value on the schema.
-			final var writeOnlyAnnotation =
-					isPropertyAnnotationsPresent ? propertyAnnotations.get().getWrite_only_flag_name() : null;
-			if (writeOnlyAnnotation != null && !writeOnlyAnnotation.isBlank()) {
-				if (EntitySearcher.getAnnotations(op, this.baseClassOntology)
-								.filter(
-										annotation ->
-												writeOnlyAnnotation.equals(
-														annotation.getProperty().getIRI().getShortForm()))
-								.count()
-						> 0) {
-					MapperObjectProperty.setWriteOnlyValueForPropertySchema(objPropertySchema, true);
+					// If property contains the annotation property (name is specified in configuration file)
+					// indicating it is write-only, then set value on the schema.
+					final var writeOnlyAnnotation = propertyAnnotations.get().getWrite_only_flag_name();
+					if (writeOnlyAnnotation != null && !writeOnlyAnnotation.isBlank()) {
+						if (EntitySearcher.getAnnotations(op, this.baseClassOntology)
+										.filter(
+												annotation ->
+														writeOnlyAnnotation.equals(
+																annotation.getProperty().getIRI().getShortForm()))
+										.count()
+								> 0) {
+							MapperObjectProperty.setWriteOnlyValueForPropertySchema(objPropertySchema, true);
+						}
+					}
 				}
 			}
 
@@ -1308,7 +1502,7 @@ public class ObjectVisitor implements OWLObjectVisitor {
 										final var propertyDescription =
 												ObaUtils.getDescription(
 														dp,
-														Set.of(this.baseClassOntology),
+														this.baseClassOntology,
 														this.configData.getConfigFlagValue(CONFIG_FLAG.DEFAULT_DESCRIPTIONS));
 
 										// In cases, such as unionOf/intersectionOf/oneOf , the property schema may
@@ -1345,65 +1539,66 @@ public class ObjectVisitor implements OWLObjectVisitor {
 											MapperDataProperty.setFunctionalForPropertySchema(dataPropertySchema);
 										}
 
-										final var propertyAnnotations = this.configData.getProperty_annotations();
-										final var isPropertyAnnotationsPresent = propertyAnnotations.isPresent();
+										final var annotationConfig = this.configData.getAnnotation_config();
+										if (annotationConfig.isPresent()) {
+											final var propertyAnnotations =
+													annotationConfig.get().getProperty_annotations();
 
-										// If property contains the annotation property (name is specified in
-										// configuration file) indicating it is read-only, then set value on the schema.
-										final var readOnlyAnnotation =
-												isPropertyAnnotationsPresent
-														? propertyAnnotations.get().getRead_only_flag_name()
-														: null;
-										if (readOnlyAnnotation != null && !readOnlyAnnotation.isBlank()) {
-											if (EntitySearcher.getAnnotations(dp, this.baseClassOntology)
-															.filter(
-																	annotation ->
-																			readOnlyAnnotation.equals(
-																					annotation.getProperty().getIRI().getShortForm()))
-															.count()
-													> 0) {
-												MapperDataProperty.setReadOnlyValueForPropertySchema(
-														dataPropertySchema, true);
-											}
-										}
+											if (propertyAnnotations.isPresent()) {
+												// If property contains the annotation property (name is specified in
+												// configuration file) indicating it is read-only, then set value on the
+												// schema.
+												final var readOnlyAnnotation =
+														propertyAnnotations.get().getRead_only_flag_name();
+												if (readOnlyAnnotation != null && !readOnlyAnnotation.isBlank()) {
+													if (EntitySearcher.getAnnotations(dp, this.baseClassOntology)
+																	.filter(
+																			annotation ->
+																					readOnlyAnnotation.equals(
+																							annotation.getProperty().getIRI().getShortForm()))
+																	.count()
+															> 0) {
+														MapperDataProperty.setReadOnlyValueForPropertySchema(
+																dataPropertySchema, true);
+													}
+												}
 
-										// If property contains the annotation property (name is specified in
-										// configuration file) indicating it is write-only, then set value on the
-										// schema.
-										final var writeOnlyAnnotation =
-												isPropertyAnnotationsPresent
-														? propertyAnnotations.get().getWrite_only_flag_name()
-														: null;
-										if (writeOnlyAnnotation != null && !writeOnlyAnnotation.isBlank()) {
-											if (EntitySearcher.getAnnotations(dp, this.baseClassOntology)
-															.filter(
-																	annotation ->
-																			writeOnlyAnnotation.equals(
-																					annotation.getProperty().getIRI().getShortForm()))
-															.count()
-													> 0) {
-												MapperDataProperty.setWriteOnlyValueForPropertySchema(
-														dataPropertySchema, true);
-											}
-										}
+												// If property contains the annotation property (name is specified in
+												// configuration file) indicating it is write-only, then set value on the
+												// schema.
+												final var writeOnlyAnnotation =
+														propertyAnnotations.get().getWrite_only_flag_name();
+												if (writeOnlyAnnotation != null && !writeOnlyAnnotation.isBlank()) {
+													if (EntitySearcher.getAnnotations(dp, this.baseClassOntology)
+																	.filter(
+																			annotation ->
+																					writeOnlyAnnotation.equals(
+																							annotation.getProperty().getIRI().getShortForm()))
+																	.count()
+															> 0) {
+														MapperDataProperty.setWriteOnlyValueForPropertySchema(
+																dataPropertySchema, true);
+													}
+												}
 
-										// If property contains the annotation property (name is specified in
-										// configuration file) indicating what the example value is for a data property,
-										// then set value on the schema.
-										final var exampleValueAnnotation =
-												isPropertyAnnotationsPresent
-														? propertyAnnotations.get().getExample_value_name()
-														: null;
-										if (exampleValueAnnotation != null && !exampleValueAnnotation.isBlank()) {
-											for (final var annotation :
-													EntitySearcher.getAnnotations(dp, this.baseClassOntology)
-															.filter(
-																	annotation ->
-																			exampleValueAnnotation.equals(
-																					annotation.getProperty().getIRI().getShortForm()))
-															.collect(Collectors.toSet())) {
-												MapperDataProperty.setExampleValueForPropertySchema(
-														dataPropertySchema, annotation);
+												// If property contains the annotation property (name is specified in
+												// configuration file) indicating what the example value is for a data
+												// property,
+												// then set value on the schema.
+												final var exampleValueAnnotation =
+														propertyAnnotations.get().getExample_value_name();
+												if (exampleValueAnnotation != null && !exampleValueAnnotation.isBlank()) {
+													for (final var annotation :
+															EntitySearcher.getAnnotations(dp, this.baseClassOntology)
+																	.filter(
+																			annotation ->
+																					exampleValueAnnotation.equals(
+																							annotation.getProperty().getIRI().getShortForm()))
+																	.collect(Collectors.toSet())) {
+														MapperDataProperty.setExampleValueForPropertySchema(
+																dataPropertySchema, annotation);
+													}
+												}
 											}
 										}
 
