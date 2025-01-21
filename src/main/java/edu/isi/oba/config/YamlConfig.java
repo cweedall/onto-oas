@@ -43,7 +43,7 @@ public class YamlConfig {
 	public Map<String, List<RelationConfig>> relations;
 	private LinkedHashMap<String, PathItem> custom_paths = null;
 	public Set<String> classes;
-	public PropertyAnnotationConfig property_annotations;
+	public AnnotationConfig annotation_config;
 
 	public Boolean getEnable_get_paths() {
 		return this.configFlags.get(CONFIG_FLAG.PATH_GET);
@@ -249,21 +249,21 @@ public class YamlConfig {
 	}
 
 	/**
-	 * The property annotations may be null (because it doesn't exist in the config file). We wrap it
+	 * The annotation config may be null (because it doesn't exist in the config file). We wrap it
 	 * within an {@link Optional} for determining whether a value exists.
 	 *
-	 * @return a {@link PropertyAnnotationConfig} parameterized {@link Optional}
+	 * @return a {@link AnnotationConfig} parameterized {@link Optional}
 	 */
-	public Optional<PropertyAnnotationConfig> getProperty_annotations() {
-		if (this.property_annotations != null) {
-			return Optional.ofNullable(this.property_annotations);
+	public Optional<AnnotationConfig> getAnnotation_config() {
+		if (this.annotation_config != null) {
+			return Optional.ofNullable(this.annotation_config);
 		} else {
 			return Optional.empty();
 		}
 	}
 
-	public void setProperty_annotations(PropertyAnnotationConfig property_annotations) {
-		this.property_annotations = property_annotations;
+	public void setAnnotation_config(AnnotationConfig annotation_config) {
+		this.annotation_config = annotation_config;
 	}
 
 	/**

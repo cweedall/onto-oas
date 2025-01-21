@@ -39,7 +39,9 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import org.semanticweb.owlapi.model.IRI;
 import org.semanticweb.owlapi.model.OWLAnnotation;
+import org.semanticweb.owlapi.model.OWLClass;
 import org.semanticweb.owlapi.model.OWLEntity;
+import org.semanticweb.owlapi.model.OWLObjectProperty;
 import org.semanticweb.owlapi.model.OWLOntology;
 import org.semanticweb.owlapi.search.EntitySearcher;
 import org.yaml.snakeyaml.LoaderOptions;
@@ -54,11 +56,13 @@ public class ObaUtils {
 		"application/rdf+xml", "text/turtle", "text/n3", "application/ld+json"
 	};
 
+	private static final String DCELEMENTS_NS = "http://purl.org/dc/elements/1.1/";
 	private static final String DCTERMS_NS = "http://purl.org/dc/terms/";
 	private static final String PROV_NS = "http://www.w3.org/ns/prov#";
 	private static final String RDFS_NS = "http://www.w3.org/2000/01/rdf-schema#";
 	private static final String SKOS_NS = "http://www.w3.org/2004/02/skos/core#";
 
+	public static final String DCELEMENTS_DEFINITION = DCELEMENTS_NS + "description";
 	public static final String DCTERMS_DEFINITION = DCTERMS_NS + "description";
 	public static final String RDFS_COMMENT = RDFS_NS + "comment";
 	public static final String SKOS_DEFINITION = SKOS_NS + "definition";
@@ -66,7 +70,12 @@ public class ObaUtils {
 
 	public static final List<String> DESCRIPTION_PROPERTIES =
 			new ArrayList<>(
-					Arrays.asList(DCTERMS_DEFINITION, RDFS_COMMENT, SKOS_DEFINITION, PROV_DEFINITION));
+					Arrays.asList(
+							DCELEMENTS_DEFINITION,
+							DCTERMS_DEFINITION,
+							RDFS_COMMENT,
+							SKOS_DEFINITION,
+							PROV_DEFINITION));
 
 	public static void write_file(String file_path, String content) {
 		BufferedWriter writer = null;
@@ -326,13 +335,32 @@ public class ObaUtils {
 	 * @return Description string
 	 */
 	public static String getDescription(
-			OWLEntity entity,
-			Set<OWLOntology> ontologies,
-			Boolean hasDefaultDescriptions,
-			String languageTag) {
+			OWLEntity entity, OWLOntology ontology, Boolean hasDefaultDescriptions, String languageTag) {
 		// Default to English (i.e. "en"), if null or empty/blank string
 		if (languageTag == null || languageTag.isBlank()) {
 			languageTag = "en";
+		}
+
+		var descriptionCount = 0;
+		if (entity instanceof OWLObjectProperty) {
+			for (final var description : ObaUtils.DESCRIPTION_PROPERTIES) {
+				descriptionCount +=
+						EntitySearcher.getAnnotationObjects(
+										entity,
+										Set.of(ontology).stream(),
+										new OWLAnnotationPropertyImpl(new IRI(description) {}))
+								.count();
+			}
+
+			if (descriptionCount == 0) {
+				for (final var objPropRange :
+						ontology.getObjectPropertyRangeAxioms(
+								((OWLObjectProperty) entity).asObjectPropertyExpression())) {
+					if (objPropRange.getRange() instanceof OWLClass) {
+						entity = objPropRange.getRange().asOWLClass();
+					}
+				}
+			}
 		}
 
 		// Use a map to keep track of all the description annotations.
@@ -341,7 +369,9 @@ public class ObaUtils {
 		for (final var description : ObaUtils.DESCRIPTION_PROPERTIES) {
 			final var annotationObjectsStream =
 					EntitySearcher.getAnnotationObjects(
-							entity, ontologies.stream(), new OWLAnnotationPropertyImpl(new IRI(description) {}));
+							entity,
+							Set.of(ontology).stream(),
+							new OWLAnnotationPropertyImpl(new IRI(description) {}));
 			final var annotationObjects = annotationObjectsStream.collect(Collectors.toSet());
 
 			for (final var annotationObj : annotationObjects) {
@@ -387,8 +417,8 @@ public class ObaUtils {
 	 * @return A string of the entity's English description.
 	 */
 	public static String getDescription(
-			OWLEntity entity, Set<OWLOntology> ontologies, Boolean hasDefaultDescriptions) {
-		return ObaUtils.getDescription(entity, ontologies, hasDefaultDescriptions, "en");
+			OWLEntity entity, OWLOntology ontology, Boolean hasDefaultDescriptions) {
+		return ObaUtils.getDescription(entity, ontology, hasDefaultDescriptions, "en");
 	}
 
 	/**

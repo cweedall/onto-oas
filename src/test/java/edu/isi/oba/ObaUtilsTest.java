@@ -67,8 +67,15 @@ public class ObaUtilsTest {
 			final var mapper = new Mapper(config_data);
 			final var planClass =
 					mapper.getManager().getOWLDataFactory().getOWLClass("http://purl.org/net/p-plan#Plan");
-			String desc = ObaUtils.getDescription(planClass, mapper.getOntologies(), true);
-			Assertions.assertNotEquals("", desc);
+
+			mapper.getOntologies().stream()
+					.forEach(
+							(ontology) -> {
+								if (ontology.containsEntityInSignature(planClass)) {
+									String desc = ObaUtils.getDescription(planClass, ontology, true);
+									Assertions.assertNotEquals("", desc);
+								}
+							});
 		} catch (Exception e) {
 			Assertions.fail("Failed to get description.", e);
 		}
