@@ -15,6 +15,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -38,6 +39,8 @@ class Mapper {
 	private final YamlConfig configData;
 
 	private final OWLOntologyManager manager = OWLManager.createOWLOntologyManager();
+
+	private final Map<String, Map<String, String>> fullMarkdownGenerationMap = new TreeMap<>();
 
 	/**
 	 * Constructor
@@ -144,6 +147,21 @@ class Mapper {
 			logger.info("");
 			logger.info("--->  SAVING SCHEMA:  \"" + mappedSchema.getName() + "\"");
 			logger.info("=======================================================================");
+
+			final var classMarkdownMap = objVisitor.getMarkdownMappings();
+			if (!classMarkdownMap.isEmpty()) {
+				classMarkdownMap.forEach(
+						(annotationKey, propertyAnnotationValueMap) -> {
+							if (this.fullMarkdownGenerationMap.containsKey(annotationKey)) {
+								this.fullMarkdownGenerationMap
+										.get(annotationKey)
+										.putAll(propertyAnnotationValueMap);
+							} else {
+								this.fullMarkdownGenerationMap.put(annotationKey, propertyAnnotationValueMap);
+							}
+						});
+			}
+
 			logger.info("");
 			this.schemas.put(mappedSchema.getName(), mappedSchema);
 		}
@@ -400,5 +418,16 @@ class Mapper {
 				});
 
 		return allowedClasses;
+	}
+
+	/**
+	 * Get all the markdown generation mappings for all the ontologies defined in the configuration
+	 * file.
+	 *
+	 * @return a {@link Map} containing annotation mappings to mappings of property name and
+	 *     annotation value.
+	 */
+	public Map<String, Map<String, String>> getFullMarkdownMappings() {
+		return this.fullMarkdownGenerationMap;
 	}
 }
