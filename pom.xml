@@ -42,14 +42,14 @@
         <dependency>
             <groupId>org.json</groupId>
             <artifactId>json</artifactId>
-            <version>20240303</version>
+            <version>20250107</version>
         </dependency>
 
         <!-- https://mvnrepository.com/artifact/org.junit.jupiter/junit-jupiter-api -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-api</artifactId>
-            <version>5.11.0</version>
+            <version>5.11.4</version>
             <scope>test</scope>
         </dependency>
 
@@ -57,76 +57,83 @@
         <dependency>
             <groupId>io.swagger.core.v3</groupId>
             <artifactId>swagger-core</artifactId>
-            <version>2.2.22</version>
+            <version>2.2.28</version>
         </dependency>
         <!-- https://mvnrepository.com/artifact/io.swagger.core.v3/swagger-integration -->
         <dependency>
             <groupId>io.swagger.core.v3</groupId>
             <artifactId>swagger-integration</artifactId>
-            <version>2.2.22</version>
+            <version>2.2.28</version>
         </dependency>
         <!-- https://mvnrepository.com/artifact/io.swagger.core.v3/swagger-jaxrs2 -->
         <dependency>
             <groupId>io.swagger.core.v3</groupId>
             <artifactId>swagger-jaxrs2</artifactId>
-            <version>2.2.22</version>
+            <version>2.2.28</version>
         </dependency>
         <!-- https://mvnrepository.com/artifact/io.swagger.core.v3/swagger-models-jakarta -->
         <dependency>
             <groupId>io.swagger.core.v3</groupId>
             <artifactId>swagger-models</artifactId>
-            <version>2.2.22</version>
+            <version>2.2.28</version>
         </dependency>
         <!-- https://mvnrepository.com/artifact/io.swagger.parser.v3/swagger-parser -->
         <dependency>
             <groupId>io.swagger.parser.v3</groupId>
             <artifactId>swagger-parser</artifactId>
-            <version>2.1.22</version>
+            <version>2.1.25</version>
         </dependency>
         <!-- https://mvnrepository.com/artifact/io.swagger.parser.v3/swagger-parser-core -->
         <dependency>
             <groupId>io.swagger.parser.v3</groupId>
             <artifactId>swagger-parser-core</artifactId>
-            <version>2.1.22</version>
+            <version>2.1.25</version>
         </dependency>
 
         <!-- The JavaX dependencies are necessary for the swagger-integration dependencies above -->
-        <!-- https://mvnrepository.com/artifact/javax/javaee-api -->
+        <!-- PREVIOUSLY: https://mvnrepository.com/artifact/javax/javaee-api -->
+        <!-- https://mvnrepository.com/artifact/jakarta.platform/jakarta.jakartaee-api -->
         <dependency>
-            <groupId>javax</groupId>
-            <artifactId>javaee-api</artifactId>
-            <version>8.0.1</version>
+            <groupId>jakarta.platform</groupId>
+            <artifactId>jakarta.jakartaee-api</artifactId>
+            <version>11.0.0-M4</version>
+            <scope>provided</scope>
         </dependency>
-        <!-- https://mvnrepository.com/artifact/javax.servlet/javax.servlet-api -->
+
+        <!-- PREVIOUSLY: https://mvnrepository.com/artifact/javax.servlet/javax.servlet-api -->
+        <!-- https://mvnrepository.com/artifact/jakarta.servlet/jakarta.servlet-api -->
         <dependency>
-            <groupId>javax.servlet</groupId>
-            <artifactId>javax.servlet-api</artifactId>
-            <version>4.0.1</version>
+            <groupId>jakarta.servlet</groupId>
+            <artifactId>jakarta.servlet-api</artifactId>
+            <version>6.1.0</version>
+            <scope>provided</scope>
         </dependency>
-        <!-- https://mvnrepository.com/artifact/javax.ws.rs/javax.ws.rs-api -->
+
+        <!-- PREVIOUSLY: https://mvnrepository.com/artifact/javax.ws.rs/javax.ws.rs-api -->
+        <!-- https://mvnrepository.com/artifact/jakarta.ws.rs/jakarta.ws.rs-api -->
         <dependency>
-            <groupId>javax.ws.rs</groupId>
-            <artifactId>javax.ws.rs-api</artifactId>
-            <version>2.1.1</version>
+            <groupId>jakarta.ws.rs</groupId>
+            <artifactId>jakarta.ws.rs-api</artifactId>
+            <version>4.0.0</version>
         </dependency>
 
         <!-- https://mvnrepository.com/artifact/net.sourceforge.owlapi/owlapi-api -->
         <dependency>
             <groupId>net.sourceforge.owlapi</groupId>
             <artifactId>owlapi-api</artifactId>
-            <version>5.5.0</version>
+            <version>5.5.1</version>
         </dependency>
         <!-- https://mvnrepository.com/artifact/net.sourceforge.owlapi/owlapi-apibinding -->
         <dependency>
             <groupId>net.sourceforge.owlapi</groupId>
             <artifactId>owlapi-apibinding</artifactId>
-            <version>5.5.0</version>
+            <version>5.5.1</version>
         </dependency>
         <!-- https://mvnrepository.com/artifact/net.sourceforge.owlapi/owlapi-impl -->
         <dependency>
             <groupId>net.sourceforge.owlapi</groupId>
             <artifactId>owlapi-impl</artifactId>
-            <version>5.5.0</version>
+            <version>5.5.1</version>
         </dependency>
 
         <!-- https://mvnrepository.com/artifact/org.slf4j/slf4j-api -->
@@ -174,7 +181,7 @@
             <plugin>
                 <groupId>com.diffplug.spotless</groupId>
                 <artifactId>spotless-maven-plugin</artifactId>
-                <version>2.43.0</version>
+                <version>2.44.2</version>
                 <!-- For configuration options, see: https://github.com/diffplug/spotless/blob/main/plugin-maven/README.md -->
                 <configuration>
                     <java>
@@ -263,7 +270,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
-                <version>3.5.0</version>
+                <version>3.5.2</version>
             </plugin>
 
             <!-- Make this jar executable -->
