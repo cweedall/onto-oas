@@ -378,23 +378,30 @@ public final class MarkdownWriter {
 																	writer.newLine();
 
 																	if ("array".equals(propertySchema.getType())) {
-																		final var objPropRef =
-																				propertySchema
-																						.getItems()
-																						.get$ref()
-																						.replace("#/components/schemas/", "");
-																		final var markdownRef =
-																				"<a href='#"
-																						+ objPropRef.toLowerCase()
-																						+ "'>"
-																						+ objPropRef
-																						+ "</a>";
-																		writer.append(
-																				"\t\t\t\t<li><span class='type_info'>type:</span><span>"
-																						+ propertySchema.getType()
-																						+ " of:<br />"
-																						+ markdownRef
-																						+ "</span></li>");
+																		final var propertySchemaItems = propertySchema.getItems();
+																		if (propertySchemaItems.get$ref() == null) {
+																			writer.append(
+																					"\t\t\t\t<li><span class='type_info'>type:</span><span>"
+																							+ propertySchemaItems.getType()
+																							+ "</span></li>");
+																		} else {
+																			final var objPropRef =
+																					propertySchemaItems
+																							.get$ref()
+																							.replace("#/components/schemas/", "");
+																			final var markdownRef =
+																					"<a href='#"
+																							+ objPropRef.toLowerCase()
+																							+ "'>"
+																							+ objPropRef
+																							+ "</a>";
+																			writer.append(
+																					"\t\t\t\t<li><span class='type_info'>type:</span><span>"
+																							+ propertySchema.getType()
+																							+ " of:<br />"
+																							+ markdownRef
+																							+ "</span></li>");
+																		}
 																	} else {
 																		writer.append(
 																				"\t\t\t\t<li><span class='type_info'>type:</span><span>"
