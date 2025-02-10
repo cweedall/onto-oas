@@ -78,11 +78,14 @@ public final class MarkdownWriter {
 													final var annotationValue = entry.getValue();
 
 													final var lineSep = System.getProperty("line.separator");
+													// Special "substitute character"
+													final var specialTempChar = "\u001A";
 													final var scrubbedAnnotationValue =
 															annotationValue
-																	.replaceAll("\r\n", lineSep)
-																	.replaceAll("\r", lineSep)
-																	.replaceAll("\n", lineSep)
+																	.replaceAll("\r\n", specialTempChar)
+																	.replaceAll("\r", specialTempChar)
+																	.replaceAll("\n", specialTempChar)
+																	.replaceAll("[" + specialTempChar + "]+", lineSep)
 																	.replaceAll("<br />", lineSep + "\t\t<br />" + lineSep)
 																	.replaceAll(lineSep + lineSep, lineSep + "<br />" + lineSep)
 																	.replaceAll(lineSep, lineSep + "\t\t");
