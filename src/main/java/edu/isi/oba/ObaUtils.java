@@ -380,13 +380,22 @@ public class ObaUtils {
 
 				if (optionalDescriptionLiteral.isPresent()) {
 					final var descriptionLiteral = optionalDescriptionLiteral.get();
+					final var yamlStringLineSep = "\n";
+					final var specialTempChar = "\u001A";
+					final var descLiteralValue =
+							descriptionLiteral
+									.getLiteral()
+									.replaceAll("\r\n", specialTempChar)
+									.replaceAll("\r", specialTempChar)
+									.replaceAll("\n", specialTempChar)
+									.replaceAll(specialTempChar, yamlStringLineSep);
 
 					// A description is present, but if it has no language tag, use empty string "".
 					// If there are multiple descriptions annotations with no language tag, only the last one
 					// encountered will be used.
 					langDescMap.put(
 							descriptionLiteral.getLang() == null ? "" : descriptionLiteral.getLang(),
-							descriptionLiteral.getLiteral());
+							descLiteralValue);
 				}
 			}
 		}
