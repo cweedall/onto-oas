@@ -104,10 +104,16 @@ public final class MarkdownWriter {
 														writer.append("<hr class='class-separator' />");
 														writer.newLine();
 														writer.newLine();
-														final var classHeader =
+
+														final var classHeaderLink =
+																"<a id='" + currentClassKey.toLowerCase() + "'></a>";
+														final var classHeaderLinkRef =
 																"[" + currentClassKey + "](#" + currentClassKey.toLowerCase() + ")";
-														tableOfContentsList.add("- " + classHeader);
-														writer.append("## " + classHeader);
+														tableOfContentsList.add("- " + classHeaderLinkRef);
+
+														writer.append(classHeaderLink);
+														writer.newLine();
+														writer.append("## " + currentClassKey);
 
 														currentClassSchema = mapper.getSchemas().get(currentClassKey);
 
@@ -145,12 +151,19 @@ public final class MarkdownWriter {
 															writer.newLine();
 															writer.newLine();
 
+															final var classInheritedPropsLink =
+																	"<a id='inherited-properties-for-"
+																			+ entryClassName.toLowerCase()
+																			+ "'></a>";
 															final var classInheritedProps =
 																	"[Inherited properties](#inherited-properties-for-"
 																			+ entryClassName.toLowerCase()
 																			+ ")";
 															tableOfContentsList.add("\t- " + classInheritedProps);
-															writer.append("### " + classInheritedProps);
+
+															writer.append(classInheritedPropsLink);
+															writer.newLine();
+															writer.append("### Inherited properties");
 
 															writer.newLine();
 															writer.append("<ul>");
@@ -177,12 +190,19 @@ public final class MarkdownWriter {
 															writer.newLine();
 															writer.newLine();
 
+															final var classSpecificPropsLink =
+																	"<a id='class-specific-properties-for-"
+																			+ entryClassName.toLowerCase()
+																			+ "'></a>";
 															final var classSpecificProps =
 																	"[Class-specific properties](#class-specific-properties-for-"
 																			+ entryClassName.toLowerCase()
 																			+ ")";
 															tableOfContentsList.add("\t- " + classSpecificProps);
-															writer.append("### " + classSpecificProps);
+
+															writer.append(classSpecificPropsLink);
+															writer.newLine();
+															writer.append("### Class-specific properties");
 														}
 
 														writer.newLine();
@@ -238,14 +258,16 @@ public final class MarkdownWriter {
 														writer.append("\t</div>");
 													} else if (entryPropertyName != null) {
 														final var classProp =
-																"["
-																		+ (entryPropertyNamePlural == null
-																				? entryPropertyName
-																				: entryPropertyNamePlural)
-																		+ "](#"
-																		+ keyReferenceId
-																		+ ")";
-														tableOfContentsList.add("\t\t- " + classProp);
+																(entryPropertyNamePlural == null
+																		? entryPropertyName
+																		: entryPropertyNamePlural);
+														final var classPropLink = "<a id='" + keyReferenceId + "'></a>";
+														final var classPropLinkRef =
+																"[" + classProp + "](#" + keyReferenceId + ")";
+														tableOfContentsList.add("\t\t- " + classPropLinkRef);
+
+														writer.append(classPropLink);
+														writer.newLine();
 														writer.append("#### " + classProp);
 
 														writer.newLine();
