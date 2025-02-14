@@ -319,9 +319,11 @@ class Mapper {
 		try {
 			final var mappedSchema = this.getSchema(cls, ontology);
 
-			// Add the OpenAPI paths
-			if (this.getClassesAllowedByYamlConfig().contains(cls)) {
-				this.addPath(pathGenerator, mappedSchema, cls.getIRI());
+			// If not disabled, and class is allowed, then add the OpenAPI paths
+			if (!this.configData.getConfigFlagValue(CONFIG_FLAG.DISABLE_ALL_PATHS)) {
+				if (this.getClassesAllowedByYamlConfig().contains(cls)) {
+					this.addPath(pathGenerator, mappedSchema, cls.getIRI());
+				}
 			}
 		} catch (Exception e) {
 			logger.log(Level.SEVERE, "Could not parse class " + cls.getIRI().toString());
