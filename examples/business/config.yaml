@@ -12,7 +12,7 @@ openapi:
     version: v1
   externalDocs:
     description: busont
-    url:  https://www.semanticarts.com/gist/previous-versions/
+    url: https://www.semanticarts.com/gist/previous-versions/
   servers:
     - url: http://localhost:8080/v1
       description: localhost server
@@ -27,11 +27,10 @@ endpoint:
   url: http://localhost:7201/sparql
   prefix: https://businessontology.com/resource
 
-## Filter the paths by methods
-enable_get_paths: true
-enable_post_paths: false
-enable_delete_paths: false
-enable_put_paths: false
-
+path_config:
+  enable_get_paths: true
+  enable_post_paths: false
+  enable_delete_paths: false
+  enable_put_paths: false
 
 follow_references: true

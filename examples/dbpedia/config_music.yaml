@@ -12,7 +12,7 @@ openapi:
     version: v1.3.0
   externalDocs:
     description: DBpedia
-    url:  http://dbpedia.org/
+    url: http://dbpedia.org/
   servers:
     - url: https://dbpedia.dbpedia.oba.isi.edu/v1.3.0
     - url: http://localhost:8080/v1.3.0
@@ -27,11 +27,11 @@ endpoint:
   url: http://dbpedia.org/sparql
   prefix: http://dbpedia.org/resource
 
-## Filter the paths by methods
-enable_get_paths: true
-enable_post_paths: false
-enable_delete_paths: false
-enable_put_paths: false
+path_config:
+  enable_get_paths: true
+  enable_post_paths: false
+  enable_delete_paths: false
+  enable_put_paths: false
 
 ## Select the classes to add in the API
 classes:
