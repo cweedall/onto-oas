@@ -31,10 +31,11 @@ endpoint:
   graph_base: http://ontosoft.isi.edu:3030/modelCatalog-1.2.0/data/
 
 ## Filter the paths by methods
-enable_get_paths: true
-enable_post_paths: false
-enable_delete_paths: false
-enable_put_paths: false
+path_config:
+  enable_get_paths: true
+  enable_post_paths: false
+  enable_delete_paths: false
+  enable_put_paths: false
 
 ## Select the classes to add in the API
 classes:

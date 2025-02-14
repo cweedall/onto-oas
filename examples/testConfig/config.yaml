@@ -23,13 +23,13 @@ endpoint:
   prefix: https://w3id.org/okn/i/example
   graph_base: http://endpoint.mint.isi.edu/modelCatalog-1.5.0/data/
 
-enable_get_paths: true
-enable_post_paths: false
-enable_delete_paths: false
-enable_put_paths: false
+path_config:
+  enable_get_paths: true
+  enable_post_paths: false
+  enable_delete_paths: false
+  enable_put_paths: false
 
 auth:
   provider: firebase
-  
-follow_references: true
 
+follow_references: true

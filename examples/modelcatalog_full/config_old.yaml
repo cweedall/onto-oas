@@ -26,10 +26,11 @@ endpoint:
 
 custom_queries_directory: examples/modelcatalog/custom_queries
 
-enable_get_paths: true
-enable_post_paths: true
-enable_delete_paths: true
-enable_put_paths: true
+path_config:
+  enable_get_paths: true
+  enable_post_paths: false
+  enable_delete_paths: false
+  enable_put_paths: false
 
 auth:
   provider: firebase
@@ -40,104 +41,104 @@ custom_paths:
     get:
       description: Gets the details of a single instance of a Model
       parameters:
-      - description: Name of the custom query
-        in: query
-        name: custom_query_name
-        required: false
-        schema:
-          default: custom_model_index
-          type: string
-      - description: Username to query
-        in: query
-        name: username
-        required: false
-        schema:
-          type: string
-      - description: Label of NumericalIndex
-        in: query
-        name: label
-        required: true
-        schema:
-          type: string
+        - description: Name of the custom query
+          in: query
+          name: custom_query_name
+          required: false
+          schema:
+            default: custom_model_index
+            type: string
+        - description: Username to query
+          in: query
+          name: username
+          required: false
+          schema:
+            type: string
+        - description: Label of NumericalIndex
+          in: query
+          name: label
+          required: true
+          schema:
+            type: string
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
                 items:
-                  $ref: '#/components/schemas/Model'
+                  $ref: "#/components/schemas/Model"
           description: Gets the details of a single instance of Model
       summary: Get a Model
       tags:
-      - Model
+        - Model
   /custom/model/intervention:
     get:
       description: Gets the details of a single instance of a Model
       parameters:
-      - description: Name of the custom query
-        in: query
-        name: custom_query_name
-        required: false
-        schema:
-          default: custom_model_intervetion
-          type: string
-      - description: Username to query
-        in: query
-        name: username
-        required: false
-        schema:
-          type: string
-      - description: Label of intervation
-        in: query
-        name: label
-        required: true
-        schema:
-          type: string
+        - description: Name of the custom query
+          in: query
+          name: custom_query_name
+          required: false
+          schema:
+            default: custom_model_intervetion
+            type: string
+        - description: Username to query
+          in: query
+          name: username
+          required: false
+          schema:
+            type: string
+        - description: Label of intervation
+          in: query
+          name: label
+          required: true
+          schema:
+            type: string
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
                 items:
-                  $ref: '#/components/schemas/Model'
+                  $ref: "#/components/schemas/Model"
           description: Gets the details of a single instance of Model
       summary: Get a Model
       tags:
-      - Model
+        - Model
   /custom/model/region:
     get:
       description: Gets the details of a single instance of a Model
       parameters:
-      - description: Name of the custom query
-        in: query
-        name: custom_query_name
-        required: false
-        schema:
-          default: custom_model_region
-          type: string
-      - description: Username to query
-        in: query
-        name: username
-        required: false
-        schema:
-          type: string
-      - description: region to search
-        in: query
-        name: label
-        required: true
-        schema:
-          type: string
+        - description: Name of the custom query
+          in: query
+          name: custom_query_name
+          required: false
+          schema:
+            default: custom_model_region
+            type: string
+        - description: Username to query
+          in: query
+          name: username
+          required: false
+          schema:
+            type: string
+        - description: region to search
+          in: query
+          name: label
+          required: true
+          schema:
+            type: string
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
                 items:
-                  $ref: '#/components/schemas/Model'
+                  $ref: "#/components/schemas/Model"
           description: Gets the details of a single instance of Model
       summary: Get a Model
       tags:
-      - Model
+        - Model
   /custom/models/variable:
     get:
       description: Get models by variable name
@@ -162,12 +163,12 @@ custom_paths:
           schema:
             type: string
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
                 items:
-                  $ref: '#/components/schemas/Model'
+                  $ref: "#/components/schemas/Model"
           description: Gets a list of instance of Model
       summary: Get a list of Model
       tags:
@@ -196,12 +197,12 @@ custom_paths:
           schema:
             type: string
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
                 items:
-                  $ref: '#/components/schemas/ModelConfigurationSetup'
+                  $ref: "#/components/schemas/ModelConfigurationSetup"
           description: Gets a list of instance of ModelConfigurationSetup
       summary: Get a list  Model
       tags:
@@ -210,101 +211,101 @@ custom_paths:
     get:
       description: Gets the details of a single instance of a ModelConfigurationSetup
       parameters:
-      - description: Username to query
-        in: query
-        name: username
-        required: false
-        schema:
-          type: string
-      - description: The ID of the resource
-        in: path
-        name: id
-        required: true
-        schema:
-          type: string
-      - description: Name of the custom query
-        in: query
-        name: custom_query_name
-        required: false
-        schema:
-          default: custom_configurationsetups
-          type: string
+        - description: Username to query
+          in: query
+          name: username
+          required: false
+          schema:
+            type: string
+        - description: The ID of the resource
+          in: path
+          name: id
+          required: true
+          schema:
+            type: string
+        - description: Name of the custom query
+          in: query
+          name: custom_query_name
+          required: false
+          schema:
+            default: custom_configurationsetups
+            type: string
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ModelConfigurationSetup'
+                $ref: "#/components/schemas/ModelConfigurationSetup"
           description: Gets the details of a single instance of  ModelConfigurationSetup
       summary: Get a ModelConfigurationSetup
       tags:
-      - ConfigurationSetup
+        - ConfigurationSetup
   /custom/modelconfigurationsetups/{id}:
     get:
       description: Gets the details of a single instance of a ModelConfigurationSetup
       parameters:
-      - description: Username to query
-        in: query
-        name: username
-        required: false
-        schema:
-          type: string
-      - description: The ID of the resource
-        in: path
-        name: id
-        required: true
-        schema:
-          type: string
-      - description: Name of the custom query
-        in: query
-        name: custom_query_name
-        required: false
-        schema:
-          default: custom_modelconfigurationsetups
-          type: string
+        - description: Username to query
+          in: query
+          name: username
+          required: false
+          schema:
+            type: string
+        - description: The ID of the resource
+          in: path
+          name: id
+          required: true
+          schema:
+            type: string
+        - description: Name of the custom query
+          in: query
+          name: custom_query_name
+          required: false
+          schema:
+            default: custom_modelconfigurationsetups
+            type: string
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ModelConfigurationSetup'
+                $ref: "#/components/schemas/ModelConfigurationSetup"
           description: Gets the details of a single instance of  ModelConfigurationSetup
       summary: Get a ModelConfigurationSetup
       tags:
-      - ModelConfigurationSetup
+        - ModelConfigurationSetup
   /custom/modelconfigurations/{id}:
     get:
       description: Gets the details of a single instance of a ModelConfiguration
       parameters:
-      - description: Username to query
-        in: query
-        name: username
-        required: false
-        schema:
-          type: string
-      - description: The ID of the resource
-        in: path
-        name: id
-        required: true
-        schema:
-          type: string
-      - description: Name of the custom query
-        in: query
-        name: custom_query_name
-        required: false
-        schema:
-          default: custom_modelconfigurations
-          type: string
+        - description: Username to query
+          in: query
+          name: username
+          required: false
+          schema:
+            type: string
+        - description: The ID of the resource
+          in: path
+          name: id
+          required: true
+          schema:
+            type: string
+        - description: Name of the custom query
+          in: query
+          name: custom_query_name
+          required: false
+          schema:
+            default: custom_modelconfigurations
+            type: string
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ModelConfiguration'
+                $ref: "#/components/schemas/ModelConfiguration"
           description: Gets the details of a single instance of ModelConfiguration
       summary: Get a ModelConfiguration
       tags:
-      - ModelConfiguration
+        - ModelConfiguration
   /custom/models/standard_variable:
     get:
       description: Gets a list of model filter by the label of a standard variable
@@ -329,12 +330,12 @@ custom_paths:
           schema:
             type: string
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
                 items:
-                  $ref: '#/components/schemas/Model'
+                  $ref: "#/components/schemas/Model"
           description: Gets a list of models
       summary: Get a list of models
       tags:

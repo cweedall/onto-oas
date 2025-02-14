@@ -27,11 +27,11 @@ endpoint:
   url: http://dbpedia.org/sparql
   prefix: http://dbpedia.org/resource
 
-## Filter the paths by methods
-enable_get_paths: true
-enable_post_paths: false
-enable_delete_paths: false
-enable_put_paths: false
+path_config:
+  enable_get_paths: true
+  enable_post_paths: false
+  enable_delete_paths: false
+  enable_put_paths: false
 
 ## Select the classes to add in the API
 follow_references: false
