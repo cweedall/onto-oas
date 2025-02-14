@@ -39,14 +39,19 @@ endpoint:
   url: http://dbpedia.org/sparql
   prefix: http://dbpedia.org/resource
 
-## Filter the paths by methods
-enable_get_paths: true
-enable_post_paths: false
-enable_delete_paths: false
-enable_put_paths: false
-
-## For endpoint path names, use "kebab-case" case (all lowercase and separate words with a dash/hyphen).  Synonyms for "kebab-case" include: caterpillar-case, param-case, dash-case, hyphen-case, lisp-case, spinal-case and css-case
-use_kebab_case_paths: false
+## Configuration settings related to OpenAPI's "path" section
+path_config:
+  ## Creates an empty "path" object within the specification file.
+  ## !!IMPORTANT!! overrides all of the "enable" options below.
+  disable_all_paths: true
+  ## Filter the paths by operation types
+  enable_get_paths: true
+  enable_post_paths: true
+  enable_delete_paths: true
+  enable_put_paths: true
+  ## For endpoint path names, use "kebab-case" case (all lowercase and separate words with a dash/hyphen).
+  ## Synonyms for "kebab-case" include: caterpillar-case, param-case, dash-case, hyphen-case, lisp-case, spinal-case and css-case
+  use_kebab_case_paths: false
 
 ## Select the classes to add in the API
 classes:
@@ -155,7 +160,21 @@ openapi:
     - url: http://localhost:8080/v1.3.0
 ```
 
-### enable_get_paths
+### Path-related configuration settings
+
+The `path_config` property contains sub-properties which are relevant to the configuration and display settings for the `path` section of the OpenAPI specification.
+
+#### disable_all_paths
+
+Creates an empty `path` section by disabling all paths from displaying. Note that, if true, this will override the other path-related configuration settings (i.e. `enable_get_paths`, `enable_post_paths`, `enable_delete_paths`, `enable_put_paths`).
+
+| Field         | Value     |
+| ------------- | --------- |
+| **Required:** | `false`   |
+| **Type:**     | `boolean` |
+| **Default:**  | `false`   |
+
+#### enable_get_paths
 
 Enable the GET method for the paths
 
@@ -165,7 +184,7 @@ Enable the GET method for the paths
 | **Type:**     | `boolean` |
 | **Default:**  | `true`    |
 
-### enable_post_paths:
+#### enable_post_paths:
 
 Enable the POST method for the paths
 
@@ -175,7 +194,7 @@ Enable the POST method for the paths
 | **Type:**     | `boolean` |
 | **Default:**  | `false`   |
 
-### enable_delete_paths
+#### enable_delete_paths
 
 Enable the DELETE method for the paths
 
@@ -185,7 +204,7 @@ Enable the DELETE method for the paths
 | **Type:**     | `boolean` |
 | **Default:**  | `false`   |
 
-### enable_put_paths
+#### enable_put_paths
 
 Enable the PUT method for the paths
 
@@ -195,7 +214,7 @@ Enable the PUT method for the paths
 | **Type:**     | `boolean` |
 | **Default:**  | `false`   |
 
-### use_kebab_case_paths
+#### use_kebab_case_paths
 
 For endpoint path names, use "kebab-case" case (all lowercase and separate words with a dash/hyphen). Synonyms for "kebab-case" include: caterpillar-case, param-case, dash-case, hyphen-case, lisp-case, spinal-case and css-case.
 

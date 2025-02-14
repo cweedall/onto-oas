@@ -32,14 +32,19 @@ endpoint:
   prefix: https://w3id.org/okn/i/mint
   graph_base: http://ontosoft.isi.edu:3030/modelCatalog-1.2.0/data/
 
-## Filter the paths by methods
-enable_get_paths: true
-enable_post_paths: false
-enable_delete_paths: false
-enable_put_paths: false
-
-## For endpoint path names, use "kebab-case" case (all lowercase and separate words with a dash/hyphen).  Synonyms for "kebab-case" include: caterpillar-case, param-case, dash-case, hyphen-case, lisp-case, spinal-case and css-case
-use_kebab_case_paths: false
+## Configuration settings related to OpenAPI's "path" section
+path_config:
+  ## Creates an empty "path" object within the specification file.
+  ## !!IMPORTANT!! overrides all of the "enable" options below.
+  disable_all_paths: true
+  ## Filter the paths by operation types
+  enable_get_paths: true
+  enable_post_paths: true
+  enable_delete_paths: true
+  enable_put_paths: true
+  ## For endpoint path names, use "kebab-case" case (all lowercase and separate words with a dash/hyphen).
+  ## Synonyms for "kebab-case" include: caterpillar-case, param-case, dash-case, hyphen-case, lisp-case, spinal-case and css-case
+  use_kebab_case_paths: false
 
 ## Select the classes to add in the API
 classes:

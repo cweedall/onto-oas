@@ -24,9 +24,10 @@ endpoint:
   prefix: https://w3id.org/okn/i/example
   graph_base: http://endpoint.mint.isi.edu/example
 
-enable_get_paths: true
-enable_post_paths: false
-enable_delete_paths: false
-enable_put_paths: false
+path_config:
+  enable_get_paths: true
+  enable_post_paths: false
+  enable_delete_paths: false
+  enable_put_paths: false
 
 follow_references: true

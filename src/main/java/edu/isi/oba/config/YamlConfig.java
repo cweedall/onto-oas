@@ -19,14 +19,8 @@ public class YamlConfig {
 					put(CONFIG_FLAG.FIX_SINGULAR_PLURAL_PROPERTY_NAMES, false);
 					put(CONFIG_FLAG.FOLLOW_REFERENCES, true);
 					put(CONFIG_FLAG.GENERATE_JSON_FILE, false);
-					put(CONFIG_FLAG.PATH_DELETE, false);
-					put(CONFIG_FLAG.PATH_GET, true);
-					put(CONFIG_FLAG.PATH_PATCH, false);
-					put(CONFIG_FLAG.PATH_POST, false);
-					put(CONFIG_FLAG.PATH_PUT, false);
 					put(CONFIG_FLAG.REQUIRED_PROPERTIES_FROM_CARDINALITY, false);
 					put(CONFIG_FLAG.USE_INHERITANCE_REFERENCES, false);
-					put(CONFIG_FLAG.USE_KEBAB_CASE_PATHS, false);
 				}
 			};
 
@@ -44,45 +38,24 @@ public class YamlConfig {
 	private LinkedHashMap<String, PathItem> custom_paths = null;
 	public Set<String> classes;
 	public AnnotationConfig annotation_config;
+	public PathConfig path_config;
 
-	public Boolean getEnable_get_paths() {
-		return this.configFlags.get(CONFIG_FLAG.PATH_GET);
+	/**
+	 * The path config may be null (because it doesn't exist in the config file). We wrap it within an
+	 * {@link Optional} for determining whether a value exists.
+	 *
+	 * @return a {@link PathConfig} parameterized {@link Optional}
+	 */
+	public Optional<PathConfig> getPath_config() {
+		if (this.path_config != null) {
+			return Optional.ofNullable(this.path_config);
+		} else {
+			return Optional.empty();
+		}
 	}
 
-	public void setEnable_get_paths(Boolean enable_get_paths) {
-		this.configFlags.put(CONFIG_FLAG.PATH_GET, enable_get_paths);
-	}
-
-	public Boolean getEnable_patch_paths() {
-		return this.configFlags.get(CONFIG_FLAG.PATH_PATCH);
-	}
-
-	public void setEnable_patch_paths(Boolean enable_patch_paths) {
-		this.configFlags.put(CONFIG_FLAG.PATH_PATCH, enable_patch_paths);
-	}
-
-	public Boolean getEnable_post_paths() {
-		return this.configFlags.get(CONFIG_FLAG.PATH_POST);
-	}
-
-	public void setEnable_post_paths(Boolean enable_post_paths) {
-		this.configFlags.put(CONFIG_FLAG.PATH_POST, enable_post_paths);
-	}
-
-	public Boolean getEnable_put_paths() {
-		return this.configFlags.get(CONFIG_FLAG.PATH_PUT);
-	}
-
-	public void setEnable_put_paths(Boolean enable_put_paths) {
-		this.configFlags.put(CONFIG_FLAG.PATH_PUT, enable_put_paths);
-	}
-
-	public Boolean getEnable_delete_paths() {
-		return this.configFlags.get(CONFIG_FLAG.PATH_DELETE);
-	}
-
-	public void setEnable_delete_paths(Boolean enable_delete_paths) {
-		this.configFlags.put(CONFIG_FLAG.PATH_DELETE, enable_delete_paths);
+	public void setPathConfig(PathConfig path_config) {
+		this.path_config = path_config;
 	}
 
 	public String getOutput_dir() {
@@ -224,14 +197,6 @@ public class YamlConfig {
 				CONFIG_FLAG.REQUIRED_PROPERTIES_FROM_CARDINALITY, required_properties_from_cardinality);
 	}
 
-	public Boolean getUse_kebab_case_paths() {
-		return this.configFlags.get(CONFIG_FLAG.USE_KEBAB_CASE_PATHS);
-	}
-
-	public void setUse_kebab_case_paths(Boolean use_kebab_case_paths) {
-		this.configFlags.put(CONFIG_FLAG.USE_KEBAB_CASE_PATHS, use_kebab_case_paths);
-	}
-
 	public Boolean getGenerate_json_file() {
 		return this.configFlags.get(CONFIG_FLAG.GENERATE_JSON_FILE);
 	}
@@ -273,7 +238,13 @@ public class YamlConfig {
 	 * @return The flag's value (true/false/null).
 	 */
 	public Boolean getConfigFlagValue(CONFIG_FLAG flag) {
-		return this.configFlags.get(flag);
+		if (this.configFlags.containsKey(flag)) {
+			return this.configFlags.get(flag);
+		} else if (this.getPath_config().isPresent()) {
+			return this.getPath_config().get().getConfigFlagValue(flag);
+		} else {
+			return false;
+		}
 	}
 
 	/**
@@ -282,6 +253,12 @@ public class YamlConfig {
 	 * @return Map of CONFIG_FLAGs and their Boolean value (true/false/null).
 	 */
 	public Map<CONFIG_FLAG, Boolean> getConfigFlags() {
-		return this.configFlags;
+		final var allConfigFlags = new HashMap<CONFIG_FLAG, Boolean>();
+		allConfigFlags.putAll(this.configFlags);
+		if (this.getPath_config().isPresent()) {
+			allConfigFlags.putAll(this.getPath_config().get().getConfigFlags());
+		}
+
+		return allConfigFlags;
 	}
 }
