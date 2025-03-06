@@ -22,8 +22,10 @@ import io.swagger.v3.parser.core.models.ParseOptions;
 import io.swagger.v3.parser.core.models.SwaggerParseResult;
 import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileWriter;
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.StandardOpenOption;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -163,7 +165,9 @@ class Serializer {
 								.writeValueAsString(openAPI);
 		this.openapi_path = dir + File.separator + openapi_file;
 		File file = new File(openapi_path);
-		BufferedWriter writer = new BufferedWriter(new FileWriter(file.getAbsoluteFile()));
+		BufferedWriter writer =
+				Files.newBufferedWriter(
+						file.toPath(), StandardCharsets.UTF_8, StandardOpenOption.TRUNCATE_EXISTING);
 		writer.write(content);
 		writer.close();
 		this.validate();
