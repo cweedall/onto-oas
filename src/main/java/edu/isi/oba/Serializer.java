@@ -166,8 +166,7 @@ class Serializer {
 		this.openapi_path = dir + File.separator + openapi_file;
 		File file = new File(openapi_path);
 		BufferedWriter writer =
-				Files.newBufferedWriter(
-						file.toPath(), StandardCharsets.UTF_8, StandardOpenOption.TRUNCATE_EXISTING);
+				Files.newBufferedWriter(file.toPath(), StandardCharsets.UTF_8, StandardOpenOption.CREATE);
 		writer.write(content);
 		writer.close();
 		this.validate();
