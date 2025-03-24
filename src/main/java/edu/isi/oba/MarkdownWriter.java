@@ -6,9 +6,9 @@ import edu.isi.oba.config.YamlConfig;
 import io.swagger.v3.oas.models.media.Schema;
 import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileWriter;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 
 public final class MarkdownWriter {
@@ -28,7 +28,9 @@ public final class MarkdownWriter {
 				final var markdownFilePath = destinationProjectDirectory + markdownFilename;
 
 				final var file = new File(markdownFilePath);
-				BufferedWriter writer = new BufferedWriter(new FileWriter(file.getAbsoluteFile()));
+				BufferedWriter writer =
+						Files.newBufferedWriter(
+								file.toPath(), StandardCharsets.UTF_8, StandardOpenOption.CREATE);
 				writer.write("");
 
 				final var markdownGenerationAnnotations =
