@@ -9,7 +9,6 @@ import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import io.swagger.v3.jaxrs2.integration.JaxrsOpenApiContext;
 import io.swagger.v3.oas.integration.SwaggerConfiguration;
-import io.swagger.v3.oas.integration.api.OpenApiContext;
 import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.PathItem;
@@ -19,8 +18,6 @@ import io.swagger.v3.oas.models.security.SecurityScheme;
 import io.swagger.v3.oas.models.tags.Tag;
 import io.swagger.v3.parser.OpenAPIV3Parser;
 import io.swagger.v3.parser.core.models.ParseOptions;
-import io.swagger.v3.parser.core.models.SwaggerParseResult;
-import java.io.BufferedWriter;
 import java.io.File;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
@@ -45,20 +42,20 @@ class Serializer {
 			LinkedHashMap<String, PathItem> custom_paths,
 			Boolean saveAsJSON)
 			throws Exception {
-		Map<String, Object> extensions = new HashMap<String, Object>();
+		final var extensions = new HashMap<String, Object>();
 		final String openapi_file =
 				Optional.ofNullable(saveAsJSON).orElse(false) ? "openapi.json" : "openapi.yaml";
 
 		// Generate security schema
-		Map<String, SecurityScheme> securitySchemes = new HashMap<String, SecurityScheme>();
-		SecurityScheme securityScheme = getSecurityScheme(extensions);
+		final var securitySchemes = new HashMap<String, SecurityScheme>();
+		final var securityScheme = getSecurityScheme(extensions);
 		securitySchemes.put("BearerAuth", securityScheme);
 
-		Components components = new Components();
+		final var components = new Components();
 		mapper.getSchemas().forEach((k, v) -> components.addSchemas(k, v));
 		components.securitySchemes(securitySchemes);
 
-		Paths paths = new Paths();
+		final var paths = new Paths();
 		mapper
 				.getPaths()
 				.forEach(
@@ -124,7 +121,7 @@ class Serializer {
 						});
 
 		// add custom paths
-		Map<String, Object> custom_extensions = new HashMap<String, Object>();
+		final var custom_extensions = new HashMap<String, Object>();
 		custom_extensions.put("x-oba-custom", true);
 
 		if (custom_paths != null)
@@ -141,11 +138,9 @@ class Serializer {
 		// Don't use .sortedOutput(true) because we are using SortedSchemaMixin to alphabetically sort
 		// the desired entries.  Sorting _everything_ alphabetically messes up the YAML file by moving
 		// the info section away from the top of the document, for example.
-		SwaggerConfiguration openApiConfiguration =
-				new SwaggerConfiguration().openAPI(openAPI).prettyPrint(true);
+		final var openApiConfiguration = new SwaggerConfiguration().openAPI(openAPI).prettyPrint(true);
 
-		OpenApiContext ctx =
-				new JaxrsOpenApiContext<>().openApiConfiguration(openApiConfiguration).init();
+		final var ctx = new JaxrsOpenApiContext<>().openApiConfiguration(openApiConfiguration).init();
 
 		// ctx.getOutputYamlMapper().configure(MapperFeature.USE_ANNOTATIONS, true);
 		ctx.getOutputYamlMapper().configure(SerializationFeature.FLUSH_AFTER_WRITE_VALUE, true);
@@ -164,21 +159,26 @@ class Serializer {
 								.writer(new DefaultPrettyPrinter())
 								.writeValueAsString(openAPI);
 		this.openapi_path = dir + File.separator + openapi_file;
-		File file = new File(openapi_path);
-		BufferedWriter writer =
-				Files.newBufferedWriter(file.toPath(), StandardCharsets.UTF_8, StandardOpenOption.CREATE);
+		final var file = new File(openapi_path);
+		final var writer =
+				Files.newBufferedWriter(
+						file.toPath(),
+						StandardCharsets.UTF_8,
+						StandardOpenOption.WRITE,
+						StandardOpenOption.CREATE,
+						StandardOpenOption.TRUNCATE_EXISTING);
 		writer.write(content);
 		writer.close();
 		this.validate();
 	}
 
 	private void validate() throws Exception {
-		ParseOptions options = new ParseOptions();
+		final var options = new ParseOptions();
 		options.setResolve(true);
-		SwaggerParseResult result = new OpenAPIV3Parser().readLocation(openapi_path, null, options);
-		List<String> messageList = result.getMessages();
-		Set<String> errors = new HashSet<>(messageList);
-		Set<String> warnings = new HashSet<>();
+		final var result = new OpenAPIV3Parser().readLocation(openapi_path, null, options);
+		final var messageList = result.getMessages();
+		final var errors = new HashSet<String>(messageList);
+		final var warnings = new HashSet<String>();
 		errors.forEach(
 				(errorMessage) -> {
 					if (errorMessage.contains(".$ref target #/components/schemas/")
@@ -193,7 +193,7 @@ class Serializer {
 
 	private SecurityScheme getSecurityScheme(Map<String, Object> extensions) {
 		extensions.put("x-bearerInfoFunc", "openapi_server.controllers.user_controller.decode_token");
-		SecurityScheme securityScheme = new SecurityScheme();
+		final var securityScheme = new SecurityScheme();
 		securityScheme.setType(SecurityScheme.Type.HTTP);
 		securityScheme.bearerFormat("JWT");
 		securityScheme.setScheme("bearer");
