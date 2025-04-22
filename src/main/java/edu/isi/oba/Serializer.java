@@ -178,7 +178,7 @@ class Serializer {
 		writer.write(content);
 		writer.close();
 
-		if (!configData.getConfigFlagValue(CONFIG_FLAG.VALIDATE_GENERATED_OPENAPI_FILE)) {
+		if (configData.getConfigFlagValue(CONFIG_FLAG.VALIDATE_GENERATED_OPENAPI_FILE)) {
 			this.validate();
 		}
 	}
