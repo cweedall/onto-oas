@@ -215,10 +215,7 @@ class Mapper {
 	 * properties.
 	 */
 	public void createSchemas() {
-		final var pathGenerator =
-				new PathGenerator(
-						this.configData.getConfigFlags(),
-						this.configData.getAuth() == null ? false : this.configData.getAuth().getEnable());
+		final var pathGenerator = new PathGenerator(this.configData);
 
 		final var processedClasses = new HashSet<IRI>();
 		for (OWLOntology ontology : this.ontologies) {
@@ -375,11 +372,12 @@ class Mapper {
 		if (this.configData.getConfigFlagValue(CONFIG_FLAG.USE_KEBAB_CASE_PATHS)) {
 			// "kebab-case" -> All lowercase and separate words with a dash/hyphen.
 			pluralPathName +=
-					ObaUtils.getLowerCasePluralOf(ObaUtils.pascalCaseToKebabCase(mappedSchema.getName()));
+					StringUtils.getLowerCasePluralOf(
+							StringUtils.pascalCaseToKebabCase(mappedSchema.getName()));
 		} else {
 			// "flatcase" -> This is the current/original version (all lower case, no
 			// spaces/dashes/underscores) of endpoint naming.
-			pluralPathName += ObaUtils.getLowerCasePluralOf(mappedSchema.getName());
+			pluralPathName += StringUtils.getLowerCasePluralOf(mappedSchema.getName());
 		}
 
 		// Create the plural paths: for example: /models/

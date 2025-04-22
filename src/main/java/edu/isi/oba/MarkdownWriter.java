@@ -30,7 +30,11 @@ public final class MarkdownWriter {
 				final var file = new File(markdownFilePath);
 				BufferedWriter writer =
 						Files.newBufferedWriter(
-								file.toPath(), StandardCharsets.UTF_8, StandardOpenOption.CREATE);
+								file.toPath(),
+								StandardCharsets.UTF_8,
+								StandardOpenOption.WRITE,
+								StandardOpenOption.CREATE,
+								StandardOpenOption.TRUNCATE_EXISTING);
 				writer.write("");
 
 				final var markdownGenerationAnnotations =
@@ -221,7 +225,7 @@ public final class MarkdownWriter {
 																	|| !currentClassSchema
 																			.getProperties()
 																			.containsKey(entryPropertyName))) {
-														entryPropertyNamePlural = ObaUtils.getPluralOf(entryPropertyName);
+														entryPropertyNamePlural = StringUtils.getPluralOf(entryPropertyName);
 														keyReferenceId =
 																key.replace("#", "-")
 																		.replace("-" + entryPropertyName, "-" + entryPropertyNamePlural)

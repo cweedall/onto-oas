@@ -13,6 +13,7 @@ public class PathConfig {
 					put(CONFIG_FLAG.PATH_PATCH, false);
 					put(CONFIG_FLAG.PATH_POST, false);
 					put(CONFIG_FLAG.PATH_PUT, false);
+					put(CONFIG_FLAG.USE_COMMON_DEFAULT_PATH_RESPONSES, true);
 					put(CONFIG_FLAG.USE_KEBAB_CASE_PATHS, false);
 				}
 			};
@@ -63,6 +64,15 @@ public class PathConfig {
 
 	public void setEnable_delete_paths(Boolean enable_delete_paths) {
 		this.configFlags.put(CONFIG_FLAG.PATH_DELETE, enable_delete_paths);
+	}
+
+	public Boolean getUse_common_default_path_responses() {
+		return this.configFlags.get(CONFIG_FLAG.USE_COMMON_DEFAULT_PATH_RESPONSES);
+	}
+
+	public void setUse_common_default_path_responses(Boolean use_common_default_path_responses) {
+		this.configFlags.put(
+				CONFIG_FLAG.USE_COMMON_DEFAULT_PATH_RESPONSES, use_common_default_path_responses);
 	}
 
 	public Boolean getUse_kebab_case_paths() {

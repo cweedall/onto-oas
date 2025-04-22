@@ -1,7 +1,6 @@
 package edu.isi.oba;
 
 import edu.isi.oba.config.AuthConfig;
-import edu.isi.oba.config.CONFIG_FLAG;
 import edu.isi.oba.config.FirebaseConfig;
 import edu.isi.oba.config.Provider;
 import edu.isi.oba.config.YamlConfig;
@@ -80,12 +79,7 @@ class Oba {
 			OpenAPI openapi_base = config_data.getOpenapi();
 
 			// get schema and paths
-			generate_openapi_spec(
-					openapi_base,
-					mapper,
-					destination_dir,
-					custom_paths,
-					config_data.getConfigFlagValue(CONFIG_FLAG.GENERATE_JSON_FILE));
+			Oba.generate_openapi_spec(openapi_base, mapper, destination_dir, custom_paths, config_data);
 			logger.info("OBA finished successfully. Output can be found at: " + destination_dir);
 		} catch (Exception e) {
 			logger.severe("Error while creating the API specification: " + e.getLocalizedMessage());
@@ -99,10 +93,10 @@ class Oba {
 			Mapper mapper,
 			String dir,
 			LinkedHashMap<String, PathItem> custom_paths,
-			Boolean saveAsJSON)
+			YamlConfig configData)
 			throws Exception {
 		String destinationProjectDirectory = dir + File.separator;
 		Path destinationProject = Paths.get(destinationProjectDirectory);
-		new Serializer(mapper, destinationProject, openapi_base, custom_paths, saveAsJSON);
+		new Serializer(mapper, destinationProject, openapi_base, custom_paths, configData);
 	}
 }
