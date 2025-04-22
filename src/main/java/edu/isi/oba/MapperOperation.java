@@ -1,5 +1,7 @@
 package edu.isi.oba;
 
+import edu.isi.oba.config.CONFIG_FLAG;
+import edu.isi.oba.config.YamlConfig;
 import io.swagger.models.Method;
 import io.swagger.v3.oas.models.Operation;
 import io.swagger.v3.oas.models.examples.Example;
@@ -29,6 +31,7 @@ enum Cardinality {
 }
 
 class MapperOperation {
+	private final YamlConfig configData;
 	private boolean auth;
 	private String summary;
 	private String description;
@@ -46,8 +49,13 @@ class MapperOperation {
 	}
 
 	public MapperOperation(
-			String schemaName, String schemaURI, Method method, Cardinality cardinality, Boolean auth) {
-		this.auth = auth;
+			String schemaName,
+			String schemaURI,
+			Method method,
+			Cardinality cardinality,
+			YamlConfig configData) {
+		this.configData = configData;
+		this.auth = this.configData.getAuth() == null ? false : this.configData.getAuth().getEnable();
 		this.cardinality = cardinality;
 		this.schemaName = schemaName;
 		this.schemaURI = schemaURI;
@@ -227,23 +235,25 @@ class MapperOperation {
 				}
 		}
 
-		this.apiResponses
-				.addApiResponse(
-						"400",
-						new ApiResponse()
-								.description(EnglishReasonPhraseCatalog.INSTANCE.getReason(400, Locale.ENGLISH)))
-				.addApiResponse(
-						"401",
-						new ApiResponse()
-								.description(EnglishReasonPhraseCatalog.INSTANCE.getReason(401, Locale.ENGLISH)))
-				.addApiResponse(
-						"403",
-						new ApiResponse()
-								.description(EnglishReasonPhraseCatalog.INSTANCE.getReason(403, Locale.ENGLISH)))
-				.addApiResponse(
-						"500",
-						new ApiResponse()
-								.description(EnglishReasonPhraseCatalog.INSTANCE.getReason(500, Locale.ENGLISH)));
+		if (this.configData.getConfigFlagValue(CONFIG_FLAG.USE_COMMON_DEFAULT_PATH_RESPONSES)) {
+			this.apiResponses
+					.addApiResponse(
+							"400",
+							new ApiResponse()
+									.description(EnglishReasonPhraseCatalog.INSTANCE.getReason(400, Locale.ENGLISH)))
+					.addApiResponse(
+							"401",
+							new ApiResponse()
+									.description(EnglishReasonPhraseCatalog.INSTANCE.getReason(401, Locale.ENGLISH)))
+					.addApiResponse(
+							"403",
+							new ApiResponse()
+									.description(EnglishReasonPhraseCatalog.INSTANCE.getReason(403, Locale.ENGLISH)))
+					.addApiResponse(
+							"500",
+							new ApiResponse()
+									.description(EnglishReasonPhraseCatalog.INSTANCE.getReason(500, Locale.ENGLISH)));
+		}
 	}
 
 	private void setOperationPatch() {
@@ -268,28 +278,30 @@ class MapperOperation {
 		this.requestBody.setContent(content);
 		this.requestBody.setDescription(requestDescription);
 
-		// Set the response
-		this.apiResponses
-				.addApiResponse(
-						"201",
-						new ApiResponse()
-								.description(EnglishReasonPhraseCatalog.INSTANCE.getReason(201, Locale.ENGLISH)))
-				.addApiResponse(
-						"400",
-						new ApiResponse()
-								.description(EnglishReasonPhraseCatalog.INSTANCE.getReason(400, Locale.ENGLISH)))
-				.addApiResponse(
-						"401",
-						new ApiResponse()
-								.description(EnglishReasonPhraseCatalog.INSTANCE.getReason(401, Locale.ENGLISH)))
-				.addApiResponse(
-						"403",
-						new ApiResponse()
-								.description(EnglishReasonPhraseCatalog.INSTANCE.getReason(403, Locale.ENGLISH)))
-				.addApiResponse(
-						"500",
-						new ApiResponse()
-								.description(EnglishReasonPhraseCatalog.INSTANCE.getReason(500, Locale.ENGLISH)));
+		if (this.configData.getConfigFlagValue(CONFIG_FLAG.USE_COMMON_DEFAULT_PATH_RESPONSES)) {
+			// Set the response
+			this.apiResponses
+					.addApiResponse(
+							"201",
+							new ApiResponse()
+									.description(EnglishReasonPhraseCatalog.INSTANCE.getReason(201, Locale.ENGLISH)))
+					.addApiResponse(
+							"400",
+							new ApiResponse()
+									.description(EnglishReasonPhraseCatalog.INSTANCE.getReason(400, Locale.ENGLISH)))
+					.addApiResponse(
+							"401",
+							new ApiResponse()
+									.description(EnglishReasonPhraseCatalog.INSTANCE.getReason(401, Locale.ENGLISH)))
+					.addApiResponse(
+							"403",
+							new ApiResponse()
+									.description(EnglishReasonPhraseCatalog.INSTANCE.getReason(403, Locale.ENGLISH)))
+					.addApiResponse(
+							"500",
+							new ApiResponse()
+									.description(EnglishReasonPhraseCatalog.INSTANCE.getReason(500, Locale.ENGLISH)));
+		}
 	}
 
 	private void setOperationPut() {
@@ -310,55 +322,59 @@ class MapperOperation {
 		this.requestBody.setContent(content);
 		this.requestBody.setDescription(requestDescription);
 
-		// Set the response
-		this.apiResponses
-				.addApiResponse(
-						"204",
-						new ApiResponse()
-								.description(EnglishReasonPhraseCatalog.INSTANCE.getReason(204, Locale.ENGLISH)))
-				.addApiResponse(
-						"400",
-						new ApiResponse()
-								.description(EnglishReasonPhraseCatalog.INSTANCE.getReason(400, Locale.ENGLISH)))
-				.addApiResponse(
-						"401",
-						new ApiResponse()
-								.description(EnglishReasonPhraseCatalog.INSTANCE.getReason(401, Locale.ENGLISH)))
-				.addApiResponse(
-						"403",
-						new ApiResponse()
-								.description(EnglishReasonPhraseCatalog.INSTANCE.getReason(403, Locale.ENGLISH)))
-				.addApiResponse(
-						"500",
-						new ApiResponse()
-								.description(EnglishReasonPhraseCatalog.INSTANCE.getReason(500, Locale.ENGLISH)));
+		if (this.configData.getConfigFlagValue(CONFIG_FLAG.USE_COMMON_DEFAULT_PATH_RESPONSES)) {
+			// Set the response
+			this.apiResponses
+					.addApiResponse(
+							"204",
+							new ApiResponse()
+									.description(EnglishReasonPhraseCatalog.INSTANCE.getReason(204, Locale.ENGLISH)))
+					.addApiResponse(
+							"400",
+							new ApiResponse()
+									.description(EnglishReasonPhraseCatalog.INSTANCE.getReason(400, Locale.ENGLISH)))
+					.addApiResponse(
+							"401",
+							new ApiResponse()
+									.description(EnglishReasonPhraseCatalog.INSTANCE.getReason(401, Locale.ENGLISH)))
+					.addApiResponse(
+							"403",
+							new ApiResponse()
+									.description(EnglishReasonPhraseCatalog.INSTANCE.getReason(403, Locale.ENGLISH)))
+					.addApiResponse(
+							"500",
+							new ApiResponse()
+									.description(EnglishReasonPhraseCatalog.INSTANCE.getReason(500, Locale.ENGLISH)));
+		}
 	}
 
 	private void setOperationDelete() {
 		summary = "Delete an existing " + this.schemaName;
 		description = "Delete an existing [" + this.schemaName + "](" + this.schemaURI + ")";
 
-		// Set the response
-		this.apiResponses
-				.addApiResponse(
-						"204",
-						new ApiResponse()
-								.description(EnglishReasonPhraseCatalog.INSTANCE.getReason(204, Locale.ENGLISH)))
-				.addApiResponse(
-						"400",
-						new ApiResponse()
-								.description(EnglishReasonPhraseCatalog.INSTANCE.getReason(400, Locale.ENGLISH)))
-				.addApiResponse(
-						"401",
-						new ApiResponse()
-								.description(EnglishReasonPhraseCatalog.INSTANCE.getReason(401, Locale.ENGLISH)))
-				.addApiResponse(
-						"403",
-						new ApiResponse()
-								.description(EnglishReasonPhraseCatalog.INSTANCE.getReason(403, Locale.ENGLISH)))
-				.addApiResponse(
-						"500",
-						new ApiResponse()
-								.description(EnglishReasonPhraseCatalog.INSTANCE.getReason(500, Locale.ENGLISH)));
+		if (this.configData.getConfigFlagValue(CONFIG_FLAG.USE_COMMON_DEFAULT_PATH_RESPONSES)) {
+			// Set the response
+			this.apiResponses
+					.addApiResponse(
+							"204",
+							new ApiResponse()
+									.description(EnglishReasonPhraseCatalog.INSTANCE.getReason(204, Locale.ENGLISH)))
+					.addApiResponse(
+							"400",
+							new ApiResponse()
+									.description(EnglishReasonPhraseCatalog.INSTANCE.getReason(400, Locale.ENGLISH)))
+					.addApiResponse(
+							"401",
+							new ApiResponse()
+									.description(EnglishReasonPhraseCatalog.INSTANCE.getReason(401, Locale.ENGLISH)))
+					.addApiResponse(
+							"403",
+							new ApiResponse()
+									.description(EnglishReasonPhraseCatalog.INSTANCE.getReason(403, Locale.ENGLISH)))
+					.addApiResponse(
+							"500",
+							new ApiResponse()
+									.description(EnglishReasonPhraseCatalog.INSTANCE.getReason(500, Locale.ENGLISH)));
+		}
 	}
 }

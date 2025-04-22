@@ -1,6 +1,7 @@
 package edu.isi.oba;
 
 import edu.isi.oba.config.CONFIG_FLAG;
+import edu.isi.oba.config.YamlConfig;
 import io.swagger.models.Method;
 import io.swagger.v3.oas.models.Operation;
 import io.swagger.v3.oas.models.PathItem;
@@ -17,37 +18,39 @@ import java.util.HashMap;
 import java.util.Map;
 
 class PathGenerator {
-	private final Map<CONFIG_FLAG, Boolean> configFlags = new HashMap<>();
-	private Boolean auth;
+	private final YamlConfig configData;
 
-	public PathGenerator(Map<CONFIG_FLAG, Boolean> configFlags, Boolean auth) {
-		this.auth = auth;
-		this.configFlags.putAll(configFlags);
+	public PathGenerator(YamlConfig configData) {
+		this.configData = configData;
 	}
 
 	public PathItem generate_singular(String schemaName, String schemaURI) {
 		PathItem path_item = new PathItem();
-		if (this.configFlags.get(CONFIG_FLAG.PATH_GET)) {
+		if (this.configData.getConfigFlagValue(CONFIG_FLAG.PATH_GET)) {
 			path_item.get(
-					new MapperOperation(schemaName, schemaURI, Method.GET, Cardinality.SINGULAR, auth)
+					new MapperOperation(
+									schemaName, schemaURI, Method.GET, Cardinality.SINGULAR, this.configData)
 							.getOperation());
 		}
 
-		if (this.configFlags.get(CONFIG_FLAG.PATH_DELETE)) {
+		if (this.configData.getConfigFlagValue(CONFIG_FLAG.PATH_DELETE)) {
 			path_item.delete(
-					new MapperOperation(schemaName, schemaURI, Method.DELETE, Cardinality.SINGULAR, auth)
+					new MapperOperation(
+									schemaName, schemaURI, Method.DELETE, Cardinality.SINGULAR, this.configData)
 							.getOperation());
 		}
 
-		if (this.configFlags.get(CONFIG_FLAG.PATH_POST)) {
+		if (this.configData.getConfigFlagValue(CONFIG_FLAG.PATH_POST)) {
 			path_item.put(
-					new MapperOperation(schemaName, schemaURI, Method.POST, Cardinality.SINGULAR, auth)
+					new MapperOperation(
+									schemaName, schemaURI, Method.POST, Cardinality.SINGULAR, this.configData)
 							.getOperation());
 		}
 
-		if (this.configFlags.get(CONFIG_FLAG.PATH_PUT)) {
+		if (this.configData.getConfigFlagValue(CONFIG_FLAG.PATH_PUT)) {
 			path_item.put(
-					new MapperOperation(schemaName, schemaURI, Method.PUT, Cardinality.SINGULAR, auth)
+					new MapperOperation(
+									schemaName, schemaURI, Method.PUT, Cardinality.SINGULAR, this.configData)
 							.getOperation());
 		}
 
@@ -56,15 +59,17 @@ class PathGenerator {
 
 	public PathItem generate_plural(String schemaName, String schemaURI) {
 		PathItem path_item = new PathItem();
-		if (this.configFlags.get(CONFIG_FLAG.PATH_GET)) {
+		if (this.configData.getConfigFlagValue(CONFIG_FLAG.PATH_GET)) {
 			path_item.get(
-					new MapperOperation(schemaName, schemaURI, Method.GET, Cardinality.PLURAL, auth)
+					new MapperOperation(
+									schemaName, schemaURI, Method.GET, Cardinality.PLURAL, this.configData)
 							.getOperation());
 		}
 
-		if (this.configFlags.get(CONFIG_FLAG.PATH_POST)) {
+		if (this.configData.getConfigFlagValue(CONFIG_FLAG.PATH_POST)) {
 			path_item.post(
-					new MapperOperation(schemaName, schemaURI, Method.POST, Cardinality.PLURAL, auth)
+					new MapperOperation(
+									schemaName, schemaURI, Method.POST, Cardinality.PLURAL, this.configData)
 							.getOperation());
 		}
 
@@ -80,6 +85,7 @@ class PathGenerator {
 		Schema schema = new Schema().$ref(ref_text);
 
 		MediaType mediaType = new MediaType().schema(schema);
+
 		Content content = new Content().addMediaType("application/json", mediaType);
 		requestBody.setContent(content);
 		String requestDescription = "User credentials";

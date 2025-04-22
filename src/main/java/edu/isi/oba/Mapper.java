@@ -215,10 +215,7 @@ class Mapper {
 	 * properties.
 	 */
 	public void createSchemas() {
-		final var pathGenerator =
-				new PathGenerator(
-						this.configData.getConfigFlags(),
-						this.configData.getAuth() == null ? false : this.configData.getAuth().getEnable());
+		final var pathGenerator = new PathGenerator(this.configData);
 
 		final var processedClasses = new HashSet<IRI>();
 		for (OWLOntology ontology : this.ontologies) {
