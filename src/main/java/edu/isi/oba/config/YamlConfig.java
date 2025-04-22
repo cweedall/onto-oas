@@ -21,6 +21,7 @@ public class YamlConfig {
 					put(CONFIG_FLAG.GENERATE_JSON_FILE, false);
 					put(CONFIG_FLAG.REQUIRED_PROPERTIES_FROM_CARDINALITY, false);
 					put(CONFIG_FLAG.USE_INHERITANCE_REFERENCES, false);
+					put(CONFIG_FLAG.VALIDATE_GENERATED_OPENAPI_FILE, true);
 				}
 			};
 
@@ -203,6 +204,15 @@ public class YamlConfig {
 
 	public void setGenerate_json_file(Boolean generate_json_file) {
 		this.configFlags.put(CONFIG_FLAG.GENERATE_JSON_FILE, generate_json_file);
+	}
+
+	public Boolean getValidate_generated_openapi_file() {
+		return this.configFlags.get(CONFIG_FLAG.VALIDATE_GENERATED_OPENAPI_FILE);
+	}
+
+	public void setValidate_generated_openapi_file(Boolean validate_generated_openapi_file) {
+		this.configFlags.put(
+				CONFIG_FLAG.VALIDATE_GENERATED_OPENAPI_FILE, validate_generated_openapi_file);
 	}
 
 	public AuthConfig getAuth() {
