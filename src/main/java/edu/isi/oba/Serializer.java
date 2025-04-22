@@ -7,12 +7,13 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import edu.isi.oba.config.CONFIG_FLAG;
+import edu.isi.oba.config.YamlConfig;
 import io.swagger.v3.jaxrs2.integration.JaxrsOpenApiContext;
 import io.swagger.v3.oas.integration.SwaggerConfiguration;
 import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.PathItem;
-import io.swagger.v3.oas.models.Paths;
 import io.swagger.v3.oas.models.media.Schema;
 import io.swagger.v3.oas.models.security.SecurityScheme;
 import io.swagger.v3.oas.models.tags.Tag;
@@ -40,43 +41,42 @@ class Serializer {
 			java.nio.file.Path dir,
 			OpenAPI openAPI,
 			LinkedHashMap<String, PathItem> custom_paths,
-			Boolean saveAsJSON)
+			YamlConfig configData)
 			throws Exception {
 		final var extensions = new HashMap<String, Object>();
 		final String openapi_file =
-				Optional.ofNullable(saveAsJSON).orElse(false) ? "openapi.json" : "openapi.yaml";
+				Optional.ofNullable(configData.getConfigFlagValue(CONFIG_FLAG.GENERATE_JSON_FILE))
+								.orElse(false)
+						? "openapi.json"
+						: "openapi.yaml";
 
-		// Generate security schema
-		final var securitySchemes = new HashMap<String, SecurityScheme>();
-		final var securityScheme = getSecurityScheme(extensions);
-		securitySchemes.put("BearerAuth", securityScheme);
+		// Add placeholder.  Paths will be set after the examples.
+		openAPI.setPaths(mapper.getPaths());
+		final var schemas = mapper.getSchemas();
+		final var components = new Components().schemas(schemas);
+		openAPI.components(components);
+		final var examples = ExamplesGenerator.generateExamples(openAPI);
+		openAPI.getComponents().setExamples(examples);
 
-		final var components = new Components();
-		mapper.getSchemas().forEach((k, v) -> components.addSchemas(k, v));
-		components.securitySchemes(securitySchemes);
+		// Remove existing Tags so that we make sure everything is in alphabetical order with
+		// the "tags" Set<Tag>.
+		openAPI.setTags(null);
 
-		final var paths = new Paths();
-		mapper
+		// Gather all tags from the path items.
+		final var tags = new HashSet<Tag>();
+		openAPI
 				.getPaths()
 				.forEach(
 						(k, v) -> {
-							paths.addPathItem(k, v);
-
-							final var tags = new HashSet<Tag>();
-
 							if (openAPI.getTags() != null) {
 								// Copy the List of OpenAPI tags (defined in the configuration file, if at all).
 								tags.addAll(openAPI.getTags().stream().collect(Collectors.toSet()));
 							}
 
-							// Remove existing Tags so that we make sure everything is in alphabetical order with
-							// the "tags" Set<Tag>.
-							openAPI.setTags(null);
-
 							// For each operation, grab any Tags that exist and add them to the Set of Tags.
-							v.readOperations()
+							v.readOperationsMap()
 									.forEach(
-											(operation) -> {
+											(httpMethod, operation) -> {
 												operation.getTags().stream()
 														.forEach(
 																(operationTagName) -> {
@@ -91,14 +91,9 @@ class Serializer {
 																	// global tags which have a description and externalUrl.
 																	// This grabs the schema's description by searching for the
 																	// schema's name.
-																	final var schemas = components.getSchemas();
 																	var tagDescription = "";
 																	if (schemas != null && schemas.get(operationTagName) != null) {
-																		tagDescription =
-																				components
-																						.getSchemas()
-																						.get(operationTagName)
-																						.getDescription();
+																		tagDescription = schemas.get(operationTagName).getDescription();
 																	}
 
 																	// Use a generic description if one was not found.
@@ -112,13 +107,19 @@ class Serializer {
 																	tags.add(tagObj);
 																});
 											});
-
-							// Convert Set to List and sort in alphabetical order (by Tag's name).
-							openAPI.setTags(
-									tags.stream()
-											.sorted((tag1, tag2) -> tag1.getName().compareToIgnoreCase(tag2.getName()))
-											.collect(Collectors.toList()));
 						});
+
+		// Convert Set to List and sort in alphabetical order (by Tag's name).
+		openAPI.setTags(
+				tags.stream()
+						.sorted((tag1, tag2) -> tag1.getName().compareToIgnoreCase(tag2.getName()))
+						.collect(Collectors.toList()));
+
+		// Generate security schema
+		final var securitySchemes = new HashMap<String, SecurityScheme>();
+		final var securityScheme = getSecurityScheme(extensions);
+		securitySchemes.put("BearerAuth", securityScheme);
+		components.securitySchemes(securitySchemes);
 
 		// add custom paths
 		final var custom_extensions = new HashMap<String, Object>();
@@ -129,11 +130,10 @@ class Serializer {
 					(k, v) -> {
 						System.out.println("inserting custom query " + k);
 						v.setExtensions(custom_extensions);
-						paths.addPathItem(k, v);
+						openAPI.getPaths().addPathItem(k, v);
 					});
 
-		openAPI.setPaths(paths);
-		openAPI.components(components);
+		openAPI.setPaths(ExamplesGenerator.generatePathExamples(openAPI.getPaths(), examples));
 
 		// Don't use .sortedOutput(true) because we are using SortedSchemaMixin to alphabetically sort
 		// the desired entries.  Sorting _everything_ alphabetically messes up the YAML file by moving
@@ -141,6 +141,13 @@ class Serializer {
 		final var openApiConfiguration = new SwaggerConfiguration().openAPI(openAPI).prettyPrint(true);
 
 		final var ctx = new JaxrsOpenApiContext<>().openApiConfiguration(openApiConfiguration).init();
+
+		// ctx.getOutputJsonMapper().configure(MapperFeature.USE_ANNOTATIONS, true);
+		ctx.getOutputJsonMapper().configure(SerializationFeature.FLUSH_AFTER_WRITE_VALUE, true);
+		ctx.getOutputJsonMapper().configure(SerializationFeature.INDENT_OUTPUT, true);
+		ctx.getOutputJsonMapper().configure(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS, true);
+		ctx.getOutputJsonMapper().configure(SerializationFeature.WRITE_ENUM_KEYS_USING_INDEX, true);
+		ctx.getOutputJsonMapper().addMixIn(Schema.class, SortedSchemaMixin.class);
 
 		// ctx.getOutputYamlMapper().configure(MapperFeature.USE_ANNOTATIONS, true);
 		ctx.getOutputYamlMapper().configure(SerializationFeature.FLUSH_AFTER_WRITE_VALUE, true);
@@ -151,7 +158,8 @@ class Serializer {
 
 		// write the filename
 		final var content =
-				Optional.ofNullable(saveAsJSON).orElse(false)
+				Optional.ofNullable(configData.getConfigFlagValue(CONFIG_FLAG.GENERATE_JSON_FILE))
+								.orElse(false)
 						? ctx.getOutputJsonMapper()
 								.writer(new DefaultPrettyPrinter())
 								.writeValueAsString(openAPI)
@@ -169,7 +177,10 @@ class Serializer {
 						StandardOpenOption.TRUNCATE_EXISTING);
 		writer.write(content);
 		writer.close();
-		this.validate();
+
+		if (!configData.getConfigFlagValue(CONFIG_FLAG.VALIDATE_GENERATED_OPENAPI_FILE)) {
+			this.validate();
+		}
 	}
 
 	private void validate() throws Exception {
