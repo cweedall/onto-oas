@@ -208,7 +208,13 @@ public class ObaUtils {
 	}
 
 	public static YamlConfig get_yaml_data(String config_yaml) {
-		Constructor constructor = new Constructor(YamlConfig.class, new LoaderOptions());
+		final var loaderOptions = new LoaderOptions();
+		loaderOptions.setAllowDuplicateKeys(true);
+		loaderOptions.setAllowRecursiveKeys(true);
+		loaderOptions.setEnumCaseSensitive(true);
+		loaderOptions.setMergeOnCompose(true);
+		loaderOptions.setProcessComments(true);
+		Constructor constructor = new Constructor(YamlConfig.class, loaderOptions);
 		Yaml yaml = new Yaml(constructor);
 
 		InputStream config_input = null;
