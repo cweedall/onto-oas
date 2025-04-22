@@ -375,11 +375,12 @@ class Mapper {
 		if (this.configData.getConfigFlagValue(CONFIG_FLAG.USE_KEBAB_CASE_PATHS)) {
 			// "kebab-case" -> All lowercase and separate words with a dash/hyphen.
 			pluralPathName +=
-					ObaUtils.getLowerCasePluralOf(ObaUtils.pascalCaseToKebabCase(mappedSchema.getName()));
+					StringUtils.getLowerCasePluralOf(
+							StringUtils.pascalCaseToKebabCase(mappedSchema.getName()));
 		} else {
 			// "flatcase" -> This is the current/original version (all lower case, no
 			// spaces/dashes/underscores) of endpoint naming.
-			pluralPathName += ObaUtils.getLowerCasePluralOf(mappedSchema.getName());
+			pluralPathName += StringUtils.getLowerCasePluralOf(mappedSchema.getName());
 		}
 
 		// Create the plural paths: for example: /models/

@@ -87,7 +87,7 @@ public class MapperObjectProperty extends MapperProperty {
 		// objectSchema.set$dynamicAnchor(
 		// 		ObaUtils.pascalCaseToKebabCase(objectSchema.getName()).toUpperCase() + "-ENUM");
 		objectSchema.set$anchor(
-				ObaUtils.pascalCaseToKebabCase(objectSchema.getName()).toUpperCase() + "-ENUM");
+				StringUtils.pascalCaseToKebabCase(objectSchema.getName()).toUpperCase() + "-ENUM");
 	}
 
 	/**
