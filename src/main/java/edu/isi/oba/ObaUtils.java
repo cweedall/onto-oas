@@ -24,7 +24,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.logging.Level;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
@@ -47,7 +46,6 @@ import org.semanticweb.owlapi.search.EntitySearcher;
 import org.yaml.snakeyaml.LoaderOptions;
 import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.constructor.Constructor;
-import rita.RiTa;
 import uk.ac.manchester.cs.owl.owlapi.OWLAnnotationPropertyImpl;
 
 public class ObaUtils {
@@ -210,7 +208,13 @@ public class ObaUtils {
 	}
 
 	public static YamlConfig get_yaml_data(String config_yaml) {
-		Constructor constructor = new Constructor(YamlConfig.class, new LoaderOptions());
+		final var loaderOptions = new LoaderOptions();
+		loaderOptions.setAllowDuplicateKeys(true);
+		loaderOptions.setAllowRecursiveKeys(true);
+		loaderOptions.setEnumCaseSensitive(true);
+		loaderOptions.setMergeOnCompose(true);
+		loaderOptions.setProcessComments(true);
+		Constructor constructor = new Constructor(YamlConfig.class, loaderOptions);
 		Yaml yaml = new Yaml(constructor);
 
 		InputStream config_input = null;
@@ -428,75 +432,5 @@ public class ObaUtils {
 	public static String getDescription(
 			OWLEntity entity, OWLOntology ontology, Boolean hasDefaultDescriptions) {
 		return ObaUtils.getDescription(entity, ontology, hasDefaultDescriptions, "en");
-	}
-
-	/**
-	 * Convert a PascalCase (or camelCase) string to kebab-case.
-	 *
-	 * @param str a {@link String} which should be formatted in CamelCase.
-	 * @return a {@link String} of the original string formatted in kebab-case.
-	 */
-	public static String pascalCaseToKebabCase(String str) {
-		return str.replaceAll("\\B([A-Z])(?=[a-z])", "-$1")
-				.replaceAll("\\B([a-z0-9])([A-Z])", "$1-$2")
-				.replaceAll(
-						"Ph-D-",
-						"PhD-") // Annoying workaround for "PhD" which usually occurs together as one "word"
-				.toLowerCase();
-	}
-
-	/**
-	 * Convert a kebab-case string to PascalCase.
-	 *
-	 * @param str a {@link String} which should be formatted in CamelCase.
-	 * @return a {@link String} of the original string formatted in kebab-case.
-	 */
-	public static String kebabCaseToCamelCase(String str) {
-		return Pattern.compile("-(.)").matcher(str).replaceAll(mr -> mr.group(1).toUpperCase());
-	}
-
-	/**
-	 * Convert a kebab-case string to PascalCase.
-	 *
-	 * @param str a {@link String} which should be formatted in CamelCase.
-	 * @return a {@link String} of the original string formatted in kebab-case.
-	 */
-	public static String kebabCaseToPascalCase(String str) {
-		final var camelCaseStr = ObaUtils.kebabCaseToCamelCase(str);
-		return camelCaseStr.substring(0, 1).toUpperCase() + camelCaseStr.substring(1);
-	}
-
-	public static String getPluralOf(String str) {
-		// Pluralizing currently only works for English.  Non-English words will be treated as though
-		// they are English.
-		// TODO: Java support for singularization/pluralization and locale/international support supoort
-		// for the process does not have many good options that we could find so far.
-		// TODO: If such an option exists or becomes available, this should be updated to support
-		// pluralization in other languages.
-		// TODO: The language/locale would need to be set as a configuration value and passed into this
-		// class somehow.
-
-		return RiTa.pluralize(str);
-	}
-
-	public static String getLowerCasePluralOf(String str) {
-		return ObaUtils.getPluralOf(str.toLowerCase());
-	}
-
-	public static String getSingularOf(String str) {
-		// Pluralizing currently only works for English.  Non-English words will be treated as though
-		// they are English.
-		// TODO: Java support for singularization/pluralization and locale/international support supoort
-		// for the process does not have many good options that we could find so far.
-		// TODO: If such an option exists or becomes available, this should be updated to support
-		// pluralization in other languages.
-		// TODO: The language/locale would need to be set as a configuration value and passed into this
-		// class somehow.
-
-		return RiTa.singularize(str);
-	}
-
-	public static String getLowerCaseSingularOf(String str) {
-		return ObaUtils.getSingularOf(str.toLowerCase());
 	}
 }

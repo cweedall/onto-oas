@@ -1,5 +1,7 @@
 package edu.isi.oba;
 
+import edu.isi.oba.config.CONFIG_FLAG;
+import edu.isi.oba.config.YamlConfig;
 import io.swagger.models.Method;
 import io.swagger.v3.oas.models.Operation;
 import io.swagger.v3.oas.models.examples.Example;
@@ -19,7 +21,9 @@ import io.swagger.v3.oas.models.security.SecurityRequirement;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
+import org.apache.http.impl.EnglishReasonPhraseCatalog;
 
 enum Cardinality {
 	SINGULAR,
@@ -27,6 +31,7 @@ enum Cardinality {
 }
 
 class MapperOperation {
+	private final YamlConfig configData;
 	private boolean auth;
 	private String summary;
 	private String description;
@@ -44,8 +49,13 @@ class MapperOperation {
 	}
 
 	public MapperOperation(
-			String schemaName, String schemaURI, Method method, Cardinality cardinality, Boolean auth) {
-		this.auth = auth;
+			String schemaName,
+			String schemaURI,
+			Method method,
+			Cardinality cardinality,
+			YamlConfig configData) {
+		this.configData = configData;
+		this.auth = this.configData.getAuth() == null ? false : this.configData.getAuth().getEnable();
 		this.cardinality = cardinality;
 		this.schemaName = schemaName;
 		this.schemaURI = schemaURI;
@@ -61,7 +71,7 @@ class MapperOperation {
 				break;
 			case PATCH:
 				setOperationPatch();
-				descriptionText += "updated.";
+				descriptionText += "patched.";
 				break;
 			case PUT:
 				setOperationPut();
@@ -69,7 +79,7 @@ class MapperOperation {
 				break;
 			case POST:
 				setOperationPost();
-				descriptionText += "updated.";
+				descriptionText += "created.";
 				break;
 			case DELETE:
 				setOperationDelete();
@@ -80,7 +90,7 @@ class MapperOperation {
 		}
 
 		if (Cardinality.SINGULAR.equals(cardinality)) {
-			parameters.add(
+			this.parameters.add(
 					new PathParameter()
 							.description(descriptionText)
 							.name("id")
@@ -88,43 +98,43 @@ class MapperOperation {
 							.schema(new StringSchema()));
 		}
 
-		if (this.auth
-				&& Set.of(Method.PATCH, Method.PUT, Method.POST, Method.DELETE).contains(method)) {
-			parameters.add(
-					new QueryParameter()
-							.description("Username")
-							.name("user")
-							.required(false)
-							.schema(new StringSchema()));
-		}
-
 		this.operation =
 				new Operation()
 						.description(this.description)
 						.summary(this.summary)
-						.addTagsItem(this.schemaName)
-						.parameters(parameters)
-						.responses(apiResponses);
+						.addTagsItem(this.schemaName);
 
-		if (Set.of(Method.PATCH, Method.PUT, Method.POST).contains(method)) {
-			this.operation.setRequestBody(requestBody);
-		}
-
-		if (Set.of(Method.PATCH, Method.PUT, Method.POST, Method.DELETE).contains(method)) {
+		if (this.auth) {
 			SecurityRequirement securityRequirement = new SecurityRequirement();
 			securityRequirement.addList("BearerAuth");
 			this.operation.addSecurityItem(securityRequirement);
+
+			if (Set.of(Method.PATCH, Method.PUT, Method.POST, Method.DELETE).contains(method)) {
+				this.parameters.add(
+						new QueryParameter()
+								.description("Username")
+								.name("user")
+								.required(false)
+								.schema(new StringSchema()));
+			}
+		}
+
+		this.operation.setParameters(this.parameters);
+		this.operation.setResponses(this.apiResponses);
+
+		if (Set.of(Method.PATCH, Method.PUT, Method.POST).contains(method)) {
+			this.operation.setRequestBody(this.requestBody);
 		}
 
 		if (Cardinality.SINGULAR.equals(cardinality)) {
 			this.operation.setOperationId(
-					ObaUtils.getLowerCasePluralOf(
-									ObaUtils.pascalCaseToKebabCase(method.name() + this.schemaName))
+					StringUtils.getLowerCasePluralOf(
+									StringUtils.pascalCaseToKebabCase(method.name() + this.schemaName))
 							+ "-id");
 		} else {
 			this.operation.setOperationId(
-					ObaUtils.getLowerCasePluralOf(
-							ObaUtils.pascalCaseToKebabCase(method.name() + this.schemaName)));
+					StringUtils.getLowerCasePluralOf(
+							StringUtils.pascalCaseToKebabCase(method.name() + this.schemaName)));
 		}
 	}
 
@@ -133,7 +143,7 @@ class MapperOperation {
 		ApiResponse responseOk;
 		// Set parameters
 		if (this.auth)
-			parameters.add(
+			this.parameters.add(
 					new QueryParameter()
 							.name("username")
 							.description("Name of the user graph to query")
@@ -164,20 +174,20 @@ class MapperOperation {
 					// mediaType.setExamples(Map.of(this.schemaName, schemaExample));
 					Content content = new Content().addMediaType("application/json", mediaType);
 					responseOk = new ApiResponse().description(responseDescriptionOk).content(content);
-					apiResponses.addApiResponse("200", responseOk);
-					parameters.add(
+					this.apiResponses.addApiResponse("200", responseOk);
+					this.parameters.add(
 							new QueryParameter()
 									.name("label")
 									.description("Filter by label")
 									.required(false)
 									.schema(new StringSchema()));
-					parameters.add(
+					this.parameters.add(
 							new QueryParameter()
 									.name("page")
 									.description("Page number")
 									.required(false)
 									.schema(new IntegerSchema()._default(1)));
-					parameters.add(
+					this.parameters.add(
 							new QueryParameter()
 									.name("per_page")
 									.description("Items per page")
@@ -220,9 +230,29 @@ class MapperOperation {
 							new ApiResponse()
 									.description(responseDescriptionOk)
 									.content(new Content().addMediaType("application/json", mediaType));
-					apiResponses.addApiResponse("200", responseOk);
+					this.apiResponses.addApiResponse("200", responseOk);
 					break;
 				}
+		}
+
+		if (this.configData.getConfigFlagValue(CONFIG_FLAG.USE_COMMON_DEFAULT_PATH_RESPONSES)) {
+			this.apiResponses
+					.addApiResponse(
+							"400",
+							new ApiResponse()
+									.description(EnglishReasonPhraseCatalog.INSTANCE.getReason(400, Locale.ENGLISH)))
+					.addApiResponse(
+							"401",
+							new ApiResponse()
+									.description(EnglishReasonPhraseCatalog.INSTANCE.getReason(401, Locale.ENGLISH)))
+					.addApiResponse(
+							"403",
+							new ApiResponse()
+									.description(EnglishReasonPhraseCatalog.INSTANCE.getReason(403, Locale.ENGLISH)))
+					.addApiResponse(
+							"500",
+							new ApiResponse()
+									.description(EnglishReasonPhraseCatalog.INSTANCE.getReason(500, Locale.ENGLISH)));
 		}
 	}
 
@@ -241,15 +271,37 @@ class MapperOperation {
 		// Set request
 		MediaType mediaType = new MediaType().schema(schema);
 		// mediaType.setExampleSetFlag(true);
-		var schemaExample = new Example();
-		schemaExample.$ref(this.schema.get$ref());
+		// var schemaExample = new Example();
+		// schemaExample.$ref(this.schema.get$ref());
 		// mediaType.setExamples(Map.of(this.schemaName, schemaExample));
 		Content content = new Content().addMediaType("application/json", mediaType);
-		requestBody.setContent(content);
-		requestBody.setDescription(requestDescription);
+		this.requestBody.setContent(content);
+		this.requestBody.setDescription(requestDescription);
 
-		// Set the response
-		apiResponses.addApiResponse("201", new ApiResponse().content(content).description("Created"));
+		if (this.configData.getConfigFlagValue(CONFIG_FLAG.USE_COMMON_DEFAULT_PATH_RESPONSES)) {
+			// Set the response
+			this.apiResponses
+					.addApiResponse(
+							"201",
+							new ApiResponse()
+									.description(EnglishReasonPhraseCatalog.INSTANCE.getReason(201, Locale.ENGLISH)))
+					.addApiResponse(
+							"400",
+							new ApiResponse()
+									.description(EnglishReasonPhraseCatalog.INSTANCE.getReason(400, Locale.ENGLISH)))
+					.addApiResponse(
+							"401",
+							new ApiResponse()
+									.description(EnglishReasonPhraseCatalog.INSTANCE.getReason(401, Locale.ENGLISH)))
+					.addApiResponse(
+							"403",
+							new ApiResponse()
+									.description(EnglishReasonPhraseCatalog.INSTANCE.getReason(403, Locale.ENGLISH)))
+					.addApiResponse(
+							"500",
+							new ApiResponse()
+									.description(EnglishReasonPhraseCatalog.INSTANCE.getReason(500, Locale.ENGLISH)));
+		}
 	}
 
 	private void setOperationPut() {
@@ -262,27 +314,67 @@ class MapperOperation {
 		// Set request
 		MediaType mediaType = new MediaType().schema(schema);
 		// mediaType.setExampleSetFlag(true);
-		var schemaExample = new Example();
-		schemaExample.$ref(this.schema.get$ref());
+		// var schemaExample = new Example();
+		// schemaExample.$ref(this.schema.get$ref());
 		// mediaType.setExamples(Map.of(this.schemaName, schemaExample));
 
 		Content content = new Content().addMediaType("application/json", mediaType);
-		requestBody.setContent(content);
-		requestBody.setDescription(requestDescription);
+		this.requestBody.setContent(content);
+		this.requestBody.setDescription(requestDescription);
 
-		// Set the response
-		apiResponses
-				.addApiResponse("200", new ApiResponse().content(content).description("Updated"))
-				.addApiResponse("404", new ApiResponse().description("Not Found"));
+		if (this.configData.getConfigFlagValue(CONFIG_FLAG.USE_COMMON_DEFAULT_PATH_RESPONSES)) {
+			// Set the response
+			this.apiResponses
+					.addApiResponse(
+							"204",
+							new ApiResponse()
+									.description(EnglishReasonPhraseCatalog.INSTANCE.getReason(204, Locale.ENGLISH)))
+					.addApiResponse(
+							"400",
+							new ApiResponse()
+									.description(EnglishReasonPhraseCatalog.INSTANCE.getReason(400, Locale.ENGLISH)))
+					.addApiResponse(
+							"401",
+							new ApiResponse()
+									.description(EnglishReasonPhraseCatalog.INSTANCE.getReason(401, Locale.ENGLISH)))
+					.addApiResponse(
+							"403",
+							new ApiResponse()
+									.description(EnglishReasonPhraseCatalog.INSTANCE.getReason(403, Locale.ENGLISH)))
+					.addApiResponse(
+							"500",
+							new ApiResponse()
+									.description(EnglishReasonPhraseCatalog.INSTANCE.getReason(500, Locale.ENGLISH)));
+		}
 	}
 
 	private void setOperationDelete() {
 		summary = "Delete an existing " + this.schemaName;
 		description = "Delete an existing [" + this.schemaName + "](" + this.schemaURI + ")";
 
-		// Set the response
-		apiResponses
-				.addApiResponse("202", new ApiResponse().description("Deleted"))
-				.addApiResponse("404", new ApiResponse().description("Not Found"));
+		if (this.configData.getConfigFlagValue(CONFIG_FLAG.USE_COMMON_DEFAULT_PATH_RESPONSES)) {
+			// Set the response
+			this.apiResponses
+					.addApiResponse(
+							"204",
+							new ApiResponse()
+									.description(EnglishReasonPhraseCatalog.INSTANCE.getReason(204, Locale.ENGLISH)))
+					.addApiResponse(
+							"400",
+							new ApiResponse()
+									.description(EnglishReasonPhraseCatalog.INSTANCE.getReason(400, Locale.ENGLISH)))
+					.addApiResponse(
+							"401",
+							new ApiResponse()
+									.description(EnglishReasonPhraseCatalog.INSTANCE.getReason(401, Locale.ENGLISH)))
+					.addApiResponse(
+							"403",
+							new ApiResponse()
+									.description(EnglishReasonPhraseCatalog.INSTANCE.getReason(403, Locale.ENGLISH)))
+					.addApiResponse(
+							"500",
+							new ApiResponse()
+									.description(EnglishReasonPhraseCatalog.INSTANCE.getReason(500, Locale.ENGLISH)));
+		}
 	}
 }
