@@ -261,6 +261,22 @@ public class MapperProperty {
 										propertySchema.addAllOfItem(descriptionSchema);
 										propertySchema.setDescription(null);
 									}
+
+									// Copy example to allOf item, if applicable.
+									if (propertySchema.getExample() != null) {
+										final var exampleSchema = new Schema();
+										exampleSchema.setExample(propertySchema.getExample());
+										propertySchema.addAllOfItem(exampleSchema);
+										propertySchema.setExample(null);
+									}
+
+									// Copy examples to allOf item, if applicable.
+									if (propertySchema.getExamples() != null) {
+										final var examplesSchema = new Schema();
+										examplesSchema.setExamples(propertySchema.getExamples());
+										propertySchema.addAllOfItem(examplesSchema);
+										propertySchema.setExamples(null);
+									}
 								} else {
 									MapperProperty.setSchemaType(propertySchema, itemsSchema.getType());
 									MapperProperty.setSchemaFormat(propertySchema, itemsSchema.getFormat());
@@ -273,14 +289,15 @@ public class MapperProperty {
 								propertySchema.setItems(null);
 
 								// Keep track of property names that are plural, but should be singular.
-								if (propertyName.equals(ObaUtils.getPluralOf(propertyName))) {
+								if (propertyName.equals(StringUtils.getPluralOf(propertyName))) {
 									convertedPropertySchemas.put(
-											ObaUtils.getSingularOf(propertyName), propertySchema);
+											StringUtils.getSingularOf(propertyName), propertySchema);
 								}
 							} else {
 								// Keep track of property names that are singular, but should be plural.
-								if (!propertyName.equals(ObaUtils.getPluralOf(propertyName))) {
-									convertedPropertySchemas.put(ObaUtils.getPluralOf(propertyName), propertySchema);
+								if (!propertyName.equals(StringUtils.getPluralOf(propertyName))) {
+									convertedPropertySchemas.put(
+											StringUtils.getPluralOf(propertyName), propertySchema);
 								}
 							}
 
@@ -400,7 +417,7 @@ public class MapperProperty {
 
 						logger.warning("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
 
-						if (newPropertySchemaName.equals(ObaUtils.getPluralOf(originalSchema.getName()))) {
+						if (newPropertySchemaName.equals(StringUtils.getPluralOf(originalSchema.getName()))) {
 							logger.warning(
 									"!!! Property \""
 											+ originalSchema.getName()
@@ -497,6 +514,9 @@ public class MapperProperty {
 
 			propertySchema.setItems(itemsSchema);
 		}
+
+		// MapperProperty.setNullableValueForPropertySchema(propertySchema, null);
+		// MapperProperty.setReadOnlyValueForPropertySchema(propertySchema, true);
 
 		// Need to make sure the property's type is "array" because it has items.
 		MapperProperty.setSchemaType(propertySchema, "array");
