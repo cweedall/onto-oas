@@ -1,7 +1,5 @@
 package edu.isi.oba;
 
-import static edu.isi.oba.Oba.logger;
-
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
 import com.fasterxml.jackson.databind.JsonMappingException;
@@ -417,16 +415,6 @@ public class ExamplesGenerator {
 												if (content != null) {
 													content.forEach(
 															(contentName, mediaType) -> {
-																logger.severe(
-																		"************** httpMethod:  "
-																				+ httpMethod
-																				+ "  -  contentName:  "
-																				+ contentName);
-																logger.severe(
-																		"************** mediaType:  "
-																				+ mediaType
-																				+ "  -  mediaType.getSchema():  "
-																				+ mediaType.getSchema());
 																// Map of the schema reference and flag indicating whether
 																// it is an array.
 																final var schemaRefMap = new HashMap<String, Boolean>();
