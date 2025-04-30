@@ -421,7 +421,8 @@ public class ObjectVisitor implements OWLObjectVisitor {
 				this.classSchema.setAllOf(null);
 				MapperProperty.setSchemaType(this.classSchema, "object");
 			} else {
-				MapperProperty.setSchemaType(this.classSchema, null);
+				// This is probably wrong.  Removing by commenting out temporarily.
+				// MapperProperty.setSchemaType(this.classSchema, null);
 			}
 		}
 
