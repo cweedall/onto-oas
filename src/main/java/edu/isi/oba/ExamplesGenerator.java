@@ -167,7 +167,23 @@ public class ExamplesGenerator {
 							}
 						}
 					} else {
-						newmap.put(key, ExamplesGenerator.iterateJsonNode(propertiesNode, requestType));
+						final var readOnlyNode = value.get("readOnly");
+						final var writeOnlyNode = value.get("writeOnly");
+
+						final var isAllowedForReadOnly =
+								(writeOnlyNode == null ? true : !Boolean.parseBoolean(writeOnlyNode.asText()))
+										&& (readOnlyNode == null ? true : Boolean.parseBoolean(readOnlyNode.asText()));
+						final var isAllowedForWriteOnly =
+								(readOnlyNode == null ? true : !Boolean.parseBoolean(readOnlyNode.asText()))
+										&& (writeOnlyNode == null
+												? true
+												: Boolean.parseBoolean(writeOnlyNode.asText()));
+
+						if (requestType == null
+								|| (requestType == RequestType.READ && isAllowedForReadOnly)
+								|| (requestType == RequestType.WRITE && isAllowedForWriteOnly)) {
+							newmap.put(key, ExamplesGenerator.iterateJsonNode(propertiesNode, requestType));
+						}
 					}
 				}
 			}
@@ -258,8 +274,8 @@ public class ExamplesGenerator {
 		final var exampleNameSuffix = underscore + exampleInName;
 		final var exampleArrayNameSuffix = underscore + arraySuffix + exampleInName;
 
-		final var readPrefix = underscore + "Read";
-		final var writePrefix = underscore + "Write";
+		final var readPrefix = underscore + "Response";
+		final var writePrefix = underscore + "Request";
 
 		final var readNameSuffix = readPrefix + exampleInName;
 		final var readArrayNameSuffix = readPrefix + arraySuffix + exampleInName;
@@ -383,8 +399,8 @@ public class ExamplesGenerator {
 																									isReferenceAnArray ? "_ArrayExample" : "_Example";
 																							final var readExampleSuffix =
 																									isReferenceAnArray
-																											? "_ReadArrayExample"
-																											: "_ReadExample";
+																											? "_ResponseArrayExample"
+																											: "_ResponseExample";
 																							if (examples.containsKey(
 																									exampleBaseName + exampleSuffix)) {
 																								mediaType.addExamples(
@@ -469,8 +485,8 @@ public class ExamplesGenerator {
 																					isReferenceAnArray ? "_ArrayExample" : "_Example";
 																			final var writeExampleSuffix =
 																					isReferenceAnArray
-																							? "_WriteArrayExample"
-																							: "_WriteExample";
+																							? "_RequestArrayExample"
+																							: "_RequestExample";
 																			if (examples.containsKey(exampleBaseName + exampleSuffix)) {
 																				mediaType.addExamples(
 																						mediaTypeExampleName,
