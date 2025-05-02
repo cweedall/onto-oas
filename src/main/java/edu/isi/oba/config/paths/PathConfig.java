@@ -1,4 +1,4 @@
-package edu.isi.oba.config.path;
+package edu.isi.oba.config.paths;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import edu.isi.oba.config.flags.CONFIG_FLAG;
