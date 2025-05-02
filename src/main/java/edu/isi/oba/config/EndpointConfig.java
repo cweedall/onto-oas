@@ -1,7 +1,9 @@
 package edu.isi.oba.config;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import edu.isi.oba.ObaUtils;
 
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class EndpointConfig {
 	private String url;
 	private String prefix;

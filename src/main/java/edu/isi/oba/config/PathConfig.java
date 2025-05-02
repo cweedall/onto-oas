@@ -1,8 +1,10 @@
 package edu.isi.oba.config;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.util.HashMap;
 import java.util.Map;
 
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class PathConfig {
 	private final Map<CONFIG_FLAG, Boolean> configFlags =
 			new HashMap<>() {

@@ -1,5 +1,8 @@
 package edu.isi.oba.config;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class MarkdownAnnotationConfig {
 	private String annotation_name;
 	private String markdown_heading;
