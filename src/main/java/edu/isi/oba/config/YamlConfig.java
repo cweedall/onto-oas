@@ -1,5 +1,6 @@
 package edu.isi.oba.config;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.PathItem;
 import java.util.HashMap;
@@ -9,6 +10,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class YamlConfig {
 	private final Map<CONFIG_FLAG, Boolean> configFlags =
 			new HashMap<>() {
