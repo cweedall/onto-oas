@@ -1,24 +1,22 @@
 package edu.isi.oba.config;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import java.util.HashMap;
 import java.util.Map;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class PathConfig {
-	private final Map<CONFIG_FLAG, Boolean> configFlags =
-			new HashMap<>() {
-				{
-					put(CONFIG_FLAG.DISABLE_ALL_PATHS, false);
-					put(CONFIG_FLAG.PATH_DELETE, false);
-					put(CONFIG_FLAG.PATH_GET, true);
-					put(CONFIG_FLAG.PATH_PATCH, false);
-					put(CONFIG_FLAG.PATH_POST, false);
-					put(CONFIG_FLAG.PATH_PUT, false);
-					put(CONFIG_FLAG.USE_COMMON_DEFAULT_PATH_RESPONSES, true);
-					put(CONFIG_FLAG.USE_KEBAB_CASE_PATHS, false);
-				}
-			};
+public class PathConfig extends ConfigFlags {
+	public PathConfig() {
+		this.configFlags.putAll(
+				Map.ofEntries(
+						Map.entry(CONFIG_FLAG.DISABLE_ALL_PATHS, false),
+						Map.entry(CONFIG_FLAG.PATH_DELETE, false),
+						Map.entry(CONFIG_FLAG.PATH_GET, true),
+						Map.entry(CONFIG_FLAG.PATH_PATCH, false),
+						Map.entry(CONFIG_FLAG.PATH_POST, false),
+						Map.entry(CONFIG_FLAG.PATH_PUT, false),
+						Map.entry(CONFIG_FLAG.USE_COMMON_DEFAULT_PATH_RESPONSES, true),
+						Map.entry(CONFIG_FLAG.USE_KEBAB_CASE_PATHS, false)));
+	}
 
 	public Boolean getDisable_all_paths() {
 		return this.configFlags.get(CONFIG_FLAG.DISABLE_ALL_PATHS);
@@ -83,24 +81,5 @@ public class PathConfig {
 
 	public void setUse_kebab_case_paths(Boolean use_kebab_case_paths) {
 		this.configFlags.put(CONFIG_FLAG.USE_KEBAB_CASE_PATHS, use_kebab_case_paths);
-	}
-
-	/**
-	 * Get the value of a particular configuration flag.
-	 *
-	 * @param {flag} the configuration flag name
-	 * @return The flag's value (true/false/null).
-	 */
-	public Boolean getConfigFlagValue(CONFIG_FLAG flag) {
-		return this.configFlags.get(flag);
-	}
-
-	/**
-	 * Get map of all config flags and their values.
-	 *
-	 * @return Map of CONFIG_FLAGs and their Boolean value (true/false/null).
-	 */
-	public Map<CONFIG_FLAG, Boolean> getConfigFlags() {
-		return this.configFlags;
 	}
 }
