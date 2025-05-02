@@ -10,9 +10,7 @@ import java.util.Optional;
 import java.util.Set;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class YamlConfig {
-	private final ConfigFlags configFlags = new ConfigFlags();
-
+public class YamlConfig extends ConfigFlags {
 	String DEFAULT_OUTPUT_DIRECTORY = "outputs";
 	String DEFAULT_PROJECT_NAME = "default_project";
 	public OpenAPI openapi;
@@ -30,7 +28,7 @@ public class YamlConfig {
 	public PathConfig path_config;
 
 	public YamlConfig() {
-		configFlags.addAllConfigFlags(
+		this.configFlags.putAll(
 				Map.ofEntries(
 						Map.entry(CONFIG_FLAG.ALWAYS_GENERATE_ARRAYS, true),
 						Map.entry(CONFIG_FLAG.DEFAULT_DESCRIPTIONS, true),
@@ -61,7 +59,7 @@ public class YamlConfig {
 		this.path_config = path_config;
 
 		if (this.getPath_config().isPresent()) {
-			this.configFlags.addAllConfigFlags(this.getPath_config().get().getConfigFlags());
+			this.configFlags.putAll(this.getPath_config().get().getConfigFlags());
 		}
 	}
 
@@ -146,79 +144,78 @@ public class YamlConfig {
 	}
 
 	public Boolean getAlways_generate_arrays() {
-		return this.configFlags.getConfigFlagValue(CONFIG_FLAG.ALWAYS_GENERATE_ARRAYS);
+		return this.configFlags.get(CONFIG_FLAG.ALWAYS_GENERATE_ARRAYS);
 	}
 
 	public void setAlways_generate_arrays(Boolean always_generate_arrays) {
-		this.configFlags.setConfigFlagValue(CONFIG_FLAG.ALWAYS_GENERATE_ARRAYS, always_generate_arrays);
+		this.configFlags.put(CONFIG_FLAG.ALWAYS_GENERATE_ARRAYS, always_generate_arrays);
 	}
 
 	public Boolean getFix_singular_plural_property_names() {
-		return this.configFlags.getConfigFlagValue(CONFIG_FLAG.FIX_SINGULAR_PLURAL_PROPERTY_NAMES);
+		return this.configFlags.get(CONFIG_FLAG.FIX_SINGULAR_PLURAL_PROPERTY_NAMES);
 	}
 
 	public void setFix_singular_plural_property_names(Boolean fix_singular_plural_property_names) {
-		this.configFlags.setConfigFlagValue(
+		this.configFlags.put(
 				CONFIG_FLAG.FIX_SINGULAR_PLURAL_PROPERTY_NAMES, fix_singular_plural_property_names);
 	}
 
 	public Boolean getFollow_references() {
-		return this.configFlags.getConfigFlagValue(CONFIG_FLAG.FOLLOW_REFERENCES);
+		return this.configFlags.get(CONFIG_FLAG.FOLLOW_REFERENCES);
 	}
 
 	public void setFollow_references(Boolean follow_references) {
-		this.configFlags.setConfigFlagValue(CONFIG_FLAG.FOLLOW_REFERENCES, follow_references);
+		this.configFlags.put(CONFIG_FLAG.FOLLOW_REFERENCES, follow_references);
 	}
 
 	public Boolean getUse_inheritance_references() {
-		return this.configFlags.getConfigFlagValue(CONFIG_FLAG.USE_INHERITANCE_REFERENCES);
+		return this.configFlags.get(CONFIG_FLAG.USE_INHERITANCE_REFERENCES);
 	}
 
 	public void setUse_inheritance_references(Boolean use_inheritance_references) {
-		this.configFlags.setConfigFlagValue(
-				CONFIG_FLAG.USE_INHERITANCE_REFERENCES, use_inheritance_references);
+		this.configFlags.put(CONFIG_FLAG.USE_INHERITANCE_REFERENCES, use_inheritance_references);
 	}
 
 	public Boolean getDefault_descriptions() {
-		return this.configFlags.getConfigFlagValue(CONFIG_FLAG.DEFAULT_DESCRIPTIONS);
+		return this.configFlags.get(CONFIG_FLAG.DEFAULT_DESCRIPTIONS);
 	}
 
 	public void setDefault_descriptions(Boolean default_descriptions) {
-		this.configFlags.setConfigFlagValue(CONFIG_FLAG.DEFAULT_DESCRIPTIONS, default_descriptions);
+		this.configFlags.put(CONFIG_FLAG.DEFAULT_DESCRIPTIONS, default_descriptions);
 	}
 
 	public Boolean getDefault_properties() {
-		return this.configFlags.getConfigFlagValue(CONFIG_FLAG.DEFAULT_PROPERTIES);
+		return this.configFlags.get(CONFIG_FLAG.DEFAULT_PROPERTIES);
 	}
 
 	public void setDefault_properties(Boolean default_properties) {
-		this.configFlags.setConfigFlagValue(CONFIG_FLAG.DEFAULT_PROPERTIES, default_properties);
+		this.configFlags.put(CONFIG_FLAG.DEFAULT_PROPERTIES, default_properties);
 	}
 
 	public Boolean getRequired_properties_from_cardinality() {
-		return this.configFlags.getConfigFlagValue(CONFIG_FLAG.REQUIRED_PROPERTIES_FROM_CARDINALITY);
+		return this.configFlags.get(CONFIG_FLAG.REQUIRED_PROPERTIES_FROM_CARDINALITY);
 	}
 
 	public void setRequired_properties_from_cardinality(
 			Boolean required_properties_from_cardinality) {
-		this.configFlags.setConfigFlagValue(
+		this.configFlags.put(
 				CONFIG_FLAG.REQUIRED_PROPERTIES_FROM_CARDINALITY, required_properties_from_cardinality);
 	}
 
 	public Boolean getGenerate_json_file() {
-		return this.configFlags.getConfigFlagValue(CONFIG_FLAG.GENERATE_JSON_FILE);
+		return this.configFlags.get(CONFIG_FLAG.GENERATE_JSON_FILE);
 	}
 
 	public void setGenerate_json_file(Boolean generate_json_file) {
-		this.configFlags.setConfigFlagValue(CONFIG_FLAG.GENERATE_JSON_FILE, generate_json_file);
+		this.configFlags.put(CONFIG_FLAG.GENERATE_JSON_FILE, generate_json_file);
 	}
 
 	public Boolean getValidate_generated_openapi_file() {
-		return this.configFlags.getConfigFlagValue(CONFIG_FLAG.VALIDATE_GENERATED_OPENAPI_FILE);
+		return this.configFlags.get(CONFIG_FLAG.VALIDATE_GENERATED_OPENAPI_FILE);
 	}
 
 	public void setValidate_generated_openapi_file(Boolean validate_generated_openapi_file) {
-		this.configFlags.setConfigFlagValue(
+		this.configFlags.put(
 				CONFIG_FLAG.VALIDATE_GENERATED_OPENAPI_FILE, validate_generated_openapi_file);
 	}
 
@@ -246,24 +243,5 @@ public class YamlConfig {
 
 	public void setAnnotation_config(AnnotationConfig annotation_config) {
 		this.annotation_config = annotation_config;
-	}
-
-	/**
-	 * Get the value of a particular configuration flag.
-	 *
-	 * @param {flag} the configuration flag name
-	 * @return The flag's value (true/false/null).
-	 */
-	public Boolean getConfigFlagValue(CONFIG_FLAG flag) {
-		return this.configFlags.getConfigFlagValue(flag);
-	}
-
-	/**
-	 * Get map of all config flags and their values.
-	 *
-	 * @return Map of CONFIG_FLAGs and their Boolean value (true/false/null).
-	 */
-	public Map<CONFIG_FLAG, Boolean> getConfigFlags() {
-		return this.configFlags.getConfigFlags();
 	}
 }
