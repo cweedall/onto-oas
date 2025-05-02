@@ -1,5 +1,8 @@
 package edu.isi.oba.config;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class AuthConfig {
 	public Boolean enable = false;
 	private String provider;
