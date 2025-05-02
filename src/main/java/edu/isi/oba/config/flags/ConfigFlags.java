@@ -1,9 +1,9 @@
-package edu.isi.oba.config;
+package edu.isi.oba.config.flags;
 
 import java.util.HashMap;
 import java.util.Map;
 
-abstract class ConfigFlags {
+public abstract class ConfigFlags {
 	// Map of configuration flags and their Boolean values.
 	protected final Map<CONFIG_FLAG, Boolean> configFlags = new HashMap<>();
 
