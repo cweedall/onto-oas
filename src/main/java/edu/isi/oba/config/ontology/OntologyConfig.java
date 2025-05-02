@@ -1,4 +1,4 @@
-package edu.isi.oba.config;
+package edu.isi.oba.config.ontology;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 

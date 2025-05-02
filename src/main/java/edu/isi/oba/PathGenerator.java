@@ -1,7 +1,7 @@
 package edu.isi.oba;
 
-import edu.isi.oba.config.CONFIG_FLAG;
 import edu.isi.oba.config.YamlConfig;
+import edu.isi.oba.config.flags.CONFIG_FLAG;
 import io.swagger.models.Method;
 import io.swagger.v3.oas.models.Operation;
 import io.swagger.v3.oas.models.PathItem;

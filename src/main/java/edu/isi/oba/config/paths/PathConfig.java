@@ -1,6 +1,8 @@
-package edu.isi.oba.config;
+package edu.isi.oba.config.path;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import edu.isi.oba.config.flags.CONFIG_FLAG;
+import edu.isi.oba.config.flags.ConfigFlags;
 import java.util.Map;
 
 @JsonIgnoreProperties(ignoreUnknown = true)

@@ -1,6 +1,10 @@
 package edu.isi.oba.config;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import edu.isi.oba.config.flags.CONFIG_FLAG;
+import edu.isi.oba.config.flags.ConfigFlags;
+import edu.isi.oba.config.ontology.AnnotationConfig;
+import edu.isi.oba.config.paths.PathConfig;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.PathItem;
 import java.util.LinkedHashMap;
