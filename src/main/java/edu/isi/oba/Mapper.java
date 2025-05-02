@@ -2,8 +2,8 @@ package edu.isi.oba;
 
 import static edu.isi.oba.Oba.logger;
 
-import edu.isi.oba.config.CONFIG_FLAG;
 import edu.isi.oba.config.YamlConfig;
+import edu.isi.oba.config.flags.CONFIG_FLAG;
 import io.swagger.v3.oas.models.Paths;
 import io.swagger.v3.oas.models.media.Schema;
 import io.swagger.v3.oas.models.media.StringSchema;
