@@ -2,10 +2,11 @@ package edu.isi.oba;
 
 import static edu.isi.oba.Oba.logger;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import edu.isi.oba.config.YamlConfig;
 import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
@@ -43,9 +44,6 @@ import org.semanticweb.owlapi.model.OWLEntity;
 import org.semanticweb.owlapi.model.OWLObjectProperty;
 import org.semanticweb.owlapi.model.OWLOntology;
 import org.semanticweb.owlapi.search.EntitySearcher;
-import org.yaml.snakeyaml.LoaderOptions;
-import org.yaml.snakeyaml.Yaml;
-import org.yaml.snakeyaml.constructor.Constructor;
 import uk.ac.manchester.cs.owl.owlapi.OWLAnnotationPropertyImpl;
 
 public class ObaUtils {
@@ -204,28 +202,26 @@ public class ObaUtils {
 			formatter.printHelp("utiConfiguration filelity-name", options);
 			System.exit(1);
 		}
+
 		return config_yaml;
 	}
 
 	public static YamlConfig get_yaml_data(String config_yaml) {
-		final var loaderOptions = new LoaderOptions();
-		loaderOptions.setAllowDuplicateKeys(true);
-		loaderOptions.setAllowRecursiveKeys(true);
-		loaderOptions.setEnumCaseSensitive(true);
-		loaderOptions.setMergeOnCompose(true);
-		loaderOptions.setProcessComments(true);
-		Constructor constructor = new Constructor(YamlConfig.class, loaderOptions);
-		Yaml yaml = new Yaml(constructor);
-
-		InputStream config_input = null;
+		YamlConfig yamlConfig = null;
 		try {
-			config_input = new FileInputStream(new File(config_yaml));
+			ObjectMapper objectMapper = new ObjectMapper(new YAMLFactory());
+			objectMapper.findAndRegisterModules();
+			yamlConfig = objectMapper.readValue(new File(config_yaml), YamlConfig.class);
 		} catch (FileNotFoundException e) {
 			System.err.println("Configuration file not found: " + config_yaml);
 			System.exit(1);
+		} catch (Exception e) {
+			System.err.println(e.getMessage());
+			System.err.println("Configuration file not found: " + config_yaml);
+			System.exit(1);
 		}
-		// Yaml config parse
-		return yaml.loadAs(config_input, YamlConfig.class);
+
+		return yamlConfig;
 	}
 
 	public static JSONObject concat_json_common_key(JSONObject[] objects, String common_key) {
