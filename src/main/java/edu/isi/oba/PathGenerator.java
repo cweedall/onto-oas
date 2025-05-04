@@ -26,7 +26,7 @@ class PathGenerator {
 
 	public PathItem generate_singular(String schemaName, String schemaURI) {
 		PathItem path_item = new PathItem();
-		if (this.configData.getConfigFlagValue(CONFIG_FLAG.PATH_GET)) {
+		if (this.configData.getConfigFlagValue(CONFIG_FLAG.PATH_GET_BY_ID)) {
 			path_item.get(
 					new MapperOperation(
 									schemaName, schemaURI, Method.GET, Cardinality.SINGULAR, this.configData)
@@ -59,7 +59,7 @@ class PathGenerator {
 
 	public PathItem generate_plural(String schemaName, String schemaURI) {
 		PathItem path_item = new PathItem();
-		if (this.configData.getConfigFlagValue(CONFIG_FLAG.PATH_GET)) {
+		if (this.configData.getConfigFlagValue(CONFIG_FLAG.PATH_GET_ALL)) {
 			path_item.get(
 					new MapperOperation(
 									schemaName, schemaURI, Method.GET, Cardinality.PLURAL, this.configData)

@@ -32,6 +32,7 @@ enum Cardinality {
 
 class MapperOperation {
 	private final YamlConfig configData;
+	private final String path_id_name;
 	private boolean auth;
 	private String summary;
 	private String description;
@@ -55,6 +56,9 @@ class MapperOperation {
 			Cardinality cardinality,
 			YamlConfig configData) {
 		this.configData = configData;
+		this.path_id_name =
+				this.configData.getPath_config().getGet_paths().getGet_by_key().getKey_name();
+
 		this.auth = this.configData.getAuth() == null ? false : this.configData.getAuth().getEnable();
 		this.cardinality = cardinality;
 		this.schemaName = schemaName;
@@ -62,7 +66,14 @@ class MapperOperation {
 		String ref_text = "#/components/schemas/" + this.schemaName;
 		schema = new Schema().$ref(ref_text);
 
-		var descriptionText = "The ID of the [" + this.schemaName + "](" + this.schemaURI + ") to be ";
+		var descriptionText =
+				"The "
+						+ this.path_id_name
+						+ " of the ["
+						+ this.schemaName
+						+ "]("
+						+ this.schemaURI
+						+ ") to be ";
 
 		switch (method) {
 			case GET:
@@ -93,7 +104,7 @@ class MapperOperation {
 			this.parameters.add(
 					new PathParameter()
 							.description(descriptionText)
-							.name("id")
+							.name(this.path_id_name)
 							.required(true)
 							.schema(new StringSchema()));
 		}
@@ -130,7 +141,8 @@ class MapperOperation {
 			this.operation.setOperationId(
 					StringUtils.getLowerCasePluralOf(
 									StringUtils.pascalCaseToKebabCase(method.name() + this.schemaName))
-							+ "-id");
+							+ "-"
+							+ this.path_id_name);
 		} else {
 			this.operation.setOperationId(
 					StringUtils.getLowerCasePluralOf(
@@ -214,7 +226,7 @@ class MapperOperation {
 				}
 			case SINGULAR:
 				{
-					summary = "Get a single " + this.schemaName + " by its id";
+					summary = "Get a single " + this.schemaName + " by its " + this.path_id_name;
 					description =
 							"Gets the details of a given [" + this.schemaName + "](" + this.schemaURI + ")";
 					responseDescriptionOk =

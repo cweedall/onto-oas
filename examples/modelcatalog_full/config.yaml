@@ -28,7 +28,13 @@ endpoint:
 custom_queries_directory: examples/modelcatalog_full/custom_queries
 
 path_config:
-  enable_get_paths: true
+  get_paths:
+    get_all:
+      enable: true
+    get_by_key:
+      enable: true
+      response_array: false
+      key_name: id
   enable_post_paths: false
   enable_delete_paths: false
   enable_put_paths: false

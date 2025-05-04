@@ -385,9 +385,12 @@ class Mapper {
 				pluralPathName,
 				pathGenerator.generate_plural(mappedSchema.getName(), classIRI.getIRIString()));
 
-		// Create the plural paths: for example: /models/id
+		// Create the singular paths: for example: /models/id
 		this.paths.addPathItem(
-				pluralPathName + "/{id}",
+				pluralPathName
+						+ "/{"
+						+ this.configData.getPath_config().getGet_paths().getGet_by_key().getKey_name()
+						+ "}",
 				pathGenerator.generate_singular(mappedSchema.getName(), classIRI.getIRIString()));
 	}
 

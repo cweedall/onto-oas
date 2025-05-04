@@ -25,7 +25,13 @@ endpoint:
   graph_base: http://localhost:8080/example-1.5.0/data/
 
 path_config:
-  enable_get_paths: true
+  get_paths:
+    get_all:
+      enable: true
+    get_by_key:
+      enable: true
+      response_array: false
+      key_name: id
   enable_post_paths: true
   enable_delete_paths: true
   enable_put_paths: true
