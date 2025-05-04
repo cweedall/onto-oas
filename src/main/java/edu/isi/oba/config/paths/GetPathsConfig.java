@@ -4,7 +4,6 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import edu.isi.oba.config.flags.CONFIG_FLAG;
 import edu.isi.oba.config.flags.ConfigFlags;
 import java.util.Map;
-import java.util.Optional;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public final class GetPathsConfig extends ConfigFlags {
@@ -12,10 +11,9 @@ public final class GetPathsConfig extends ConfigFlags {
 	private Get_By_Key get_by_key;
 
 	/**
-	 * Get the {@link Get_All} config (a sub-property within {@link GetPathsConfig}). We wrap it
-	 * within an {@link Optional} because it may not exist in the config file.
+	 * Get the {@link Get_All} config (a sub-property within {@link GetPathsConfig}).
 	 *
-	 * @return a {@link Get_All} parameterized {@link Optional}
+	 * @return a {@link Get_All}
 	 */
 	public Get_All getGet_all() {
 		return this.get_all;
@@ -38,10 +36,9 @@ public final class GetPathsConfig extends ConfigFlags {
 	}
 
 	/**
-	 * Get the {@link Get_By_Key} config (a sub-property within {@link GetPathsConfig}). We wrap it
-	 * within an {@link Optional} because it may not exist in the config file.
+	 * Get the {@link Get_By_Key} config (a sub-property within {@link GetPathsConfig}).
 	 *
-	 * @return a {@link GetPathsConfig} parameterized {@link Optional}
+	 * @return a {@link GetPathsConfig}
 	 */
 	public Get_By_Key getGet_by_key() {
 		return get_by_key;
