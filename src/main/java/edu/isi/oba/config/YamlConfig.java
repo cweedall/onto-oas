@@ -10,7 +10,6 @@ import io.swagger.v3.oas.models.PathItem;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -46,25 +45,28 @@ public class YamlConfig extends ConfigFlags {
 	}
 
 	/**
-	 * The path config may be null (because it doesn't exist in the config file). We wrap it within an
-	 * {@link Optional} for determining whether a value exists.
+	 * Get the {@link PathConfig}.
 	 *
-	 * @return a {@link PathConfig} parameterized {@link Optional}
+	 * @return a {@link PathConfig}
 	 */
-	public Optional<PathConfig> getPath_config() {
-		if (this.path_config != null) {
-			return Optional.ofNullable(this.path_config);
-		} else {
-			return Optional.empty();
-		}
+	public PathConfig getPath_config() {
+		return this.path_config;
 	}
 
+	/**
+	 * Set the PathConfig, if it exists in the config file. This is the configuration for all
+	 * paths/operations.
+	 *
+	 * @param {path_config} a {@link PathConfig}
+	 */
 	public void setPath_config(PathConfig path_config) {
-		this.path_config = path_config;
-
-		if (this.getPath_config().isPresent()) {
-			this.configFlags.putAll(this.getPath_config().get().getConfigFlags());
+		if (path_config == null) {
+			this.path_config = new PathConfig();
+		} else {
+			this.path_config = path_config;
 		}
+
+		this.configFlags.putAll(this.path_config.getConfigFlags());
 	}
 
 	public String getOutput_dir() {
@@ -232,17 +234,12 @@ public class YamlConfig extends ConfigFlags {
 	}
 
 	/**
-	 * The annotation config may be null (because it doesn't exist in the config file). We wrap it
-	 * within an {@link Optional} for determining whether a value exists.
+	 * Get the {@link AnnotationConfig}
 	 *
-	 * @return a {@link AnnotationConfig} parameterized {@link Optional}
+	 * @return a {@link AnnotationConfig}
 	 */
-	public Optional<AnnotationConfig> getAnnotation_config() {
-		if (this.annotation_config != null) {
-			return Optional.ofNullable(this.annotation_config);
-		} else {
-			return Optional.empty();
-		}
+	public AnnotationConfig getAnnotation_config() {
+		return this.annotation_config;
 	}
 
 	public void setAnnotation_config(AnnotationConfig annotation_config) {
