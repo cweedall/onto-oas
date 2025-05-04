@@ -29,7 +29,6 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -45,8 +44,7 @@ class Serializer {
 			throws Exception {
 		final var extensions = new HashMap<String, Object>();
 		final String openapi_file =
-				Optional.ofNullable(configData.getConfigFlagValue(CONFIG_FLAG.GENERATE_JSON_FILE))
-								.orElse(false)
+				configData.getConfigFlagValue(CONFIG_FLAG.GENERATE_JSON_FILE)
 						? "openapi.json"
 						: "openapi.yaml";
 
@@ -158,8 +156,7 @@ class Serializer {
 
 		// write the filename
 		final var content =
-				Optional.ofNullable(configData.getConfigFlagValue(CONFIG_FLAG.GENERATE_JSON_FILE))
-								.orElse(false)
+				configData.getConfigFlagValue(CONFIG_FLAG.GENERATE_JSON_FILE)
 						? ctx.getOutputJsonMapper()
 								.writer(new DefaultPrettyPrinter())
 								.writeValueAsString(openAPI)

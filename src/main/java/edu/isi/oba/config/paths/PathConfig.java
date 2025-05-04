@@ -7,12 +7,13 @@ import java.util.Map;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class PathConfig extends ConfigFlags {
+	private GetPathsConfig get_paths;
+
 	public PathConfig() {
 		this.configFlags.putAll(
 				Map.ofEntries(
 						Map.entry(CONFIG_FLAG.DISABLE_ALL_PATHS, false),
 						Map.entry(CONFIG_FLAG.PATH_DELETE, false),
-						Map.entry(CONFIG_FLAG.PATH_GET, true),
 						Map.entry(CONFIG_FLAG.PATH_PATCH, false),
 						Map.entry(CONFIG_FLAG.PATH_POST, false),
 						Map.entry(CONFIG_FLAG.PATH_PUT, false),
@@ -26,14 +27,6 @@ public class PathConfig extends ConfigFlags {
 
 	public void setDisable_all_paths(Boolean disable_all_paths) {
 		this.configFlags.put(CONFIG_FLAG.DISABLE_ALL_PATHS, disable_all_paths);
-	}
-
-	public Boolean getEnable_get_paths() {
-		return this.configFlags.get(CONFIG_FLAG.PATH_GET);
-	}
-
-	public void setEnable_get_paths(Boolean enable_get_paths) {
-		this.configFlags.put(CONFIG_FLAG.PATH_GET, enable_get_paths);
 	}
 
 	public Boolean getEnable_patch_paths() {
@@ -83,5 +76,30 @@ public class PathConfig extends ConfigFlags {
 
 	public void setUse_kebab_case_paths(Boolean use_kebab_case_paths) {
 		this.configFlags.put(CONFIG_FLAG.USE_KEBAB_CASE_PATHS, use_kebab_case_paths);
+	}
+
+	/**
+	 * Get the {@link GetPathsConfig} may be null (because it doesn't exist in the config file).
+	 *
+	 * @return a {@link GetPathsConfig}
+	 */
+	public GetPathsConfig getGet_paths() {
+		return this.get_paths;
+	}
+
+	/**
+	 * Set the GetPathsConfig, if it exists in the config file. This is the configuration for GET
+	 * paths.
+	 *
+	 * @param {get_paths} A {@link GetPathsConfig}
+	 */
+	public void setGet_paths(GetPathsConfig get_paths) {
+		if (get_paths == null) {
+			this.get_paths = new GetPathsConfig();
+		} else {
+			this.get_paths = get_paths;
+		}
+
+		this.configFlags.putAll(this.get_paths.getConfigFlags());
 	}
 }
