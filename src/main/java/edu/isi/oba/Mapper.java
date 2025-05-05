@@ -3,7 +3,7 @@ package edu.isi.oba;
 import static edu.isi.oba.Oba.logger;
 
 import edu.isi.oba.config.YamlConfig;
-import edu.isi.oba.config.flags.CONFIG_FLAG;
+import edu.isi.oba.config.flags.ConfigFlagType;
 import io.swagger.v3.oas.models.Paths;
 import io.swagger.v3.oas.models.media.Schema;
 import io.swagger.v3.oas.models.media.StringSchema;
@@ -317,7 +317,7 @@ class Mapper {
 			final var mappedSchema = this.getSchema(cls, ontology);
 
 			// If not disabled, and class is allowed, then add the OpenAPI paths
-			if (!this.configData.getConfigFlagValue(CONFIG_FLAG.DISABLE_ALL_PATHS)) {
+			if (!this.configData.getConfigFlagValue(ConfigFlagType.DISABLE_ALL_PATHS)) {
 				if (this.getClassesAllowedByYamlConfig().contains(cls)) {
 					this.addPath(pathGenerator, mappedSchema, cls.getIRI());
 				}
@@ -369,7 +369,7 @@ class Mapper {
 	private void addPath(PathGenerator pathGenerator, Schema mappedSchema, IRI classIRI) {
 		// Pluralize the schema name.  Also convert to kebab-case if the configuration specifies it.
 		var pluralPathName = "/";
-		if (this.configData.getConfigFlagValue(CONFIG_FLAG.USE_KEBAB_CASE_PATHS)) {
+		if (this.configData.getConfigFlagValue(ConfigFlagType.USE_KEBAB_CASE_PATHS)) {
 			// "kebab-case" -> All lowercase and separate words with a dash/hyphen.
 			pluralPathName +=
 					StringUtils.getLowerCasePluralOf(

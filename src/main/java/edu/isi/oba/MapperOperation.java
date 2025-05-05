@@ -1,7 +1,7 @@
 package edu.isi.oba;
 
 import edu.isi.oba.config.YamlConfig;
-import edu.isi.oba.config.flags.CONFIG_FLAG;
+import edu.isi.oba.config.flags.ConfigFlagType;
 import io.swagger.models.Method;
 import io.swagger.v3.oas.models.Operation;
 import io.swagger.v3.oas.models.examples.Example;
@@ -247,7 +247,7 @@ class MapperOperation {
 				}
 		}
 
-		if (this.configData.getConfigFlagValue(CONFIG_FLAG.USE_COMMON_DEFAULT_PATH_RESPONSES)) {
+		if (this.configData.getConfigFlagValue(ConfigFlagType.USE_COMMON_DEFAULT_PATH_RESPONSES)) {
 			this.apiResponses
 					.addApiResponse(
 							"400",
@@ -290,7 +290,7 @@ class MapperOperation {
 		this.requestBody.setContent(content);
 		this.requestBody.setDescription(requestDescription);
 
-		if (this.configData.getConfigFlagValue(CONFIG_FLAG.USE_COMMON_DEFAULT_PATH_RESPONSES)) {
+		if (this.configData.getConfigFlagValue(ConfigFlagType.USE_COMMON_DEFAULT_PATH_RESPONSES)) {
 			// Set the response
 			this.apiResponses
 					.addApiResponse(
@@ -334,7 +334,7 @@ class MapperOperation {
 		this.requestBody.setContent(content);
 		this.requestBody.setDescription(requestDescription);
 
-		if (this.configData.getConfigFlagValue(CONFIG_FLAG.USE_COMMON_DEFAULT_PATH_RESPONSES)) {
+		if (this.configData.getConfigFlagValue(ConfigFlagType.USE_COMMON_DEFAULT_PATH_RESPONSES)) {
 			// Set the response
 			this.apiResponses
 					.addApiResponse(
@@ -364,7 +364,7 @@ class MapperOperation {
 		summary = "Delete an existing " + this.schemaName;
 		description = "Delete an existing [" + this.schemaName + "](" + this.schemaURI + ")";
 
-		if (this.configData.getConfigFlagValue(CONFIG_FLAG.USE_COMMON_DEFAULT_PATH_RESPONSES)) {
+		if (this.configData.getConfigFlagValue(ConfigFlagType.USE_COMMON_DEFAULT_PATH_RESPONSES)) {
 			// Set the response
 			this.apiResponses
 					.addApiResponse(
