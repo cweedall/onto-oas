@@ -7,16 +7,16 @@ import java.util.Map;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class PathConfig extends ConfigFlags {
+	private DeletePathsConfig delete_paths;
 	private GetPathsConfig get_paths;
+	private PostPathsConfig post_paths;
+	private PutPathsConfig put_paths;
 
 	public PathConfig() {
 		this.configFlags.putAll(
 				Map.ofEntries(
 						Map.entry(ConfigFlagType.DISABLE_ALL_PATHS, false),
-						Map.entry(ConfigFlagType.PATH_DELETE, false),
 						Map.entry(ConfigFlagType.PATH_PATCH, false),
-						Map.entry(ConfigFlagType.PATH_POST, false),
-						Map.entry(ConfigFlagType.PATH_PUT, false),
 						Map.entry(ConfigFlagType.USE_COMMON_DEFAULT_PATH_RESPONSES, true),
 						Map.entry(ConfigFlagType.USE_KEBAB_CASE_PATHS, false)));
 	}
@@ -37,30 +37,6 @@ public class PathConfig extends ConfigFlags {
 		this.configFlags.put(ConfigFlagType.PATH_PATCH, enable_patch_paths);
 	}
 
-	public Boolean getEnable_post_paths() {
-		return this.configFlags.get(ConfigFlagType.PATH_POST);
-	}
-
-	public void setEnable_post_paths(Boolean enable_post_paths) {
-		this.configFlags.put(ConfigFlagType.PATH_POST, enable_post_paths);
-	}
-
-	public Boolean getEnable_put_paths() {
-		return this.configFlags.get(ConfigFlagType.PATH_PUT);
-	}
-
-	public void setEnable_put_paths(Boolean enable_put_paths) {
-		this.configFlags.put(ConfigFlagType.PATH_PUT, enable_put_paths);
-	}
-
-	public Boolean getEnable_delete_paths() {
-		return this.configFlags.get(ConfigFlagType.PATH_DELETE);
-	}
-
-	public void setEnable_delete_paths(Boolean enable_delete_paths) {
-		this.configFlags.put(ConfigFlagType.PATH_DELETE, enable_delete_paths);
-	}
-
 	public Boolean getUse_common_default_path_responses() {
 		return this.configFlags.get(ConfigFlagType.USE_COMMON_DEFAULT_PATH_RESPONSES);
 	}
@@ -76,6 +52,31 @@ public class PathConfig extends ConfigFlags {
 
 	public void setUse_kebab_case_paths(Boolean use_kebab_case_paths) {
 		this.configFlags.put(ConfigFlagType.USE_KEBAB_CASE_PATHS, use_kebab_case_paths);
+	}
+
+	/**
+	 * Get the {@link DeletePathsConfig} may be null (because it doesn't exist in the config file).
+	 *
+	 * @return a {@link DeletePathsConfig}
+	 */
+	public DeletePathsConfig getDelete_paths() {
+		return this.delete_paths;
+	}
+
+	/**
+	 * Set the DeletePathsConfig, if it exists in the config file. This is the configuration for
+	 * DELETE paths.
+	 *
+	 * @param {delete_paths} A {@link DeletePathsConfig}
+	 */
+	public void setDelete_paths(DeletePathsConfig delete_paths) {
+		if (delete_paths == null) {
+			this.delete_paths = new DeletePathsConfig();
+		} else {
+			this.delete_paths = delete_paths;
+		}
+
+		this.configFlags.putAll(this.delete_paths.getConfigFlags());
 	}
 
 	/**
@@ -101,5 +102,55 @@ public class PathConfig extends ConfigFlags {
 		}
 
 		this.configFlags.putAll(this.get_paths.getConfigFlags());
+	}
+
+	/**
+	 * Get the {@link PostPathsConfig} may be null (because it doesn't exist in the config file).
+	 *
+	 * @return a {@link PostPathsConfig}
+	 */
+	public PostPathsConfig getPost_paths() {
+		return this.post_paths;
+	}
+
+	/**
+	 * Set the PostPathsConfig, if it exists in the config file. This is the configuration for POST
+	 * paths.
+	 *
+	 * @param {post_paths} A {@link PostPathsConfig}
+	 */
+	public void setPost_paths(PostPathsConfig post_paths) {
+		if (post_paths == null) {
+			this.post_paths = new PostPathsConfig();
+		} else {
+			this.post_paths = post_paths;
+		}
+
+		this.configFlags.putAll(this.post_paths.getConfigFlags());
+	}
+
+	/**
+	 * Get the {@link PutPathsConfig} may be null (because it doesn't exist in the config file).
+	 *
+	 * @return a {@link PutPathsConfig}
+	 */
+	public PutPathsConfig getPut_paths() {
+		return this.put_paths;
+	}
+
+	/**
+	 * Set the PutPathsConfig, if it exists in the config file. This is the configuration for PUT
+	 * paths.
+	 *
+	 * @param {put_paths} A {@link PutPathsConfig}
+	 */
+	public void setPut_paths(PutPathsConfig put_paths) {
+		if (put_paths == null) {
+			this.put_paths = new PutPathsConfig();
+		} else {
+			this.put_paths = put_paths;
+		}
+
+		this.configFlags.putAll(this.put_paths.getConfigFlags());
 	}
 }

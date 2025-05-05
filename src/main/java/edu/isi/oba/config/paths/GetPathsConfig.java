@@ -63,7 +63,7 @@ public final class GetPathsConfig extends ConfigFlags {
 	@JsonIgnoreProperties(ignoreUnknown = true)
 	public static class Get_All extends ConfigFlags {
 		Get_All() {
-			configFlags.putAll(Map.ofEntries(Map.entry(ConfigFlagType.PATH_GET_ALL, true)));
+			this.configFlags.putAll(Map.ofEntries(Map.entry(ConfigFlagType.PATH_GET_ALL, true)));
 		}
 
 		public Boolean getEnable() {
@@ -71,17 +71,18 @@ public final class GetPathsConfig extends ConfigFlags {
 		}
 
 		public void setEnable(Boolean enable) {
-			this.configFlags.put(ConfigFlagType.PATH_GET_ALL, enable);
+			if (enable != null) {
+				this.configFlags.put(ConfigFlagType.PATH_GET_ALL, enable);
+			}
 		}
 	}
 
 	@JsonIgnoreProperties(ignoreUnknown = true)
 	public static class Get_By_Key extends ConfigFlags {
-		public String key_name;
+		// Default key name to be "id";
+		public String key_name = "id";
 
 		Get_By_Key() {
-			// Default key name to be "id";
-			this.key_name = "id";
 			this.configFlags.putAll(
 					Map.ofEntries(
 							Map.entry(ConfigFlagType.PATH_GET_BY_ID, true),
@@ -93,7 +94,9 @@ public final class GetPathsConfig extends ConfigFlags {
 		}
 
 		public void setEnable(Boolean enable) {
-			this.configFlags.put(ConfigFlagType.PATH_GET_BY_ID, enable);
+			if (enable != null) {
+				this.configFlags.put(ConfigFlagType.PATH_GET_BY_ID, enable);
+			}
 		}
 
 		public Boolean getResponse_array() {
