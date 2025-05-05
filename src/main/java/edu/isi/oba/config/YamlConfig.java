@@ -1,7 +1,7 @@
 package edu.isi.oba.config;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import edu.isi.oba.config.flags.CONFIG_FLAG;
+import edu.isi.oba.config.flags.ConfigFlagType;
 import edu.isi.oba.config.flags.ConfigFlags;
 import edu.isi.oba.config.ontology.AnnotationConfig;
 import edu.isi.oba.config.paths.PathConfig;
@@ -33,15 +33,15 @@ public class YamlConfig extends ConfigFlags {
 	public YamlConfig() {
 		this.configFlags.putAll(
 				Map.ofEntries(
-						Map.entry(CONFIG_FLAG.ALWAYS_GENERATE_ARRAYS, true),
-						Map.entry(CONFIG_FLAG.DEFAULT_DESCRIPTIONS, true),
-						Map.entry(CONFIG_FLAG.DEFAULT_PROPERTIES, true),
-						Map.entry(CONFIG_FLAG.FIX_SINGULAR_PLURAL_PROPERTY_NAMES, false),
-						Map.entry(CONFIG_FLAG.FOLLOW_REFERENCES, true),
-						Map.entry(CONFIG_FLAG.GENERATE_JSON_FILE, false),
-						Map.entry(CONFIG_FLAG.REQUIRED_PROPERTIES_FROM_CARDINALITY, false),
-						Map.entry(CONFIG_FLAG.USE_INHERITANCE_REFERENCES, false),
-						Map.entry(CONFIG_FLAG.VALIDATE_GENERATED_OPENAPI_FILE, true)));
+						Map.entry(ConfigFlagType.ALWAYS_GENERATE_ARRAYS, true),
+						Map.entry(ConfigFlagType.DEFAULT_DESCRIPTIONS, true),
+						Map.entry(ConfigFlagType.DEFAULT_PROPERTIES, true),
+						Map.entry(ConfigFlagType.FIX_SINGULAR_PLURAL_PROPERTY_NAMES, false),
+						Map.entry(ConfigFlagType.FOLLOW_REFERENCES, true),
+						Map.entry(ConfigFlagType.GENERATE_JSON_FILE, false),
+						Map.entry(ConfigFlagType.REQUIRED_PROPERTIES_FROM_CARDINALITY, false),
+						Map.entry(ConfigFlagType.USE_INHERITANCE_REFERENCES, false),
+						Map.entry(ConfigFlagType.VALIDATE_GENERATED_OPENAPI_FILE, true)));
 	}
 
 	/**
@@ -150,79 +150,79 @@ public class YamlConfig extends ConfigFlags {
 	}
 
 	public Boolean getAlways_generate_arrays() {
-		return this.configFlags.get(CONFIG_FLAG.ALWAYS_GENERATE_ARRAYS);
+		return this.configFlags.get(ConfigFlagType.ALWAYS_GENERATE_ARRAYS);
 	}
 
 	public void setAlways_generate_arrays(Boolean always_generate_arrays) {
-		this.configFlags.put(CONFIG_FLAG.ALWAYS_GENERATE_ARRAYS, always_generate_arrays);
+		this.configFlags.put(ConfigFlagType.ALWAYS_GENERATE_ARRAYS, always_generate_arrays);
 	}
 
 	public Boolean getFix_singular_plural_property_names() {
-		return this.configFlags.get(CONFIG_FLAG.FIX_SINGULAR_PLURAL_PROPERTY_NAMES);
+		return this.configFlags.get(ConfigFlagType.FIX_SINGULAR_PLURAL_PROPERTY_NAMES);
 	}
 
 	public void setFix_singular_plural_property_names(Boolean fix_singular_plural_property_names) {
 		this.configFlags.put(
-				CONFIG_FLAG.FIX_SINGULAR_PLURAL_PROPERTY_NAMES, fix_singular_plural_property_names);
+				ConfigFlagType.FIX_SINGULAR_PLURAL_PROPERTY_NAMES, fix_singular_plural_property_names);
 	}
 
 	public Boolean getFollow_references() {
-		return this.configFlags.get(CONFIG_FLAG.FOLLOW_REFERENCES);
+		return this.configFlags.get(ConfigFlagType.FOLLOW_REFERENCES);
 	}
 
 	public void setFollow_references(Boolean follow_references) {
-		this.configFlags.put(CONFIG_FLAG.FOLLOW_REFERENCES, follow_references);
+		this.configFlags.put(ConfigFlagType.FOLLOW_REFERENCES, follow_references);
 	}
 
 	public Boolean getUse_inheritance_references() {
-		return this.configFlags.get(CONFIG_FLAG.USE_INHERITANCE_REFERENCES);
+		return this.configFlags.get(ConfigFlagType.USE_INHERITANCE_REFERENCES);
 	}
 
 	public void setUse_inheritance_references(Boolean use_inheritance_references) {
-		this.configFlags.put(CONFIG_FLAG.USE_INHERITANCE_REFERENCES, use_inheritance_references);
+		this.configFlags.put(ConfigFlagType.USE_INHERITANCE_REFERENCES, use_inheritance_references);
 	}
 
 	public Boolean getDefault_descriptions() {
-		return this.configFlags.get(CONFIG_FLAG.DEFAULT_DESCRIPTIONS);
+		return this.configFlags.get(ConfigFlagType.DEFAULT_DESCRIPTIONS);
 	}
 
 	public void setDefault_descriptions(Boolean default_descriptions) {
-		this.configFlags.put(CONFIG_FLAG.DEFAULT_DESCRIPTIONS, default_descriptions);
+		this.configFlags.put(ConfigFlagType.DEFAULT_DESCRIPTIONS, default_descriptions);
 	}
 
 	public Boolean getDefault_properties() {
-		return this.configFlags.get(CONFIG_FLAG.DEFAULT_PROPERTIES);
+		return this.configFlags.get(ConfigFlagType.DEFAULT_PROPERTIES);
 	}
 
 	public void setDefault_properties(Boolean default_properties) {
-		this.configFlags.put(CONFIG_FLAG.DEFAULT_PROPERTIES, default_properties);
+		this.configFlags.put(ConfigFlagType.DEFAULT_PROPERTIES, default_properties);
 	}
 
 	public Boolean getRequired_properties_from_cardinality() {
-		return this.configFlags.get(CONFIG_FLAG.REQUIRED_PROPERTIES_FROM_CARDINALITY);
+		return this.configFlags.get(ConfigFlagType.REQUIRED_PROPERTIES_FROM_CARDINALITY);
 	}
 
 	public void setRequired_properties_from_cardinality(
 			Boolean required_properties_from_cardinality) {
 		this.configFlags.put(
-				CONFIG_FLAG.REQUIRED_PROPERTIES_FROM_CARDINALITY, required_properties_from_cardinality);
+				ConfigFlagType.REQUIRED_PROPERTIES_FROM_CARDINALITY, required_properties_from_cardinality);
 	}
 
 	public Boolean getGenerate_json_file() {
-		return this.configFlags.get(CONFIG_FLAG.GENERATE_JSON_FILE);
+		return this.configFlags.get(ConfigFlagType.GENERATE_JSON_FILE);
 	}
 
 	public void setGenerate_json_file(Boolean generate_json_file) {
-		this.configFlags.put(CONFIG_FLAG.GENERATE_JSON_FILE, generate_json_file);
+		this.configFlags.put(ConfigFlagType.GENERATE_JSON_FILE, generate_json_file);
 	}
 
 	public Boolean getValidate_generated_openapi_file() {
-		return this.configFlags.get(CONFIG_FLAG.VALIDATE_GENERATED_OPENAPI_FILE);
+		return this.configFlags.get(ConfigFlagType.VALIDATE_GENERATED_OPENAPI_FILE);
 	}
 
 	public void setValidate_generated_openapi_file(Boolean validate_generated_openapi_file) {
 		this.configFlags.put(
-				CONFIG_FLAG.VALIDATE_GENERATED_OPENAPI_FILE, validate_generated_openapi_file);
+				ConfigFlagType.VALIDATE_GENERATED_OPENAPI_FILE, validate_generated_openapi_file);
 	}
 
 	public AuthConfig getAuth() {
