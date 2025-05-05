@@ -33,21 +33,21 @@ class PathGenerator {
 							.getOperation());
 		}
 
-		if (this.configData.getConfigFlagValue(ConfigFlagType.PATH_DELETE)) {
+		if (this.configData.getConfigFlagValue(ConfigFlagType.PATH_DELETE_BY_ID)) {
 			path_item.delete(
 					new MapperOperation(
 									schemaName, schemaURI, Method.DELETE, Cardinality.SINGULAR, this.configData)
 							.getOperation());
 		}
 
-		if (this.configData.getConfigFlagValue(ConfigFlagType.PATH_POST)) {
+		if (this.configData.getConfigFlagValue(ConfigFlagType.PATH_POST_SINGLE)) {
 			path_item.put(
 					new MapperOperation(
 									schemaName, schemaURI, Method.POST, Cardinality.SINGULAR, this.configData)
 							.getOperation());
 		}
 
-		if (this.configData.getConfigFlagValue(ConfigFlagType.PATH_PUT)) {
+		if (this.configData.getConfigFlagValue(ConfigFlagType.PATH_PUT_BY_ID)) {
 			path_item.put(
 					new MapperOperation(
 									schemaName, schemaURI, Method.PUT, Cardinality.SINGULAR, this.configData)
@@ -66,7 +66,7 @@ class PathGenerator {
 							.getOperation());
 		}
 
-		if (this.configData.getConfigFlagValue(ConfigFlagType.PATH_POST)) {
+		if (this.configData.getConfigFlagValue(ConfigFlagType.PATH_POST_BULK)) {
 			path_item.post(
 					new MapperOperation(
 									schemaName, schemaURI, Method.POST, Cardinality.PLURAL, this.configData)
