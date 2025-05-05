@@ -1,7 +1,7 @@
 package edu.isi.oba.config.paths;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import edu.isi.oba.config.flags.CONFIG_FLAG;
+import edu.isi.oba.config.flags.ConfigFlagType;
 import edu.isi.oba.config.flags.ConfigFlags;
 import java.util.Map;
 
@@ -63,15 +63,15 @@ public final class GetPathsConfig extends ConfigFlags {
 	@JsonIgnoreProperties(ignoreUnknown = true)
 	public static class Get_All extends ConfigFlags {
 		Get_All() {
-			configFlags.putAll(Map.ofEntries(Map.entry(CONFIG_FLAG.PATH_GET_ALL, true)));
+			configFlags.putAll(Map.ofEntries(Map.entry(ConfigFlagType.PATH_GET_ALL, true)));
 		}
 
 		public Boolean getEnable() {
-			return this.configFlags.get(CONFIG_FLAG.PATH_GET_ALL);
+			return this.configFlags.get(ConfigFlagType.PATH_GET_ALL);
 		}
 
 		public void setEnable(Boolean enable) {
-			this.configFlags.put(CONFIG_FLAG.PATH_GET_ALL, enable);
+			this.configFlags.put(ConfigFlagType.PATH_GET_ALL, enable);
 		}
 	}
 
@@ -84,24 +84,24 @@ public final class GetPathsConfig extends ConfigFlags {
 			this.key_name = "id";
 			this.configFlags.putAll(
 					Map.ofEntries(
-							Map.entry(CONFIG_FLAG.PATH_GET_BY_ID, true),
-							Map.entry(CONFIG_FLAG.PATH_GET_BY_ID_RESPONSE_ARRAY, false)));
+							Map.entry(ConfigFlagType.PATH_GET_BY_ID, true),
+							Map.entry(ConfigFlagType.PATH_GET_BY_ID_RESPONSE_ARRAY, false)));
 		}
 
 		public Boolean getEnable() {
-			return this.configFlags.get(CONFIG_FLAG.PATH_GET_BY_ID);
+			return this.configFlags.get(ConfigFlagType.PATH_GET_BY_ID);
 		}
 
 		public void setEnable(Boolean enable) {
-			this.configFlags.put(CONFIG_FLAG.PATH_GET_BY_ID, enable);
+			this.configFlags.put(ConfigFlagType.PATH_GET_BY_ID, enable);
 		}
 
 		public Boolean getResponse_array() {
-			return this.configFlags.get(CONFIG_FLAG.PATH_GET_BY_ID_RESPONSE_ARRAY);
+			return this.configFlags.get(ConfigFlagType.PATH_GET_BY_ID_RESPONSE_ARRAY);
 		}
 
 		public void setResponse_array(Boolean enable) {
-			this.configFlags.put(CONFIG_FLAG.PATH_GET_BY_ID_RESPONSE_ARRAY, enable);
+			this.configFlags.put(ConfigFlagType.PATH_GET_BY_ID_RESPONSE_ARRAY, enable);
 		}
 
 		public String getKey_name() {
