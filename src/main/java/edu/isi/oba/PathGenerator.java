@@ -1,7 +1,7 @@
 package edu.isi.oba;
 
 import edu.isi.oba.config.YamlConfig;
-import edu.isi.oba.config.flags.CONFIG_FLAG;
+import edu.isi.oba.config.flags.ConfigFlagType;
 import io.swagger.models.Method;
 import io.swagger.v3.oas.models.Operation;
 import io.swagger.v3.oas.models.PathItem;
@@ -26,28 +26,28 @@ class PathGenerator {
 
 	public PathItem generate_singular(String schemaName, String schemaURI) {
 		PathItem path_item = new PathItem();
-		if (this.configData.getConfigFlagValue(CONFIG_FLAG.PATH_GET_BY_ID)) {
+		if (this.configData.getConfigFlagValue(ConfigFlagType.PATH_GET_BY_ID)) {
 			path_item.get(
 					new MapperOperation(
 									schemaName, schemaURI, Method.GET, Cardinality.SINGULAR, this.configData)
 							.getOperation());
 		}
 
-		if (this.configData.getConfigFlagValue(CONFIG_FLAG.PATH_DELETE)) {
+		if (this.configData.getConfigFlagValue(ConfigFlagType.PATH_DELETE)) {
 			path_item.delete(
 					new MapperOperation(
 									schemaName, schemaURI, Method.DELETE, Cardinality.SINGULAR, this.configData)
 							.getOperation());
 		}
 
-		if (this.configData.getConfigFlagValue(CONFIG_FLAG.PATH_POST)) {
+		if (this.configData.getConfigFlagValue(ConfigFlagType.PATH_POST)) {
 			path_item.put(
 					new MapperOperation(
 									schemaName, schemaURI, Method.POST, Cardinality.SINGULAR, this.configData)
 							.getOperation());
 		}
 
-		if (this.configData.getConfigFlagValue(CONFIG_FLAG.PATH_PUT)) {
+		if (this.configData.getConfigFlagValue(ConfigFlagType.PATH_PUT)) {
 			path_item.put(
 					new MapperOperation(
 									schemaName, schemaURI, Method.PUT, Cardinality.SINGULAR, this.configData)
@@ -59,14 +59,14 @@ class PathGenerator {
 
 	public PathItem generate_plural(String schemaName, String schemaURI) {
 		PathItem path_item = new PathItem();
-		if (this.configData.getConfigFlagValue(CONFIG_FLAG.PATH_GET_ALL)) {
+		if (this.configData.getConfigFlagValue(ConfigFlagType.PATH_GET_ALL)) {
 			path_item.get(
 					new MapperOperation(
 									schemaName, schemaURI, Method.GET, Cardinality.PLURAL, this.configData)
 							.getOperation());
 		}
 
-		if (this.configData.getConfigFlagValue(CONFIG_FLAG.PATH_POST)) {
+		if (this.configData.getConfigFlagValue(ConfigFlagType.PATH_POST)) {
 			path_item.post(
 					new MapperOperation(
 									schemaName, schemaURI, Method.POST, Cardinality.PLURAL, this.configData)
