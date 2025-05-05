@@ -1,6 +1,6 @@
 package edu.isi.oba.config.flags;
 
-public enum CONFIG_FLAG {
+public enum ConfigFlagType {
 	ALWAYS_GENERATE_ARRAYS,
 	DEFAULT_DESCRIPTIONS,
 	DEFAULT_PROPERTIES,

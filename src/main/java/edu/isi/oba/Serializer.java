@@ -8,7 +8,7 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import edu.isi.oba.config.YamlConfig;
-import edu.isi.oba.config.flags.CONFIG_FLAG;
+import edu.isi.oba.config.flags.ConfigFlagType;
 import io.swagger.v3.jaxrs2.integration.JaxrsOpenApiContext;
 import io.swagger.v3.oas.integration.SwaggerConfiguration;
 import io.swagger.v3.oas.models.Components;
@@ -44,7 +44,7 @@ class Serializer {
 			throws Exception {
 		final var extensions = new HashMap<String, Object>();
 		final String openapi_file =
-				configData.getConfigFlagValue(CONFIG_FLAG.GENERATE_JSON_FILE)
+				configData.getConfigFlagValue(ConfigFlagType.GENERATE_JSON_FILE)
 						? "openapi.json"
 						: "openapi.yaml";
 
@@ -156,7 +156,7 @@ class Serializer {
 
 		// write the filename
 		final var content =
-				configData.getConfigFlagValue(CONFIG_FLAG.GENERATE_JSON_FILE)
+				configData.getConfigFlagValue(ConfigFlagType.GENERATE_JSON_FILE)
 						? ctx.getOutputJsonMapper()
 								.writer(new DefaultPrettyPrinter())
 								.writeValueAsString(openAPI)
@@ -175,7 +175,7 @@ class Serializer {
 		writer.write(content);
 		writer.close();
 
-		if (configData.getConfigFlagValue(CONFIG_FLAG.VALIDATE_GENERATED_OPENAPI_FILE)) {
+		if (configData.getConfigFlagValue(ConfigFlagType.VALIDATE_GENERATED_OPENAPI_FILE)) {
 			this.validate();
 		}
 	}
