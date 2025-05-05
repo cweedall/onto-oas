@@ -1,4 +1,4 @@
-package edu.isi.oba.config.ontology;
+package edu.isi.oba.config.ontology.annotations;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.util.HashSet;
