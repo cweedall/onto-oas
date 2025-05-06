@@ -7,8 +7,11 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import com.fasterxml.jackson.dataformat.yaml.YAMLGenerator;
 import edu.isi.oba.config.YamlConfig;
 import edu.isi.oba.config.flags.ConfigFlagType;
+import io.swagger.v3.core.util.Yaml;
 import io.swagger.v3.jaxrs2.integration.JaxrsOpenApiContext;
 import io.swagger.v3.oas.integration.SwaggerConfiguration;
 import io.swagger.v3.oas.models.Components;
@@ -31,6 +34,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import org.yaml.snakeyaml.DumperOptions;
 
 class Serializer {
 	String openapi_path;
@@ -154,6 +158,28 @@ class Serializer {
 		ctx.getOutputYamlMapper().configure(SerializationFeature.WRITE_ENUM_KEYS_USING_INDEX, true);
 		ctx.getOutputYamlMapper().addMixIn(Schema.class, SortedSchemaMixin.class);
 
+		final var dumperOptions = new DumperOptions();
+		// dumperOptions.setDefaultFlowStyle(DumperOptions.FlowStyle.BLOCK);
+		dumperOptions.setDefaultFlowStyle(DumperOptions.FlowStyle.BLOCK);
+		dumperOptions.setDefaultScalarStyle(DumperOptions.ScalarStyle.LITERAL);
+		dumperOptions.setPrettyFlow(true);
+		dumperOptions.setProcessComments(true);
+		dumperOptions.setSplitLines(false);
+
+		YAMLFactory factory = (YAMLFactory) Yaml.mapper().getFactory();
+		// factory.rebuild().dumperOptions(dumperOptions);
+		factory
+				.enable(YAMLGenerator.Feature.MINIMIZE_QUOTES)
+				.enable(YAMLGenerator.Feature.ALWAYS_QUOTE_NUMBERS_AS_STRINGS)
+				.disable(YAMLGenerator.Feature.SPLIT_LINES)
+				.enable(YAMLGenerator.Feature.LITERAL_BLOCK_STYLE)
+				.enable(YAMLGenerator.Feature.INDENT_ARRAYS)
+				.enable(YAMLGenerator.Feature.INDENT_ARRAYS_WITH_INDICATOR)
+				.disable(YAMLGenerator.Feature.WRITE_DOC_START_MARKER);
+		factory.rebuild().dumperOptions(dumperOptions);
+
+		final var pretty = Yaml.pretty(openAPI);
+
 		// write the filename
 		final var content =
 				configData.getConfigFlagValue(ConfigFlagType.GENERATE_JSON_FILE)
@@ -172,7 +198,8 @@ class Serializer {
 						StandardOpenOption.WRITE,
 						StandardOpenOption.CREATE,
 						StandardOpenOption.TRUNCATE_EXISTING);
-		writer.write(content);
+		// writer.write(content);
+		writer.write(pretty);
 		writer.close();
 
 		if (configData.getConfigFlagValue(ConfigFlagType.VALIDATE_GENERATED_OPENAPI_FILE)) {
