@@ -2,13 +2,16 @@ package edu.isi.oba;
 
 import edu.isi.oba.config.YamlConfig;
 import edu.isi.oba.config.flags.ConfigFlagType;
+import edu.isi.oba.config.paths.PathKeyType;
 import io.swagger.models.Method;
 import io.swagger.v3.oas.models.Operation;
 import io.swagger.v3.oas.models.examples.Example;
 import io.swagger.v3.oas.models.media.ArraySchema;
+import io.swagger.v3.oas.models.media.BooleanSchema;
 import io.swagger.v3.oas.models.media.Content;
 import io.swagger.v3.oas.models.media.IntegerSchema;
 import io.swagger.v3.oas.models.media.MediaType;
+import io.swagger.v3.oas.models.media.NumberSchema;
 import io.swagger.v3.oas.models.media.Schema;
 import io.swagger.v3.oas.models.media.StringSchema;
 import io.swagger.v3.oas.models.parameters.Parameter;
@@ -34,8 +37,6 @@ class MapperOperation {
 	private final YamlConfig configData;
 	private final String path_id_name;
 	private boolean auth;
-	private String summary;
-	private String description;
 	private final String schemaName;
 	private final String schemaURI;
 	private final List<Parameter> parameters = new ArrayList<>();
@@ -56,64 +57,38 @@ class MapperOperation {
 			Cardinality cardinality,
 			YamlConfig configData) {
 		this.configData = configData;
-		this.path_id_name =
-				this.configData.getPath_config().getGet_paths().getGet_by_key().getKey_name();
-
+		this.path_id_name = this.getPathKeyName(method);
 		this.auth = this.configData.getAuth() == null ? false : this.configData.getAuth().getEnable();
 		this.cardinality = cardinality;
 		this.schemaName = schemaName;
 		this.schemaURI = schemaURI;
-		String ref_text = "#/components/schemas/" + this.schemaName;
-		schema = new Schema().$ref(ref_text);
+		schema = new Schema().$ref("#/components/schemas/" + this.schemaName);
 
-		var descriptionText =
-				"The "
-						+ this.path_id_name
-						+ " of the ["
-						+ this.schemaName
-						+ "]("
-						+ this.schemaURI
-						+ ") to be ";
+		// Set key parameter, if configured.
+		this.setPathKeyParameter(method);
 
 		switch (method) {
 			case GET:
 				setOperationGet();
-				descriptionText += "retrieved.";
 				break;
 			case PATCH:
 				setOperationPatch();
-				descriptionText += "patched.";
 				break;
 			case PUT:
 				setOperationPut();
-				descriptionText += "updated.";
 				break;
 			case POST:
 				setOperationPost();
-				descriptionText += "created.";
 				break;
 			case DELETE:
 				setOperationDelete();
-				descriptionText += "deleted.";
 				break;
 			default:
 				break;
 		}
 
-		if (Cardinality.SINGULAR.equals(cardinality)) {
-			this.parameters.add(
-					new PathParameter()
-							.description(descriptionText)
-							.name(this.path_id_name)
-							.required(true)
-							.schema(new StringSchema()));
-		}
-
-		this.operation =
-				new Operation()
-						.description(this.description)
-						.summary(this.summary)
-						.addTagsItem(this.schemaName);
+		// Create new Operation object for the given Schema and the specified method / cardinality.
+		this.operation = this.getOperationTemplate(method, schemaName, schemaURI, cardinality);
 
 		if (this.auth) {
 			SecurityRequirement securityRequirement = new SecurityRequirement();
@@ -150,8 +125,150 @@ class MapperOperation {
 		}
 	}
 
+	private Operation getOperationTemplate(
+			Method method, String schemaName, String schemaURI, Cardinality cardinality) {
+		String operationDescription = null;
+		String operationSummary = null;
+
+		switch (method) {
+			case DELETE:
+				if (Cardinality.SINGULAR.equals(cardinality)) {
+					operationDescription =
+							"Delete an existing instance of ["
+									+ schemaName
+									+ "]("
+									+ schemaURI
+									+ ") by its "
+									+ this.path_id_name;
+					operationSummary = "Delete an existing " + schemaName;
+				}
+				break;
+			case GET:
+				if (Cardinality.SINGULAR.equals(cardinality)) {
+					operationDescription =
+							"Gets the details of a given ["
+									+ schemaName
+									+ "]("
+									+ schemaURI
+									+ ") by its "
+									+ this.path_id_name;
+					operationSummary = "Get a single " + schemaName;
+				} else {
+					operationDescription =
+							"Gets the details of all instances of [" + schemaName + "](" + schemaURI + ")";
+					operationSummary = "Gets all instances of " + schemaName;
+				}
+				break;
+			case PATCH:
+				operationDescription = null;
+				operationSummary = null;
+				break;
+			case POST:
+				if (Cardinality.SINGULAR.equals(cardinality)) {
+					operationDescription = "Create a new instance of [" + schemaName + "](" + schemaURI + ")";
+					operationSummary = "Create one " + schemaName;
+				} else {
+					operationDescription =
+							"Create one or more new instances of [" + schemaName + "](" + schemaURI + ")";
+					operationSummary = "Create one or more " + schemaName;
+				}
+
+				break;
+			case PUT:
+				if (Cardinality.SINGULAR.equals(cardinality)) {
+					operationDescription =
+							"Update an existing instance of ["
+									+ schemaName
+									+ "]("
+									+ schemaURI
+									+ ") by its "
+									+ this.path_id_name;
+					operationSummary = "Update an existing " + schemaName;
+				} else {
+					operationDescription = "Update bulk instances of [" + schemaName + "](" + schemaURI + ")";
+					operationSummary = "Update one or more " + schemaName;
+				}
+				break;
+			default:
+				break;
+		}
+
+		return new Operation()
+				.description(operationDescription)
+				.summary(operationSummary)
+				.addTagsItem(schemaName);
+	}
+
+	private Schema getSchemaBasedOnPathKeyType(PathKeyType keyType) {
+		switch (keyType) {
+			case STRING:
+				return new StringSchema();
+			case NUMBER:
+				return new NumberSchema();
+			case INTEGER:
+				return new IntegerSchema();
+			case BOOLEAN:
+				return new BooleanSchema();
+			default:
+				return new Schema();
+		}
+	}
+
+	private String getPathKeyName(Method method) {
+		if (Cardinality.SINGULAR.equals(cardinality)) {
+			final var pathConfig = this.configData.getPath_config();
+
+			switch (method) {
+				case GET:
+					return pathConfig.getGet_paths().getGet_by_key().getKey_name();
+				case PUT:
+					return pathConfig.getPut_paths().getPut_by_key().getKey_name();
+				case DELETE:
+					return pathConfig.getDelete_paths().getDelete_by_key().getKey_name();
+				default:
+					break;
+			}
+		}
+
+		return null;
+	}
+
+	private PathKeyType getPathKeyType(Method method) {
+		if (Cardinality.SINGULAR.equals(cardinality)) {
+			final var pathConfig = this.configData.getPath_config();
+
+			switch (method) {
+				case GET:
+					return pathConfig.getGet_paths().getGet_by_key().getKey_type();
+				case PUT:
+					return pathConfig.getPut_paths().getPut_by_key().getKey_type();
+				case DELETE:
+					return pathConfig.getDelete_paths().getDelete_by_key().getKey_type();
+				default:
+					break;
+			}
+		}
+
+		return null;
+	}
+
+	private void setPathKeyParameter(Method method) {
+		if (Cardinality.SINGULAR.equals(cardinality)) {
+			final var keyName = this.getPathKeyName(method);
+
+			if (keyName != null) {
+				final var descriptionText = "The " + keyName + " of the endpoint resource.";
+				this.parameters.add(
+						new PathParameter()
+								.description(descriptionText)
+								.name(keyName)
+								.required(true)
+								.schema(this.getSchemaBasedOnPathKeyType(this.getPathKeyType(method))));
+			}
+		}
+	}
+
 	private void setOperationGet() {
-		String responseDescriptionOk;
 		ApiResponse responseOk;
 		// Set parameters
 		if (this.auth)
@@ -165,27 +282,18 @@ class MapperOperation {
 		switch (cardinality) {
 			case PLURAL:
 				{
-					summary = "List all instances of " + this.schemaName;
-					description =
-							"Gets a list of all instances of [" + this.schemaName + "](" + this.schemaURI + ")";
-					responseDescriptionOk =
-							"Successful response - returns an array with the instances of ["
-									+ this.schemaName
-									+ "]("
-									+ this.schemaURI
-									+ ").";
-
 					// Set response
 					ArraySchema schema = new ArraySchema();
 					schema.setItems(this.schema);
 
 					var mediaType = new MediaType().schema(schema);
-					// mediaType.setExampleSetFlag(true);
 					var schemaExample = new Example();
 					schemaExample.$ref(this.schema.get$ref());
-					// mediaType.setExamples(Map.of(this.schemaName, schemaExample));
 					Content content = new Content().addMediaType("application/json", mediaType);
-					responseOk = new ApiResponse().description(responseDescriptionOk).content(content);
+					responseOk =
+							new ApiResponse()
+									.description(EnglishReasonPhraseCatalog.INSTANCE.getReason(200, Locale.ENGLISH))
+									.content(content);
 					this.apiResponses.addApiResponse("200", responseOk);
 					this.parameters.add(
 							new QueryParameter()
@@ -210,37 +318,16 @@ class MapperOperation {
 													.maximum(BigDecimal.valueOf(200))
 													.minimum(BigDecimal.valueOf(1))));
 					break;
-
-					// MediaType mediaType = new MediaType().schema(schema);
-					// //mediaType.setExampleSetFlag(true);
-					// var schemaExample = new Example();
-					// schemaExample.$ref(this.schema.get$ref());
-					// mediaType.setExamples(Map.of(this.schemaName, schemaExample));
-					// Content content = new Content().addMediaType("application/json", mediaType);
-					// requestBody.setContent(content);
-					// requestBody.setDescription(requestDescription);
-					// Set the response
-					// apiResponses.addApiResponse("201", new ApiResponse()
-					// .content(content)
-					// .description("Created")
 				}
 			case SINGULAR:
 				{
-					summary = "Get a single " + this.schemaName + " by its " + this.path_id_name;
-					description =
-							"Gets the details of a given [" + this.schemaName + "](" + this.schemaURI + ")";
-					responseDescriptionOk =
-							"Gets the details of a given [" + this.schemaName + "](" + this.schemaURI + ")";
-
 					// Set request
 					var mediaType = new MediaType().schema(schema);
-					// mediaType.setExampleSetFlag(true);
 					var schemaExample = new Example();
 					schemaExample.$ref(this.schema.get$ref());
-					// mediaType.setExamples(Map.of(this.schemaName, schemaExample));
 					responseOk =
 							new ApiResponse()
-									.description(responseDescriptionOk)
+									.description(EnglishReasonPhraseCatalog.INSTANCE.getReason(200, Locale.ENGLISH))
 									.content(new Content().addMediaType("application/json", mediaType));
 					this.apiResponses.addApiResponse("200", responseOk);
 					break;
@@ -274,18 +361,10 @@ class MapperOperation {
 
 	private void setOperationPost() {
 		String requestDescription =
-				"Information about the [" + this.schemaName + "](" + this.schemaURI + ") to be created";
-
-		// Edit global fields
-		summary = "Create one " + this.schemaName;
-		description = "Create a new instance of [" + this.schemaName + "](" + this.schemaURI + ")";
+				"Information about the [" + this.schemaName + "](" + this.schemaURI + ") to be created.";
 
 		// Set request
 		MediaType mediaType = new MediaType().schema(schema);
-		// mediaType.setExampleSetFlag(true);
-		// var schemaExample = new Example();
-		// schemaExample.$ref(this.schema.get$ref());
-		// mediaType.setExamples(Map.of(this.schemaName, schemaExample));
 		Content content = new Content().addMediaType("application/json", mediaType);
 		this.requestBody.setContent(content);
 		this.requestBody.setDescription(requestDescription);
@@ -318,18 +397,10 @@ class MapperOperation {
 
 	private void setOperationPut() {
 		String requestDescription =
-				"An old [" + this.schemaName + "](" + this.schemaURI + ") to be updated";
-
-		summary = "Update an existing " + this.schemaName;
-		description = "Updates an existing [" + this.schemaName + "](" + this.schemaURI + ")";
+				"An old [" + this.schemaName + "](" + this.schemaURI + ") to be updated.";
 
 		// Set request
 		MediaType mediaType = new MediaType().schema(schema);
-		// mediaType.setExampleSetFlag(true);
-		// var schemaExample = new Example();
-		// schemaExample.$ref(this.schema.get$ref());
-		// mediaType.setExamples(Map.of(this.schemaName, schemaExample));
-
 		Content content = new Content().addMediaType("application/json", mediaType);
 		this.requestBody.setContent(content);
 		this.requestBody.setDescription(requestDescription);
@@ -361,9 +432,6 @@ class MapperOperation {
 	}
 
 	private void setOperationDelete() {
-		summary = "Delete an existing " + this.schemaName;
-		description = "Delete an existing [" + this.schemaName + "](" + this.schemaURI + ")";
-
 		if (this.configData.getConfigFlagValue(ConfigFlagType.USE_COMMON_DEFAULT_PATH_RESPONSES)) {
 			// Set the response
 			this.apiResponses

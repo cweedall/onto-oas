@@ -63,7 +63,7 @@ public final class PostPathsConfig extends ConfigFlags {
 	@JsonIgnoreProperties(ignoreUnknown = true)
 	public static class Post_Bulk extends ConfigFlags {
 		// Default path suffix to be "_bulk";
-		public String path_suffix = "_bulk";
+		private String path_suffix = "_bulk";
 
 		Post_Bulk() {
 			configFlags.putAll(Map.ofEntries(Map.entry(ConfigFlagType.PATH_POST_BULK, false)));

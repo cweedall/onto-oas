@@ -24,56 +24,74 @@ class PathGenerator {
 		this.configData = configData;
 	}
 
+	/**
+	 * Generate a singular {@link PathItem} for the path section of the OpenAPI specification.
+	 *
+	 * @param schemaName The schema's name (to be used for the path name).
+	 * @param schemaURI The schema's URI (in the ontology).
+	 * @return a Swagger OAS {@link PathItem} - null if not configurable.
+	 */
 	public PathItem generate_singular(String schemaName, String schemaURI) {
-		PathItem path_item = new PathItem();
 		if (this.configData.getConfigFlagValue(ConfigFlagType.PATH_GET_BY_ID)) {
-			path_item.get(
-					new MapperOperation(
-									schemaName, schemaURI, Method.GET, Cardinality.SINGULAR, this.configData)
-							.getOperation());
+			return new PathItem()
+					.get(
+							new MapperOperation(
+											schemaName, schemaURI, Method.GET, Cardinality.SINGULAR, this.configData)
+									.getOperation());
 		}
 
 		if (this.configData.getConfigFlagValue(ConfigFlagType.PATH_DELETE_BY_ID)) {
-			path_item.delete(
-					new MapperOperation(
-									schemaName, schemaURI, Method.DELETE, Cardinality.SINGULAR, this.configData)
-							.getOperation());
+			return new PathItem()
+					.delete(
+							new MapperOperation(
+											schemaName, schemaURI, Method.DELETE, Cardinality.SINGULAR, this.configData)
+									.getOperation());
 		}
 
 		if (this.configData.getConfigFlagValue(ConfigFlagType.PATH_POST_SINGLE)) {
-			path_item.put(
-					new MapperOperation(
-									schemaName, schemaURI, Method.POST, Cardinality.SINGULAR, this.configData)
-							.getOperation());
+			return new PathItem()
+					.put(
+							new MapperOperation(
+											schemaName, schemaURI, Method.POST, Cardinality.SINGULAR, this.configData)
+									.getOperation());
 		}
 
 		if (this.configData.getConfigFlagValue(ConfigFlagType.PATH_PUT_BY_ID)) {
-			path_item.put(
-					new MapperOperation(
-									schemaName, schemaURI, Method.PUT, Cardinality.SINGULAR, this.configData)
-							.getOperation());
+			return new PathItem()
+					.put(
+							new MapperOperation(
+											schemaName, schemaURI, Method.PUT, Cardinality.SINGULAR, this.configData)
+									.getOperation());
 		}
 
-		return path_item;
+		return null;
 	}
 
+	/**
+	 * Generate a plural {@link PathItem} for the path section of the OpenAPI specification.
+	 *
+	 * @param schemaName The schema's name (to be used for the path name).
+	 * @param schemaURI The schema's URI (in the ontology).
+	 * @return a Swagger OAS {@link PathItem} - null if not configurable.
+	 */
 	public PathItem generate_plural(String schemaName, String schemaURI) {
-		PathItem path_item = new PathItem();
 		if (this.configData.getConfigFlagValue(ConfigFlagType.PATH_GET_ALL)) {
-			path_item.get(
-					new MapperOperation(
-									schemaName, schemaURI, Method.GET, Cardinality.PLURAL, this.configData)
-							.getOperation());
+			return new PathItem()
+					.get(
+							new MapperOperation(
+											schemaName, schemaURI, Method.GET, Cardinality.PLURAL, this.configData)
+									.getOperation());
 		}
 
 		if (this.configData.getConfigFlagValue(ConfigFlagType.PATH_POST_BULK)) {
-			path_item.post(
-					new MapperOperation(
-									schemaName, schemaURI, Method.POST, Cardinality.PLURAL, this.configData)
-							.getOperation());
+			return new PathItem()
+					.post(
+							new MapperOperation(
+											schemaName, schemaURI, Method.POST, Cardinality.PLURAL, this.configData)
+									.getOperation());
 		}
 
-		return path_item;
+		return null;
 	}
 
 	public static PathItem user_login(String schema_name) {
