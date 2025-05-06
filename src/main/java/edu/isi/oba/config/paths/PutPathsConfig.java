@@ -63,7 +63,7 @@ public final class PutPathsConfig extends ConfigFlags {
 	@JsonIgnoreProperties(ignoreUnknown = true)
 	public static class Put_Bulk extends ConfigFlags {
 		// Default path suffix to be "_bulk";
-		public String path_suffix = "_bulk";
+		private String path_suffix = "_bulk";
 
 		Put_Bulk() {
 			this.configFlags.putAll(Map.ofEntries(Map.entry(ConfigFlagType.PATH_PUT_BULK, false)));
@@ -93,7 +93,12 @@ public final class PutPathsConfig extends ConfigFlags {
 	@JsonIgnoreProperties(ignoreUnknown = true)
 	public static class Put_By_Key extends ConfigFlags {
 		// Default key name to be "id";
-		public String key_name = "id";
+		private String key_name = "id";
+		// Default key type to be STRING.  Used within the application for enum convenience.
+		private PathKeyType key_type = PathKeyType.STRING;
+		// Default key type to be "string".  Used as a convenience for setting the values from the
+		// configuration file.
+		private String key_datatype = key_type.toString();
 
 		Put_By_Key() {
 			this.configFlags.putAll(Map.ofEntries(Map.entry(ConfigFlagType.PATH_PUT_BY_ID, false)));
@@ -116,6 +121,21 @@ public final class PutPathsConfig extends ConfigFlags {
 		public void setKey_name(String key_name) {
 			if (key_name != null && !key_name.isBlank()) {
 				this.key_name = key_name;
+			}
+		}
+
+		public PathKeyType getKey_type() {
+			return this.key_type;
+		}
+
+		public String getKey_datatype() {
+			return this.key_datatype;
+		}
+
+		public void setKey_datatype(String key_datatype) {
+			if (key_datatype != null && !key_datatype.isBlank()) {
+				this.key_type = PathKeyType.valueOfLabel(key_datatype);
+				this.key_datatype = key_datatype;
 			}
 		}
 	}
