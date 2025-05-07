@@ -19,6 +19,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 
 public class ExamplesGenerator {
 	public static Map<String, Example> generateExamples(OpenAPI openAPI) throws Exception {
@@ -70,7 +71,7 @@ public class ExamplesGenerator {
 			e.printStackTrace();
 		}
 
-		return componentsWithExamples;
+		return new TreeMap<>(componentsWithExamples);
 	}
 
 	private static Map<String, Object> iterateJsonNode(JsonNode node) {
@@ -189,7 +190,7 @@ public class ExamplesGenerator {
 			}
 		}
 
-		return newmap;
+		return new TreeMap<>(newmap);
 	}
 
 	private static Object getObjectFromTypeAndFormat(JsonNode valueNode) {
