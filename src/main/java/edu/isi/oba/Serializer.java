@@ -5,13 +5,16 @@ import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.json.JsonReadFeature;
+import com.fasterxml.jackson.core.json.JsonWriteFeature;
 import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.fasterxml.jackson.dataformat.yaml.YAMLGenerator;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import edu.isi.oba.config.YamlConfig;
 import edu.isi.oba.config.flags.ConfigFlagType;
-import io.swagger.v3.core.util.Yaml;
 import io.swagger.v3.jaxrs2.integration.JaxrsOpenApiContext;
 import io.swagger.v3.oas.integration.SwaggerConfiguration;
 import io.swagger.v3.oas.models.Components;
@@ -142,45 +145,95 @@ class Serializer {
 		// the info section away from the top of the document, for example.
 		final var openApiConfiguration = new SwaggerConfiguration().openAPI(openAPI).prettyPrint(true);
 
+		// Create the OpenAPI context for specifying the output/serialization settings.
 		final var ctx = new JaxrsOpenApiContext<>().openApiConfiguration(openApiConfiguration).init();
 
-		// ctx.getOutputJsonMapper().configure(MapperFeature.USE_ANNOTATIONS, true);
-		ctx.getOutputJsonMapper().configure(SerializationFeature.FLUSH_AFTER_WRITE_VALUE, true);
-		ctx.getOutputJsonMapper().configure(SerializationFeature.INDENT_OUTPUT, true);
-		ctx.getOutputJsonMapper().configure(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS, true);
-		ctx.getOutputJsonMapper().configure(SerializationFeature.WRITE_ENUM_KEYS_USING_INDEX, true);
-		ctx.getOutputJsonMapper().addMixIn(Schema.class, SortedSchemaMixin.class);
-
+		// ============================================================
+		// JSON serialization/output settings.
+		// ============================================================
+		// Get the JSON OutputMapper from the OpenAPI context.
+		final var ctxJsonObjectMapper = ctx.getOutputJsonMapper();
 		// ctx.getOutputYamlMapper().configure(MapperFeature.USE_ANNOTATIONS, true);
-		ctx.getOutputYamlMapper().configure(SerializationFeature.FLUSH_AFTER_WRITE_VALUE, true);
-		ctx.getOutputYamlMapper().configure(SerializationFeature.INDENT_OUTPUT, true);
-		ctx.getOutputYamlMapper().configure(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS, true);
-		ctx.getOutputYamlMapper().configure(SerializationFeature.WRITE_ENUM_KEYS_USING_INDEX, true);
-		ctx.getOutputYamlMapper().addMixIn(Schema.class, SortedSchemaMixin.class);
+		ctxJsonObjectMapper.enable(SerializationFeature.FLUSH_AFTER_WRITE_VALUE);
+		ctxJsonObjectMapper.enable(SerializationFeature.INDENT_OUTPUT);
+		ctxJsonObjectMapper.enable(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS);
+		ctxJsonObjectMapper.enable(SerializationFeature.WRITE_ENUM_KEYS_USING_INDEX);
+		ctxJsonObjectMapper.addMixIn(Schema.class, SortedSchemaMixin.class);
 
+		// Get the JSON Factory of the JSON ObjectMapper.
+		final var ctxJsonFactory = ctxJsonObjectMapper.getFactory();
+		// Get the JSON Factory Builder, to be able to enable/disable specific features.
+		final var ctxJsonFactoryBuilder = ctxJsonFactory.rebuild();
+
+		ctxJsonFactory.enable(JsonGenerator.Feature.COMBINE_UNICODE_SURROGATES_IN_UTF8);
+		ctxJsonFactory.enable(JsonGenerator.Feature.WRITE_BIGDECIMAL_AS_PLAIN);
+
+		ctxJsonFactoryBuilder.enable(JsonWriteFeature.QUOTE_FIELD_NAMES);
+		ctxJsonFactoryBuilder.enable(JsonWriteFeature.WRITE_HEX_UPPER_CASE);
+		ctxJsonFactoryBuilder.enable(JsonReadFeature.ALLOW_SINGLE_QUOTES);
+		ctxJsonFactoryBuilder.enable(JsonReadFeature.ALLOW_TRAILING_DECIMAL_POINT_FOR_NUMBERS);
+		ctxJsonFactoryBuilder.disable(JsonReadFeature.ALLOW_UNQUOTED_FIELD_NAMES);
+		ctxJsonFactoryBuilder.enable(JsonReadFeature.ALLOW_YAML_COMMENTS);
+		ctxJsonFactoryBuilder.enable(com.fasterxml.jackson.core.JsonFactory.Feature.CHARSET_DETECTION);
+		ctxJsonFactoryBuilder.enable(
+				com.fasterxml.jackson.core.JsonFactory.Feature.CANONICALIZE_FIELD_NAMES);
+		ctxJsonFactoryBuilder.enable(com.fasterxml.jackson.core.JsonFactory.Feature.INTERN_FIELD_NAMES);
+		ctxJsonFactoryBuilder.enable(
+				com.fasterxml.jackson.core.JsonFactory.Feature.USE_THREAD_LOCAL_FOR_BUFFER_RECYCLING);
+
+		// Re-initialize the JSON OutputMapper for the OpenAPI context, based on the updated settings.
+		ctx.setOutputJsonMapper(ctxJsonObjectMapper.copyWith(ctxJsonFactoryBuilder.build()));
+
+		// ============================================================
+		// YAML serialization/output settings.
+		// ============================================================
+		// Get the YAML OutputMapper from the OpenAPI context.
+		final var ctxYamlObjectMapper = ctx.getOutputYamlMapper();
+		ctxYamlObjectMapper.registerModule(new JavaTimeModule());
+		// ctx.getOutputYamlMapper().configure(MapperFeature.USE_ANNOTATIONS, true);
+		ctxYamlObjectMapper.enable(SerializationFeature.FLUSH_AFTER_WRITE_VALUE);
+		ctxYamlObjectMapper.enable(SerializationFeature.INDENT_OUTPUT);
+		ctxYamlObjectMapper.enable(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS);
+		ctxYamlObjectMapper.enable(SerializationFeature.WRITE_ENUM_KEYS_USING_INDEX);
+		ctxYamlObjectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+		// ctxYamlObjectMapper.disable(SerializationFeature.WRITE_DATES_WITH_CONTEXT_TIME_ZONE);
+		// ctxYamlObjectMapper.disable(SerializationFeature.WRITE_DATES_WITH_ZONE_ID);
+		ctxYamlObjectMapper.addMixIn(Schema.class, SortedSchemaMixin.class);
+
+		// Get the JSON Factory of the YAML ObjectMapper.
+		final var ctxYamlJsonFactory = ctxYamlObjectMapper.getFactory();
+		// Cast the JSON Factory as a YAML Factory.
+		final var ctxYamlFactory = (YAMLFactory) ctxYamlJsonFactory;
+		// Get the YAML Factory Builder, to be able to enable/disable specific features.
+		final var ctxYamlFactoryBuilder = ctxYamlFactory.rebuild();
+
+		// In Jackson v3, YAMLGenerator.Feature is renamed to YAMLWriteFeature
+		ctxYamlFactoryBuilder.enable(YAMLGenerator.Feature.ALLOW_LONG_KEYS);
+		ctxYamlFactoryBuilder.disable(YAMLGenerator.Feature.SPLIT_LINES);
+		ctxYamlFactoryBuilder.enable(YAMLGenerator.Feature.LITERAL_BLOCK_STYLE);
+		ctxYamlFactoryBuilder.enable(YAMLGenerator.Feature.MINIMIZE_QUOTES);
+		ctxYamlFactoryBuilder.enable(YAMLGenerator.Feature.ALWAYS_QUOTE_NUMBERS_AS_STRINGS);
+		ctxYamlFactoryBuilder.enable(YAMLGenerator.Feature.INDENT_ARRAYS);
+		ctxYamlFactoryBuilder.enable(YAMLGenerator.Feature.INDENT_ARRAYS_WITH_INDICATOR);
+		ctxYamlFactoryBuilder.disable(YAMLGenerator.Feature.WRITE_DOC_START_MARKER);
+
+		// Create DumperOptions for configuring additional YAML serialization settings.
 		final var dumperOptions = new DumperOptions();
-		// dumperOptions.setDefaultFlowStyle(DumperOptions.FlowStyle.BLOCK);
 		dumperOptions.setDefaultFlowStyle(DumperOptions.FlowStyle.BLOCK);
 		dumperOptions.setDefaultScalarStyle(DumperOptions.ScalarStyle.LITERAL);
+		dumperOptions.setAllowUnicode(true);
 		dumperOptions.setPrettyFlow(true);
 		dumperOptions.setProcessComments(true);
 		dumperOptions.setSplitLines(false);
+		dumperOptions.setNonPrintableStyle(DumperOptions.NonPrintableStyle.ESCAPE);
 
-		YAMLFactory factory = (YAMLFactory) Yaml.mapper().getFactory();
-		// factory.rebuild().dumperOptions(dumperOptions);
-		factory
-				.enable(YAMLGenerator.Feature.MINIMIZE_QUOTES)
-				.enable(YAMLGenerator.Feature.ALWAYS_QUOTE_NUMBERS_AS_STRINGS)
-				.disable(YAMLGenerator.Feature.SPLIT_LINES)
-				.enable(YAMLGenerator.Feature.LITERAL_BLOCK_STYLE)
-				.enable(YAMLGenerator.Feature.INDENT_ARRAYS)
-				.enable(YAMLGenerator.Feature.INDENT_ARRAYS_WITH_INDICATOR)
-				.disable(YAMLGenerator.Feature.WRITE_DOC_START_MARKER);
-		factory.rebuild().dumperOptions(dumperOptions);
+		// Specify that the YAML Factory Builder should use those DumperOptions.
+		ctxYamlFactoryBuilder.dumperOptions(dumperOptions);
 
-		final var pretty = Yaml.pretty(openAPI);
+		// Re-initialize the YAML OutputMapper for the OpenAPI context, based on the updated settings.
+		ctx.setOutputYamlMapper(ctxYamlObjectMapper.copyWith(ctxYamlFactoryBuilder.build()));
 
-		// write the filename
+		// Get the file contents as either JSON or YAML (default) based on the configuration file.
 		final var content =
 				configData.getConfigFlagValue(ConfigFlagType.GENERATE_JSON_FILE)
 						? ctx.getOutputJsonMapper()
@@ -198,8 +251,7 @@ class Serializer {
 						StandardOpenOption.WRITE,
 						StandardOpenOption.CREATE,
 						StandardOpenOption.TRUNCATE_EXISTING);
-		// writer.write(content);
-		writer.write(pretty);
+		writer.write(content);
 		writer.close();
 
 		if (configData.getConfigFlagValue(ConfigFlagType.VALIDATE_GENERATED_OPENAPI_FILE)) {
