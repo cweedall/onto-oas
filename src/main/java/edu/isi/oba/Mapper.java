@@ -354,7 +354,7 @@ class Mapper {
 	 * @return a {@link Map> of short form name {@link String} keys and their {@link Schema} values
 	 */
 	public Map<String, Schema> getSchemas() {
-		return this.schemas;
+		return new TreeMap<>(this.schemas);
 	}
 
 	/**
