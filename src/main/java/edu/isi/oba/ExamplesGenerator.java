@@ -28,7 +28,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
-import org.apache.jena.iri.IRIException0;
+import org.apache.jena.iri.IRIException;
 import org.apache.jena.iri.IRIFactory;
 
 public class ExamplesGenerator {
@@ -273,7 +273,7 @@ public class ExamplesGenerator {
 						final var iri = "http://www.example.org/red%09ros&#xE9;#red";
 						try {
 							return IRIFactory.iriImplementation().construct(iri);
-						} catch (IRIException0 e) {
+						} catch (IRIException e) {
 							return String.valueOf(iri);
 						}
 					} else if ("password".equals(formatNode.asText())) {
