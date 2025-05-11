@@ -73,6 +73,13 @@
             <version>2.8.21</version>
         </dependency>
 
+        <!-- https://mvnrepository.com/artifact/org.apache.jena/jena-iri -->
+        <dependency>
+            <groupId>org.apache.jena</groupId>
+            <artifactId>jena-iri</artifactId>
+            <version>4.10.0</version>
+        </dependency>
+
         <!-- https://mvnrepository.com/artifact/org.apache.maven.plugins/maven-shade-plugin -->
         <dependency>
             <groupId>org.apache.maven.plugins</groupId>
