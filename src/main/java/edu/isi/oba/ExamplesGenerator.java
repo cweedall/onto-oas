@@ -15,11 +15,21 @@ import io.swagger.v3.oas.models.examples.Example;
 import io.swagger.v3.oas.models.media.Schema;
 import io.swagger.v3.parser.OpenAPIV3Parser;
 import io.swagger.v3.parser.core.models.ParseOptions;
+import java.net.Inet4Address;
+import java.net.Inet6Address;
+import java.net.InetAddress;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.UnknownHostException;
+import java.time.LocalDate;
+import java.time.ZonedDateTime;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import org.apache.jena.iri.IRIException;
+import org.apache.jena.iri.IRIFactory;
 
 public class ExamplesGenerator {
 	public static Map<String, Example> generateExamples(OpenAPI openAPI) throws Exception {
@@ -224,37 +234,67 @@ public class ExamplesGenerator {
 				} else {
 					if ("binary".equals(formatNode.asText())) {
 						// Represents binary data, often used for file uploads.
-						return String.valueOf("2025-01-02");
+						return Integer.parseInt("This is some binary data", 2);
 					} else if ("byte".equals(formatNode.asText())) {
 						// Represents base64 encoded data / file contents
-						return String.valueOf("2025-01-02");
+						return String.valueOf("These are some bytes").getBytes();
 					} else if ("date".equals(formatNode.asText())) {
 						// Represents a date in the format YYYY-MM-DD.
-						return String.valueOf("2025-01-02");
+						return LocalDate.parse("2025-01-02");
 					} else if ("date-time".equals(formatNode.asText())) {
 						// Represents a date and time in the format YYYY-MM-DDTHH:mm:ssZ.
-						return String.valueOf("2025-01-02T07:00:00.000Z");
+						return ZonedDateTime.parse("2025-01-02T07:00:00.000Z");
 					} else if ("hostname".equals(formatNode.asText())) {
 						// Represents a host name as defined by RFC1123
-						return String.valueOf("hostname");
+						final var hostname = "localhost";
+						try {
+							return InetAddress.getByName(hostname).getCanonicalHostName();
+						} catch (UnknownHostException e) {
+							return String.valueOf(hostname);
+						}
 					} else if ("ipv4".equals(formatNode.asText())) {
 						// Represents an IPv4 address.
-						return String.valueOf("192.168.1.1");
+						final var ipv4Addr = "192.168.1.1";
+						try {
+							return (Inet4Address) InetAddress.getByName(ipv4Addr);
+						} catch (UnknownHostException e) {
+							return String.valueOf(ipv4Addr);
+						}
 					} else if ("ipv6".equals(formatNode.asText())) {
 						// Represents an IPv6 address.
-						return String.valueOf("2001:db8:3333:4444:5555:6666:7777:8888");
+						final var ipv6Addr = "2001:db8:3333:4444:5555:6666:7777:8888";
+						try {
+							return (Inet6Address) InetAddress.getByName(ipv6Addr);
+						} catch (UnknownHostException e) {
+							return String.valueOf(ipv6Addr);
+						}
 					} else if ("iri".equals(formatNode.asText())) {
 						// Represents an Internationalized Resource Identifier (IRI).
-						return String.valueOf("http://www.example.org/red%09ros&#xE9;#red");
+						final var iri = "http://www.example.org/red%09ros&#xE9;#red";
+						try {
+							return IRIFactory.iriImplementation().construct(iri);
+						} catch (IRIException e) {
+							return String.valueOf(iri);
+						}
 					} else if ("password".equals(formatNode.asText())) {
 						// Indicates that the string contains sensitive information.
 						return String.valueOf("\u25CF\u25CF\u25CF\u25CF\u25CF\u25CF");
 					} else if ("uri".equals(formatNode.asText())) {
 						// Represents a Uniform Resource Identifier (URI).
-						return String.valueOf("mailto:user@example.com");
+						final var uri = "mailto:user@example.com";
+						try {
+							return new URI(uri);
+						} catch (URISyntaxException e) {
+							return String.valueOf(uri);
+						}
 					} else if ("uri-reference".equals(formatNode.asText())) {
 						// Represents a URI reference.
-						return String.valueOf("http://www.example.com/page.html#section1");
+						final var uriReference = "http://www.example.com/page.html#section1";
+						try {
+							return new URI(uriReference);
+						} catch (URISyntaxException e) {
+							return String.valueOf(uriReference);
+						}
 					} else {
 						// generic string without a format.
 						return typeNode;
