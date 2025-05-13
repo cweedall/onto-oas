@@ -23,6 +23,7 @@ import java.net.URISyntaxException;
 import java.net.UnknownHostException;
 import java.time.LocalDate;
 import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -240,10 +241,11 @@ public class ExamplesGenerator {
 						return String.valueOf("These are some bytes").getBytes();
 					} else if ("date".equals(formatNode.asText())) {
 						// Represents a date in the format YYYY-MM-DD.
-						return LocalDate.parse("2025-01-02");
+						return LocalDate.parse("2025-01-02", DateTimeFormatter.ISO_LOCAL_DATE);
 					} else if ("date-time".equals(formatNode.asText())) {
 						// Represents a date and time in the format YYYY-MM-DDTHH:mm:ssZ.
-						return ZonedDateTime.parse("2025-01-02T07:00:00.000Z");
+						return ZonedDateTime.parse(
+								"2025-01-02T07:00:00.000Z", DateTimeFormatter.ISO_ZONED_DATE_TIME);
 					} else if ("hostname".equals(formatNode.asText())) {
 						// Represents a host name as defined by RFC1123
 						final var hostname = "localhost";
@@ -385,29 +387,22 @@ public class ExamplesGenerator {
 																				final var schemaRefMap = new HashMap<String, Boolean>();
 
 																				final var mediaTypeSchema = mediaType.getSchema();
-																				final var isArrayRef =
-																						"array".equals(mediaTypeSchema.getType())
-																								&& mediaTypeSchema.getItems() != null
-																								&& mediaTypeSchema.getItems().get$ref() != null;
-																				String schemaRef = null;
-																				if (isArrayRef) {
-																					schemaRef = mediaTypeSchema.getItems().get$ref();
-																				} else {
-																					schemaRef = mediaTypeSchema.get$ref();
-																				}
 
-																				if (schemaRef != null) {
-																					schemaRefMap.put(schemaRef, isArrayRef);
-																				} else {
+																				// If the schema is a composed schema (allOf, anyOf, or
+																				// oneOf), then we need to traverse differently.
+																				if (mediaTypeSchema.get$ref() == null
+																						&& mediaTypeSchema.getType() == null) {
 																					final var composedSchemaItemsList = new HashSet<Schema>();
 																					if (mediaTypeSchema.getAllOf() != null) {
 																						composedSchemaItemsList.addAll(
 																								mediaTypeSchema.getAllOf());
 																					}
+
 																					if (mediaTypeSchema.getAnyOf() != null) {
 																						composedSchemaItemsList.addAll(
 																								mediaTypeSchema.getAnyOf());
 																					}
+
 																					if (mediaTypeSchema.getOneOf() != null) {
 																						composedSchemaItemsList.addAll(
 																								mediaTypeSchema.getOneOf());
@@ -417,10 +412,43 @@ public class ExamplesGenerator {
 																							(schema) -> {
 																								final var composedSchemaRef =
 																										((Schema) schema).get$ref();
+
 																								if (composedSchemaRef != null) {
-																									schemaRefMap.put(composedSchemaRef, isArrayRef);
+																									schemaRefMap.put(composedSchemaRef, false);
+																								} else {
+																									final var isArrayRef =
+																											"array".equals(((Schema) schema).getType())
+																													&& ((Schema) schema).getItems() != null
+																													&& ((Schema) schema).getItems().get$ref()
+																															!= null;
+																									String schemaRef = null;
+																									if (isArrayRef) {
+																										schemaRef =
+																												((Schema) schema).getItems().get$ref();
+																									} else {
+																										schemaRef = ((Schema) schema).get$ref();
+																									}
+
+																									if (schemaRef != null) {
+																										schemaRefMap.put(schemaRef, isArrayRef);
+																									}
 																								}
 																							});
+																				} else {
+																					final var isArrayRef =
+																							"array".equals(mediaTypeSchema.getType())
+																									&& mediaTypeSchema.getItems() != null
+																									&& mediaTypeSchema.getItems().get$ref() != null;
+																					String schemaRef = null;
+																					if (isArrayRef) {
+																						schemaRef = mediaTypeSchema.getItems().get$ref();
+																					} else {
+																						schemaRef = mediaTypeSchema.get$ref();
+																					}
+
+																					if (schemaRef != null) {
+																						schemaRefMap.put(schemaRef, isArrayRef);
+																					}
 																				}
 
 																				// Now add all the examples to the content
@@ -477,27 +505,20 @@ public class ExamplesGenerator {
 																final var schemaRefMap = new HashMap<String, Boolean>();
 
 																final var mediaTypeSchema = mediaType.getSchema();
-																final var isArrayRef =
-																		"array".equals(mediaTypeSchema.getType())
-																				&& mediaTypeSchema.getItems() != null
-																				&& mediaTypeSchema.getItems().get$ref() != null;
-																String schemaRef = null;
-																if (isArrayRef) {
-																	schemaRef = mediaTypeSchema.getItems().get$ref();
-																} else {
-																	schemaRef = mediaTypeSchema.get$ref();
-																}
 
-																if (schemaRef != null) {
-																	schemaRefMap.put(schemaRef, isArrayRef);
-																} else {
+																// If the schema is a composed schema (allOf, anyOf, or
+																// oneOf), then we need to traverse differently.
+																if (mediaTypeSchema.get$ref() == null
+																		&& mediaTypeSchema.getType() == null) {
 																	final var composedSchemaItemsList = new HashSet<Schema>();
 																	if (mediaTypeSchema.getAllOf() != null) {
 																		composedSchemaItemsList.addAll(mediaTypeSchema.getAllOf());
 																	}
+
 																	if (mediaTypeSchema.getAnyOf() != null) {
 																		composedSchemaItemsList.addAll(mediaTypeSchema.getAnyOf());
 																	}
+
 																	if (mediaTypeSchema.getOneOf() != null) {
 																		composedSchemaItemsList.addAll(mediaTypeSchema.getOneOf());
 																	}
@@ -505,10 +526,41 @@ public class ExamplesGenerator {
 																	composedSchemaItemsList.forEach(
 																			(schema) -> {
 																				final var composedSchemaRef = ((Schema) schema).get$ref();
+
 																				if (composedSchemaRef != null) {
-																					schemaRefMap.put(composedSchemaRef, isArrayRef);
+																					schemaRefMap.put(composedSchemaRef, false);
+																				} else {
+																					final var isArrayRef =
+																							"array".equals(((Schema) schema).getType())
+																									&& ((Schema) schema).getItems() != null
+																									&& ((Schema) schema).getItems().get$ref() != null;
+																					String schemaRef = null;
+																					if (isArrayRef) {
+																						schemaRef = ((Schema) schema).getItems().get$ref();
+																					} else {
+																						schemaRef = ((Schema) schema).get$ref();
+																					}
+
+																					if (schemaRef != null) {
+																						schemaRefMap.put(schemaRef, isArrayRef);
+																					}
 																				}
 																			});
+																} else {
+																	final var isArrayRef =
+																			"array".equals(mediaTypeSchema.getType())
+																					&& mediaTypeSchema.getItems() != null
+																					&& mediaTypeSchema.getItems().get$ref() != null;
+																	String schemaRef = null;
+																	if (isArrayRef) {
+																		schemaRef = mediaTypeSchema.getItems().get$ref();
+																	} else {
+																		schemaRef = mediaTypeSchema.get$ref();
+																	}
+
+																	if (schemaRef != null) {
+																		schemaRefMap.put(schemaRef, isArrayRef);
+																	}
 																}
 
 																// Now add all the examples to the content
