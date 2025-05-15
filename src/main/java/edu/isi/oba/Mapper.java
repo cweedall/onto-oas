@@ -215,8 +215,6 @@ class Mapper {
 	 * properties.
 	 */
 	public void createSchemas() {
-		final var pathGenerator = new PathGenerator(this.configData);
-
 		final var processedClasses = new HashSet<IRI>();
 		for (OWLOntology ontology : this.ontologies) {
 			final var format = ontology.getFormat();
@@ -259,7 +257,7 @@ class Mapper {
 											.forEach(
 													(owlClass) -> {
 														processedClasses.add(owlClass.getIRI());
-														this.addOwlclassToOpenAPI(pathGenerator, owlClass, ontology);
+														this.addOwlclassToOpenAPI(owlClass, ontology);
 													});
 
 									// After allowed classes have been schema-fied, repeat for all the referenced
@@ -282,7 +280,7 @@ class Mapper {
 												.forEach(
 														(owlClass) -> {
 															processedClasses.add(owlClass.getIRI());
-															this.addOwlclassToOpenAPI(pathGenerator, owlClass, ontology);
+															this.addOwlclassToOpenAPI(owlClass, ontology);
 														});
 									}
 
@@ -293,11 +291,11 @@ class Mapper {
 		}
 
 		if (this.configData.getAuth().getEnable()) {
-			this.addUserPath(pathGenerator);
+			this.addUserPath();
 		}
 	}
 
-	private void addUserPath(PathGenerator pathGenerator) {
+	private void addUserPath() {
 		// User schema
 		final var userSchema = new Schema();
 		userSchema.setName("User");
@@ -308,18 +306,20 @@ class Mapper {
 
 		this.schemas.put("User", userSchema);
 
-		this.paths.addPathItem("/user/login", pathGenerator.user_login(userSchema.getName()));
+		this.paths.addPathItem("/user/login", PathGenerator.user_login(userSchema.getName()));
 	}
 
-	private void addOwlclassToOpenAPI(
-			PathGenerator pathGenerator, OWLClass cls, OWLOntology ontology) {
+	private void addOwlclassToOpenAPI(OWLClass cls, OWLOntology ontology) {
 		try {
 			final var mappedSchema = this.getSchema(cls, ontology);
 
 			// If not disabled, and class is allowed, then add the OpenAPI paths
 			if (!this.configData.getConfigFlagValue(ConfigFlagType.DISABLE_ALL_PATHS)) {
 				if (this.getClassesAllowedByYamlConfig().contains(cls)) {
-					this.addPath(pathGenerator, mappedSchema, cls.getIRI());
+					// Generate all paths for the class/schema and add to the current Paths object.
+					this.paths.putAll(
+							PathGenerator.generateAllPathItemsForSchema(
+									mappedSchema, cls.getIRI(), this.configData));
 				}
 			}
 		} catch (Exception e) {
@@ -364,40 +364,6 @@ class Mapper {
 	 */
 	public Paths getPaths() {
 		return this.paths;
-	}
-
-	private void addPath(PathGenerator pathGenerator, Schema mappedSchema, IRI classIRI) {
-		// Pluralize the schema name.  Also convert to kebab-case if the configuration specifies it.
-		var pluralPathName = "/";
-		if (this.configData.getConfigFlagValue(ConfigFlagType.USE_KEBAB_CASE_PATHS)) {
-			// "kebab-case" -> All lowercase and separate words with a dash/hyphen.
-			pluralPathName +=
-					StringUtils.getLowerCasePluralOf(
-							StringUtils.pascalCaseToKebabCase(mappedSchema.getName()));
-		} else {
-			// "flatcase" -> This is the current/original version (all lower case, no
-			// spaces/dashes/underscores) of endpoint naming.
-			pluralPathName += StringUtils.getLowerCasePluralOf(mappedSchema.getName());
-		}
-
-		// Create the plural paths: for example: /models/
-		final var pluralPathItem =
-				pathGenerator.generate_plural(mappedSchema.getName(), classIRI.getIRIString());
-		if (pluralPathItem != null) {
-			this.paths.addPathItem(pluralPathName, pluralPathItem);
-		}
-
-		// Create the singular paths: for example: /models/id
-		final var singularPathItem =
-				pathGenerator.generate_singular(mappedSchema.getName(), classIRI.getIRIString());
-		if (singularPathItem != null) {
-			this.paths.addPathItem(
-					pluralPathName
-							+ "/{"
-							+ this.configData.getPath_config().getGet_paths().getGet_by_key().getKey_name()
-							+ "}",
-					singularPathItem);
-		}
 	}
 
 	/**
