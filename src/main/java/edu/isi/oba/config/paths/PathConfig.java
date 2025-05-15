@@ -11,6 +11,7 @@ public class PathConfig extends ConfigFlags {
 	private GetPathsConfig get_paths;
 	private PostPathsConfig post_paths;
 	private PutPathsConfig put_paths;
+	private SearchPathsConfig search_paths;
 
 	public PathConfig() {
 		this.configFlags.putAll(
@@ -152,5 +153,30 @@ public class PathConfig extends ConfigFlags {
 		}
 
 		this.configFlags.putAll(this.put_paths.getConfigFlags());
+	}
+
+	/**
+	 * Get the {@link SearchPathsConfig} may be null (because it doesn't exist in the config file).
+	 *
+	 * @return a {@link SearchPathsConfig}
+	 */
+	public SearchPathsConfig getSearch_paths() {
+		return this.search_paths;
+	}
+
+	/**
+	 * Set the SearchPathsConfig, if it exists in the config file. This is the configuration for PUT
+	 * paths.
+	 *
+	 * @param {search_paths} A {@link SearchPathsConfig}
+	 */
+	public void setSearch_paths(SearchPathsConfig search_paths) {
+		if (search_paths == null) {
+			this.search_paths = new SearchPathsConfig();
+		} else {
+			this.search_paths = search_paths;
+		}
+
+		this.configFlags.putAll(this.search_paths.getConfigFlags());
 	}
 }
