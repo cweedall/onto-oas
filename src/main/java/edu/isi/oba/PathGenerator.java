@@ -2,7 +2,9 @@ package edu.isi.oba;
 
 import edu.isi.oba.config.YamlConfig;
 import edu.isi.oba.config.flags.ConfigFlagType;
-import io.swagger.models.Method;
+import edu.isi.oba.generators.CardinalityType;
+import edu.isi.oba.generators.HttpMethod;
+import edu.isi.oba.generators.OperationGenerator;
 import io.swagger.v3.oas.models.Operation;
 import io.swagger.v3.oas.models.PathItem;
 import io.swagger.v3.oas.models.headers.Header;
@@ -16,82 +18,130 @@ import io.swagger.v3.oas.models.responses.ApiResponse;
 import io.swagger.v3.oas.models.responses.ApiResponses;
 import java.util.HashMap;
 import java.util.Map;
+import org.semanticweb.owlapi.model.IRI;
 
-class PathGenerator {
-	private final YamlConfig configData;
+public class PathGenerator {
+	/**
+	 * Generate all endpoint paths (including all operations for them) for a particular schema, based
+	 * on any configuration requirements in the configuration file.
+	 *
+	 * @param schema a Swagger {@link Schema}.
+	 * @param schemaIRI the {@link Schema}'s {@link IRI} (in the ontology).
+	 * @param configData the {@link YamlConfig} configuration settings for conversion.
+	 * @return a {@link Map} of endpoint path suffixes to Swagger OAS {@link PathItem}s - empty if not
+	 *     configurable.
+	 */
+	public static Map<String, PathItem> generateAllPathItemsForSchema(
+			Schema schema, IRI schemaIRI, YamlConfig configData) {
+		final var pathNamePathItemMap = new HashMap<String, PathItem>();
 
-	public PathGenerator(YamlConfig configData) {
-		this.configData = configData;
+		final var pluralPathName =
+				"/"
+						+ (configData.getConfigFlagValue(ConfigFlagType.USE_KEBAB_CASE_PATHS)
+								? StringUtils.getLowerCasePluralOf(
+										StringUtils.pascalCaseToKebabCase(schema.getName()))
+								: StringUtils.getLowerCasePluralOf(schema.getName()));
+
+		PathGenerator.generatePathSuffixPathItems(schema, schemaIRI, configData)
+				.forEach(
+						(pathSuffix, pathItem) -> {
+							final var addedPathSuffix = pathSuffix == null ? "" : "/" + pathSuffix;
+							pathNamePathItemMap.put(pluralPathName + addedPathSuffix, pathItem);
+						});
+
+		return pathNamePathItemMap;
 	}
 
 	/**
 	 * Generate a singular {@link PathItem} for the path section of the OpenAPI specification.
 	 *
-	 * @param schemaName The schema's name (to be used for the path name).
-	 * @param schemaURI The schema's URI (in the ontology).
-	 * @return a Swagger OAS {@link PathItem} - null if not configurable.
+	 * @param schemaName the {@link Schema}'s name (to be used for the path name).
+	 * @param schemaIRI the {@link Schema}'s {@link IRI} (in the ontology).
+	 * @return a {@link Map} of endpoint path suffixes to Swagger OAS {@link PathItem}s - empty if not
+	 *     configurable.
 	 */
-	public PathItem generate_singular(String schemaName, String schemaURI) {
-		if (this.configData.getConfigFlagValue(ConfigFlagType.PATH_GET_BY_ID)) {
-			return new PathItem()
+	private static Map<String, PathItem> generatePathSuffixPathItems(
+			Schema schema, IRI schemaIRI, YamlConfig configData) {
+		final var suffixPathItemsMap = new HashMap<String, PathItem>();
+
+		// -----------------------------
+		// PLURAL records
+		// -----------------------------
+		if (configData.getConfigFlagValue(ConfigFlagType.PATH_GET_ALL)) {
+			suffixPathItemsMap
+					.computeIfAbsent(null, k -> new PathItem())
 					.get(
-							new MapperOperation(
-											schemaName, schemaURI, Method.GET, Cardinality.SINGULAR, this.configData)
-									.getOperation());
+							OperationGenerator.generateOperation(
+									schema, schemaIRI, HttpMethod.GET, CardinalityType.PLURAL, configData));
 		}
 
-		if (this.configData.getConfigFlagValue(ConfigFlagType.PATH_DELETE_BY_ID)) {
-			return new PathItem()
-					.delete(
-							new MapperOperation(
-											schemaName, schemaURI, Method.DELETE, Cardinality.SINGULAR, this.configData)
-									.getOperation());
-		}
-
-		if (this.configData.getConfigFlagValue(ConfigFlagType.PATH_POST_SINGLE)) {
-			return new PathItem()
-					.put(
-							new MapperOperation(
-											schemaName, schemaURI, Method.POST, Cardinality.SINGULAR, this.configData)
-									.getOperation());
-		}
-
-		if (this.configData.getConfigFlagValue(ConfigFlagType.PATH_PUT_BY_ID)) {
-			return new PathItem()
-					.put(
-							new MapperOperation(
-											schemaName, schemaURI, Method.PUT, Cardinality.SINGULAR, this.configData)
-									.getOperation());
-		}
-
-		return null;
-	}
-
-	/**
-	 * Generate a plural {@link PathItem} for the path section of the OpenAPI specification.
-	 *
-	 * @param schemaName The schema's name (to be used for the path name).
-	 * @param schemaURI The schema's URI (in the ontology).
-	 * @return a Swagger OAS {@link PathItem} - null if not configurable.
-	 */
-	public PathItem generate_plural(String schemaName, String schemaURI) {
-		if (this.configData.getConfigFlagValue(ConfigFlagType.PATH_GET_ALL)) {
-			return new PathItem()
-					.get(
-							new MapperOperation(
-											schemaName, schemaURI, Method.GET, Cardinality.PLURAL, this.configData)
-									.getOperation());
-		}
-
-		if (this.configData.getConfigFlagValue(ConfigFlagType.PATH_POST_BULK)) {
-			return new PathItem()
+		if (configData.getConfigFlagValue(ConfigFlagType.PATH_POST_BULK)) {
+			final var postBulkSuffix =
+					configData.getPath_config().getPost_paths().getPost_bulk().getPath_suffix();
+			suffixPathItemsMap
+					.computeIfAbsent(postBulkSuffix, k -> new PathItem())
 					.post(
-							new MapperOperation(
-											schemaName, schemaURI, Method.POST, Cardinality.PLURAL, this.configData)
-									.getOperation());
+							OperationGenerator.generateOperation(
+									schema, schemaIRI, HttpMethod.POST, CardinalityType.PLURAL, configData));
 		}
 
-		return null;
+		// SEARCH - these are always PLURAL records
+		// Currently - only supports searches via the POST operation (e.g. POST
+		// /{resource-name}/_search).
+		if (configData.getConfigFlagValue(ConfigFlagType.PATH_SEARCH_BY_POST)) {
+			final var searchByPostSuffix =
+					configData.getPath_config().getSearch_paths().getSearch_by_post().getPath_suffix();
+			suffixPathItemsMap
+					.computeIfAbsent(searchByPostSuffix, k -> new PathItem())
+					.post(
+							OperationGenerator.generateOperation(
+									schema, schemaIRI, HttpMethod.SEARCH, CardinalityType.PLURAL, configData));
+		}
+
+		// -----------------------------
+		// SINGULAR records
+		// -----------------------------
+		if (configData.getConfigFlagValue(ConfigFlagType.PATH_GET_BY_ID)) {
+			final var getSuffix =
+					"{" + configData.getPath_config().getGet_paths().getGet_by_key().getKey_name() + "}";
+			suffixPathItemsMap
+					.computeIfAbsent(getSuffix, k -> new PathItem())
+					.get(
+							OperationGenerator.generateOperation(
+									schema, schemaIRI, HttpMethod.GET, CardinalityType.SINGULAR, configData));
+		}
+
+		if (configData.getConfigFlagValue(ConfigFlagType.PATH_DELETE_BY_ID)) {
+			final var deleteSuffix =
+					"{"
+							+ configData.getPath_config().getDelete_paths().getDelete_by_key().getKey_name()
+							+ "}";
+			suffixPathItemsMap
+					.computeIfAbsent(deleteSuffix, k -> new PathItem())
+					.delete(
+							OperationGenerator.generateOperation(
+									schema, schemaIRI, HttpMethod.DELETE, CardinalityType.SINGULAR, configData));
+		}
+
+		if (configData.getConfigFlagValue(ConfigFlagType.PATH_POST_SINGLE)) {
+			suffixPathItemsMap
+					.computeIfAbsent(null, k -> new PathItem())
+					.post(
+							OperationGenerator.generateOperation(
+									schema, schemaIRI, HttpMethod.POST, CardinalityType.SINGULAR, configData));
+		}
+
+		if (configData.getConfigFlagValue(ConfigFlagType.PATH_PUT_BY_ID)) {
+			final var putSuffix =
+					"{" + configData.getPath_config().getPut_paths().getPut_by_key().getKey_name() + "}";
+			suffixPathItemsMap
+					.computeIfAbsent(putSuffix, k -> new PathItem())
+					.put(
+							OperationGenerator.generateOperation(
+									schema, schemaIRI, HttpMethod.PUT, CardinalityType.SINGULAR, configData));
+		}
+
+		return suffixPathItemsMap;
 	}
 
 	public static PathItem user_login(String schema_name) {
