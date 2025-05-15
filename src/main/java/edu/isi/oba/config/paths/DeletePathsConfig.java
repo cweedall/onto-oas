@@ -38,11 +38,13 @@ public final class DeletePathsConfig extends ConfigFlags {
 	public static class Delete_By_Key extends ConfigFlags {
 		// Default key name to be "id";
 		private String key_name = "id";
+		private String key_name_in_text = this.key_name;
+
 		// Default key type to be STRING.  Used within the application for enum convenience.
 		private PathKeyType key_type = PathKeyType.STRING;
 		// Default key type to be "string".  Used as a convenience for setting the values from the
 		// configuration file.
-		private String key_datatype = key_type.toString();
+		private String key_datatype = this.key_type.toString();
 
 		Delete_By_Key() {
 			this.configFlags.putAll(Map.ofEntries(Map.entry(ConfigFlagType.PATH_DELETE_BY_ID, false)));
@@ -59,12 +61,22 @@ public final class DeletePathsConfig extends ConfigFlags {
 		}
 
 		public String getKey_name() {
-			return key_name;
+			return this.key_name;
 		}
 
 		public void setKey_name(String key_name) {
 			if (key_name != null && !key_name.isBlank()) {
 				this.key_name = key_name;
+			}
+		}
+
+		public String getKey_name_in_text() {
+			return this.key_name_in_text;
+		}
+
+		public void setKey_name_in_text(String key_name_in_text) {
+			if (key_name_in_text != null && !key_name_in_text.isBlank()) {
+				this.key_name_in_text = key_name_in_text;
 			}
 		}
 
