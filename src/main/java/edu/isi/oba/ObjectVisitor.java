@@ -4,6 +4,7 @@ import static edu.isi.oba.Oba.logger;
 
 import edu.isi.oba.config.YamlConfig;
 import edu.isi.oba.config.flags.ConfigFlagType;
+import edu.isi.oba.utils.ObaUtils;
 import io.swagger.v3.oas.models.media.ArraySchema;
 import io.swagger.v3.oas.models.media.ObjectSchema;
 import io.swagger.v3.oas.models.media.Schema;

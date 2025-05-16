@@ -1,4 +1,4 @@
-package edu.isi.oba;
+package edu.isi.oba.utils;
 
 import java.util.regex.Pattern;
 import rita.RiTa;
