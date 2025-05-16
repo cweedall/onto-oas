@@ -4,6 +4,7 @@ import edu.isi.oba.config.AuthConfig;
 import edu.isi.oba.config.FirebaseConfig;
 import edu.isi.oba.config.Provider;
 import edu.isi.oba.config.YamlConfig;
+import edu.isi.oba.utils.ObaUtils;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.PathItem;
 import java.io.File;
@@ -17,8 +18,8 @@ import java.util.logging.Level;
 import java.util.logging.LogManager;
 import java.util.logging.Logger;
 
-class Oba {
-	static Logger logger = null;
+public class Oba {
+	public static Logger logger = null;
 
 	public static void main(String[] args) throws Exception {
 		/*

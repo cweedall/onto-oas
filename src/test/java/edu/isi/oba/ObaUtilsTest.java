@@ -1,5 +1,6 @@
 package edu.isi.oba;
 
+import edu.isi.oba.utils.ObaUtils;
 import java.io.IOException;
 import java.util.logging.ConsoleHandler;
 import java.util.logging.Level;

@@ -1,4 +1,4 @@
-package edu.isi.oba;
+package edu.isi.oba.utils;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;

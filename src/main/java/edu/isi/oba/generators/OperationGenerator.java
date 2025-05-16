@@ -1,9 +1,9 @@
 package edu.isi.oba.generators;
 
-import edu.isi.oba.StringUtils;
 import edu.isi.oba.config.YamlConfig;
 import edu.isi.oba.config.flags.ConfigFlagType;
 import edu.isi.oba.config.paths.PathKeyType;
+import edu.isi.oba.utils.StringUtils;
 import io.swagger.models.Method;
 import io.swagger.v3.oas.models.Operation;
 import io.swagger.v3.oas.models.examples.Example;

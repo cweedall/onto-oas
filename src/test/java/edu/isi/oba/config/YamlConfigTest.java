@@ -1,6 +1,6 @@
 package edu.isi.oba.config;
 
-import static edu.isi.oba.ObaUtils.get_yaml_data;
+import static edu.isi.oba.utils.ObaUtils.get_yaml_data;
 
 import java.util.Set;
 import org.junit.jupiter.api.Assertions;

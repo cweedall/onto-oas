@@ -1,10 +1,8 @@
-package edu.isi.oba;
+package edu.isi.oba.generators;
 
 import edu.isi.oba.config.YamlConfig;
 import edu.isi.oba.config.flags.ConfigFlagType;
-import edu.isi.oba.generators.CardinalityType;
-import edu.isi.oba.generators.HttpMethod;
-import edu.isi.oba.generators.OperationGenerator;
+import edu.isi.oba.utils.StringUtils;
 import io.swagger.v3.oas.models.Operation;
 import io.swagger.v3.oas.models.PathItem;
 import io.swagger.v3.oas.models.headers.Header;
