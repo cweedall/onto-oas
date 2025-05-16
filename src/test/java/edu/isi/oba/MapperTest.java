@@ -1,8 +1,9 @@
 package edu.isi.oba;
 
-import static edu.isi.oba.ObaUtils.get_yaml_data;
+import static edu.isi.oba.utils.ObaUtils.get_yaml_data;
 
 import edu.isi.oba.config.AuthConfig;
+import edu.isi.oba.utils.ObaUtils;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;

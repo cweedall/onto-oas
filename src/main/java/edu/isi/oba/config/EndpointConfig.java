@@ -1,7 +1,7 @@
 package edu.isi.oba.config;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import edu.isi.oba.ObaUtils;
+import edu.isi.oba.utils.ObaUtils;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class EndpointConfig {

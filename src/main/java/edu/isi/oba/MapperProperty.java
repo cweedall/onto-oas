@@ -2,6 +2,7 @@ package edu.isi.oba;
 
 import static edu.isi.oba.Oba.logger;
 
+import edu.isi.oba.utils.StringUtils;
 import io.swagger.v3.oas.models.media.ComposedSchema;
 import io.swagger.v3.oas.models.media.ObjectSchema;
 import io.swagger.v3.oas.models.media.Schema;

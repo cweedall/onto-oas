@@ -1,9 +1,10 @@
-package edu.isi.oba;
+package edu.isi.oba.utils;
 
 import static edu.isi.oba.Oba.logger;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import edu.isi.oba.Oba;
 import edu.isi.oba.config.YamlConfig;
 import java.io.BufferedWriter;
 import java.io.File;
