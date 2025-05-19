@@ -2,6 +2,7 @@ package edu.isi.oba.generators;
 
 import edu.isi.oba.config.YamlConfig;
 import edu.isi.oba.config.flags.ConfigFlagType;
+import edu.isi.oba.config.paths.OperationType;
 import edu.isi.oba.config.paths.PathKeyType;
 import edu.isi.oba.utils.StringUtils;
 import io.swagger.models.Method;
@@ -50,11 +51,9 @@ public class OperationGenerator {
 	 * @return a Swagger {@link Operation}.
 	 */
 	public static Operation generateOperation(
-			Schema schema,
-			IRI schemaIRI,
-			HttpMethod method,
-			CardinalityType cardinality,
-			YamlConfig configData) {
+			Schema schema, IRI schemaIRI, OperationType operationType, YamlConfig configData) {
+		final var method = operationType.getHttpMethod();
+		final var cardinality = operationType.getCardinalityType();
 
 		// Create new Operation object for the given Schema and the specified method / cardinality.
 		final var operation =

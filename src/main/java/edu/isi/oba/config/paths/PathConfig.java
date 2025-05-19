@@ -3,10 +3,15 @@ package edu.isi.oba.config.paths;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import edu.isi.oba.config.flags.ConfigFlagType;
 import edu.isi.oba.config.flags.ConfigFlags;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
+import org.semanticweb.owlapi.model.IRI;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class PathConfig extends ConfigFlags {
+	private Set<PathsForClassConfig> pathsForClasses = new HashSet<>();
 	private DeletePathsConfig delete_paths;
 	private GetPathsConfig get_paths;
 	private PostPathsConfig post_paths;
@@ -53,6 +58,36 @@ public class PathConfig extends ConfigFlags {
 
 	public void setUse_kebab_case_paths(Boolean use_kebab_case_paths) {
 		this.configFlags.put(ConfigFlagType.USE_KEBAB_CASE_PATHS, use_kebab_case_paths);
+	}
+
+	/**
+	 * Get the {@link PathsForClassConfig} for a particular class IRI.
+	 *
+	 * @return a {@link PathsForClassConfig}
+	 */
+	public PathsForClassConfig getPathsForClasses(IRI classIRI) {
+		return this.pathsForClasses.stream()
+				.filter(k -> classIRI.equals(k.getClassIRI()))
+				.findFirst()
+				.orElse(new PathsForClassConfig());
+	}
+
+	/**
+	 * Get all class {@link IRI}s from the {@link Set} of {@link PathsForClassConfig}.
+	 *
+	 * @return a {@link Set} of {@link IRI}s
+	 */
+	public Set<IRI> getPathClasses() {
+		return this.pathsForClasses.stream().map(k -> k.getClassIRI()).collect(Collectors.toSet());
+	}
+
+	/**
+	 * Set all {@link PathsForClassConfig}, if any exist in the config file.
+	 *
+	 * @param {pathsForClasses} a {@link Set} of {@link PathsForClassConfig}
+	 */
+	public void setPaths_for_classes(Set<PathsForClassConfig> pathsForClasses) {
+		this.pathsForClasses = pathsForClasses;
 	}
 
 	/**

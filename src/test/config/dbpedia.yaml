@@ -32,6 +32,16 @@ endpoint:
 
 ## Filter the paths by methods
 path_config:
+  paths_for_classes:
+    - class_iri: http://dbpedia.org/ontology/Genre
+      allow_operations:
+      deny_operations:
+    - class_iri: http://dbpedia.org/ontology/Band
+      allow_operations:
+      deny_operations:
+  delete_paths:
+    delete_by_key:
+      enable: false
   get_paths:
     get_all:
       enable: true
@@ -39,9 +49,19 @@ path_config:
       enable: true
       response_array: false
       key_name: id
-  enable_post_paths: false
-  enable_delete_paths: false
-  enable_put_paths: false
+  post_paths:
+    post_bulk:
+      enable: false
+    post_single:
+      enable: false
+  put_paths:
+    put_bulk:
+      enable: false
+    put_by_key:
+      enable: false
+  search_paths:
+    search_by_post:
+      enable: false
 
 ## Select the classes to add in the API
 classes:
