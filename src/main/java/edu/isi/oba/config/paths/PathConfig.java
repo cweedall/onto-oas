@@ -3,6 +3,7 @@ package edu.isi.oba.config.paths;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import edu.isi.oba.config.flags.ConfigFlagType;
 import edu.isi.oba.config.flags.ConfigFlags;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -10,7 +11,7 @@ import org.semanticweb.owlapi.model.IRI;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class PathConfig extends ConfigFlags {
-	private Set<PathsForClassConfig> pathsForClasses;
+	private Set<PathsForClassConfig> pathsForClasses = new HashSet<>();
 	private DeletePathsConfig delete_paths;
 	private GetPathsConfig get_paths;
 	private PostPathsConfig post_paths;
