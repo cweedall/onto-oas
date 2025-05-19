@@ -35,6 +35,7 @@ import org.semanticweb.owlapi.reasoner.structural.StructuralReasonerFactory;
 class Mapper {
 	private final Map<IRI, String> schemaNames = new HashMap<>(); // URI-names of the schemas
 	private final Map<String, Schema> schemas = new HashMap<>();
+	private final Map<IRI, Schema> iriSchemaMap = new HashMap<>();
 	private final Paths paths = new Paths();
 	private final Set<OWLOntology> ontologies;
 	private final Set<OWLClass> allowedClasses = new HashSet<>();
@@ -166,6 +167,7 @@ class Mapper {
 
 			logger.info("");
 			this.schemas.put(mappedSchema.getName(), mappedSchema);
+			this.iriSchemaMap.put(cls.getIRI(), mappedSchema);
 		}
 
 		return mappedSchema;
@@ -317,7 +319,7 @@ class Mapper {
 
 			// If not disabled, and class is allowed, then add the OpenAPI paths
 			if (!this.configData.getConfigFlagValue(ConfigFlagType.DISABLE_ALL_PATHS)) {
-				if (this.getClassesAllowedByYamlConfig().contains(cls)) {
+				if (this.configData.getPath_config().getPathClasses().contains(cls.getIRI())) {
 					// Generate all paths for the class/schema and add to the current Paths object.
 					this.paths.putAll(
 							PathGenerator.generateAllPathItemsForSchema(
@@ -374,25 +376,36 @@ class Mapper {
 	 * @return a {@link Set} of {@link OWLClass}es that are allowed by the config file.
 	 */
 	private Set<OWLClass> getClassesAllowedByYamlConfig() {
-		final var allowedClassesByIRI = this.configData.getClasses();
 		final var allowedClasses = new HashSet<OWLClass>();
 
-		this.ontologies.forEach(
-				(ontology) -> {
-					// If the configuration contains no allowed classes, then add all classes from the
-					// ontology.
-					if (allowedClassesByIRI == null || allowedClassesByIRI.isEmpty()) {
-						allowedClasses.addAll(ontology.getClassesInSignature());
-					} else {
-						ontology
-								.classesInSignature()
-								.filter(owlClass -> allowedClassesByIRI.contains(owlClass.getIRI().toString()))
-								.forEach(
-										(allowedClass) -> {
-											allowedClasses.add(allowedClass);
-										});
-					}
-				});
+		if (this.ontologies == null || this.ontologies.isEmpty()) {
+			logger.severe(
+					"No ontologies specified in the YAML configuration file.  Nothing can be processed.");
+			System.exit(1);
+		} else {
+			final var allowedPathClassesByIRI = this.configData.getPath_config().getPathClasses();
+			final var allowedNonPathClassesByIRI = this.configData.getClasses();
+
+			this.ontologies.forEach(
+					(ontology) -> {
+						// If the configuration contains no allowed classes, then add all classes from the
+						// ontology.
+						if (allowedPathClassesByIRI == null || allowedPathClassesByIRI.isEmpty()) {
+							allowedClasses.addAll(ontology.getClassesInSignature());
+						} else {
+							ontology
+									.classesInSignature()
+									.filter(
+											owlClass ->
+													allowedPathClassesByIRI.contains(owlClass.getIRI())
+															|| allowedNonPathClassesByIRI.contains(owlClass.getIRI().toString()))
+									.forEach(
+											(allowedClass) -> {
+												allowedClasses.add(allowedClass);
+											});
+						}
+					});
+		}
 
 		return allowedClasses;
 	}
