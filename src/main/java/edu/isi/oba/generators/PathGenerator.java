@@ -2,6 +2,7 @@ package edu.isi.oba.generators;
 
 import edu.isi.oba.config.YamlConfig;
 import edu.isi.oba.config.flags.ConfigFlagType;
+import edu.isi.oba.config.paths.OperationType;
 import edu.isi.oba.utils.StringUtils;
 import io.swagger.v3.oas.models.Operation;
 import io.swagger.v3.oas.models.PathItem;
@@ -19,6 +20,31 @@ import java.util.Map;
 import org.semanticweb.owlapi.model.IRI;
 
 public class PathGenerator {
+	/**
+	 * Generate all endpoint paths (including all operations for them) for all schemas, based on any
+	 * configuration requirements in the configuration file.
+	 *
+	 * @param schemas a {@link Map} of class {@link IRI}s and {@link Schema}s.
+	 * @param configData the {@link YamlConfig} configuration settings for conversion.
+	 * @return a {@link Map} of endpoint paths to Swagger OAS {@link PathItem}s - empty if not
+	 *     configurable.
+	 */
+	public static Map<String, PathItem> generateAllPathItems(
+			Map<IRI, Schema> schemas, YamlConfig configData) {
+		final var pathNamePathItemMap = new HashMap<String, PathItem>();
+		if (schemas == null) {
+			return pathNamePathItemMap;
+		} else {
+			schemas.forEach(
+					(iri, schema) -> {
+						pathNamePathItemMap.putAll(
+								PathGenerator.generateAllPathItemsForSchema(schema, iri, configData));
+					});
+
+			return pathNamePathItemMap;
+		}
+	}
+
 	/**
 	 * Generate all endpoint paths (including all operations for them) for a particular schema, based
 	 * on any configuration requirements in the configuration file.
@@ -61,82 +87,135 @@ public class PathGenerator {
 	private static Map<String, PathItem> generatePathSuffixPathItems(
 			Schema schema, IRI schemaIRI, YamlConfig configData) {
 		final var suffixPathItemsMap = new HashMap<String, PathItem>();
+		final var pathConfig = configData.getPath_config();
 
 		// -----------------------------
 		// PLURAL records
 		// -----------------------------
-		if (configData.getConfigFlagValue(ConfigFlagType.PATH_GET_ALL)) {
+		if ((configData.getConfigFlagValue(ConfigFlagType.PATH_GET_ALL)
+						&& !pathConfig
+								.getPathsForClasses(schemaIRI)
+								.denyOperationsContains(OperationType.GET_ALL))
+				|| pathConfig
+						.getPathsForClasses(schemaIRI)
+						.allowOperationsContains(OperationType.GET_ALL)) {
 			suffixPathItemsMap
 					.computeIfAbsent(null, k -> new PathItem())
 					.get(
 							OperationGenerator.generateOperation(
-									schema, schemaIRI, HttpMethod.GET, CardinalityType.PLURAL, configData));
+									schema, schemaIRI, OperationType.GET_ALL, configData));
 		}
 
-		if (configData.getConfigFlagValue(ConfigFlagType.PATH_POST_BULK)) {
-			final var postBulkSuffix =
-					configData.getPath_config().getPost_paths().getPost_bulk().getPath_suffix();
+		if ((configData.getConfigFlagValue(ConfigFlagType.PATH_POST_BULK)
+						&& !pathConfig
+								.getPathsForClasses(schemaIRI)
+								.denyOperationsContains(OperationType.POST_BULK))
+				|| pathConfig
+						.getPathsForClasses(schemaIRI)
+						.allowOperationsContains(OperationType.POST_BULK)) {
+			final var postBulkSuffix = pathConfig.getPost_paths().getPost_bulk().getPath_suffix();
 			suffixPathItemsMap
 					.computeIfAbsent(postBulkSuffix, k -> new PathItem())
 					.post(
 							OperationGenerator.generateOperation(
-									schema, schemaIRI, HttpMethod.POST, CardinalityType.PLURAL, configData));
+									schema, schemaIRI, OperationType.POST_BULK, configData));
+		}
+
+		if ((configData.getConfigFlagValue(ConfigFlagType.PATH_PUT_BULK)
+						&& !pathConfig
+								.getPathsForClasses(schemaIRI)
+								.denyOperationsContains(OperationType.PUT_BULK))
+				|| pathConfig
+						.getPathsForClasses(schemaIRI)
+						.allowOperationsContains(OperationType.PUT_BULK)) {
+			final var putBulkSuffix = pathConfig.getPut_paths().getPut_bulk().getPath_suffix();
+			suffixPathItemsMap
+					.computeIfAbsent(putBulkSuffix, k -> new PathItem())
+					.put(
+							OperationGenerator.generateOperation(
+									schema, schemaIRI, OperationType.PUT_BULK, configData));
 		}
 
 		// SEARCH - these are always PLURAL records
 		// Currently - only supports searches via the POST operation (e.g. POST
 		// /{resource-name}/_search).
-		if (configData.getConfigFlagValue(ConfigFlagType.PATH_SEARCH_BY_POST)) {
+		if ((configData.getConfigFlagValue(ConfigFlagType.PATH_SEARCH_BY_POST)
+						&& !pathConfig
+								.getPathsForClasses(schemaIRI)
+								.denyOperationsContains(OperationType.SEARCH_BY_POST))
+				|| pathConfig
+						.getPathsForClasses(schemaIRI)
+						.allowOperationsContains(OperationType.SEARCH_BY_POST)) {
 			final var searchByPostSuffix =
-					configData.getPath_config().getSearch_paths().getSearch_by_post().getPath_suffix();
+					pathConfig.getSearch_paths().getSearch_by_post().getPath_suffix();
 			suffixPathItemsMap
 					.computeIfAbsent(searchByPostSuffix, k -> new PathItem())
 					.post(
 							OperationGenerator.generateOperation(
-									schema, schemaIRI, HttpMethod.SEARCH, CardinalityType.PLURAL, configData));
+									schema, schemaIRI, OperationType.SEARCH_BY_POST, configData));
 		}
 
 		// -----------------------------
 		// SINGULAR records
 		// -----------------------------
-		if (configData.getConfigFlagValue(ConfigFlagType.PATH_GET_BY_ID)) {
-			final var getSuffix =
-					"{" + configData.getPath_config().getGet_paths().getGet_by_key().getKey_name() + "}";
+		if ((configData.getConfigFlagValue(ConfigFlagType.PATH_GET_BY_ID)
+						&& !pathConfig
+								.getPathsForClasses(schemaIRI)
+								.denyOperationsContains(OperationType.GET_BY_KEY))
+				|| pathConfig
+						.getPathsForClasses(schemaIRI)
+						.allowOperationsContains(OperationType.GET_BY_KEY)) {
+			final var getSuffix = "{" + pathConfig.getGet_paths().getGet_by_key().getKey_name() + "}";
 			suffixPathItemsMap
 					.computeIfAbsent(getSuffix, k -> new PathItem())
 					.get(
 							OperationGenerator.generateOperation(
-									schema, schemaIRI, HttpMethod.GET, CardinalityType.SINGULAR, configData));
+									schema, schemaIRI, OperationType.GET_BY_KEY, configData));
 		}
 
-		if (configData.getConfigFlagValue(ConfigFlagType.PATH_DELETE_BY_ID)) {
+		if ((configData.getConfigFlagValue(ConfigFlagType.PATH_DELETE_BY_ID)
+						&& !pathConfig
+								.getPathsForClasses(schemaIRI)
+								.denyOperationsContains(OperationType.DELETE_BY_KEY))
+				|| pathConfig
+						.getPathsForClasses(schemaIRI)
+						.allowOperationsContains(OperationType.DELETE_BY_KEY)) {
 			final var deleteSuffix =
-					"{"
-							+ configData.getPath_config().getDelete_paths().getDelete_by_key().getKey_name()
-							+ "}";
+					"{" + pathConfig.getDelete_paths().getDelete_by_key().getKey_name() + "}";
 			suffixPathItemsMap
 					.computeIfAbsent(deleteSuffix, k -> new PathItem())
 					.delete(
 							OperationGenerator.generateOperation(
-									schema, schemaIRI, HttpMethod.DELETE, CardinalityType.SINGULAR, configData));
+									schema, schemaIRI, OperationType.DELETE_BY_KEY, configData));
 		}
 
-		if (configData.getConfigFlagValue(ConfigFlagType.PATH_POST_SINGLE)) {
+		if ((configData.getConfigFlagValue(ConfigFlagType.PATH_POST_SINGLE)
+						&& !pathConfig
+								.getPathsForClasses(schemaIRI)
+								.denyOperationsContains(OperationType.POST_SINGLE))
+				|| pathConfig
+						.getPathsForClasses(schemaIRI)
+						.allowOperationsContains(OperationType.POST_SINGLE)) {
 			suffixPathItemsMap
 					.computeIfAbsent(null, k -> new PathItem())
 					.post(
 							OperationGenerator.generateOperation(
-									schema, schemaIRI, HttpMethod.POST, CardinalityType.SINGULAR, configData));
+									schema, schemaIRI, OperationType.POST_SINGLE, configData));
 		}
 
-		if (configData.getConfigFlagValue(ConfigFlagType.PATH_PUT_BY_ID)) {
-			final var putSuffix =
-					"{" + configData.getPath_config().getPut_paths().getPut_by_key().getKey_name() + "}";
+		if ((configData.getConfigFlagValue(ConfigFlagType.PATH_PUT_BY_ID)
+						&& !pathConfig
+								.getPathsForClasses(schemaIRI)
+								.denyOperationsContains(OperationType.PUT_BY_KEY))
+				|| pathConfig
+						.getPathsForClasses(schemaIRI)
+						.allowOperationsContains(OperationType.PUT_BY_KEY)) {
+			final var putSuffix = "{" + pathConfig.getPut_paths().getPut_by_key().getKey_name() + "}";
 			suffixPathItemsMap
 					.computeIfAbsent(putSuffix, k -> new PathItem())
 					.put(
 							OperationGenerator.generateOperation(
-									schema, schemaIRI, HttpMethod.PUT, CardinalityType.SINGULAR, configData));
+									schema, schemaIRI, OperationType.PUT_BY_KEY, configData));
 		}
 
 		return suffixPathItemsMap;
