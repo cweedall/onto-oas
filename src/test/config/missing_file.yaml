@@ -23,6 +23,9 @@ endpoint:
   graph_base: http://endpoint.mint.isi.edu/modelCatalog-1.4.0/data/
 
 path_config:
+  delete_paths:
+    delete_by_key:
+      enable: false
   get_paths:
     get_all:
       enable: true
@@ -30,8 +33,18 @@ path_config:
       enable: true
       response_array: false
       key_name: id
-  enable_post_paths: false
-  enable_delete_paths: false
-  enable_put_paths: false
+  post_paths:
+    post_bulk:
+      enable: false
+    post_single:
+      enable: false
+  put_paths:
+    put_bulk:
+      enable: false
+    put_by_key:
+      enable: false
+  search_paths:
+    search_by_post:
+      enable: false
 
 follow_references: true
