@@ -1,8 +1,9 @@
 package edu.isi.oba.config;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import edu.isi.oba.config.flags.ConfigFlagType;
-import edu.isi.oba.config.flags.ConfigFlags;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonSetter;
+import edu.isi.oba.config.flags.GlobalFlags;
 import edu.isi.oba.config.ontology.annotations.AnnotationConfig;
 import edu.isi.oba.config.paths.PathConfig;
 import io.swagger.v3.oas.models.OpenAPI;
@@ -13,35 +14,50 @@ import java.util.Map;
 import java.util.Set;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class YamlConfig extends ConfigFlags {
+public class YamlConfig {
 	String DEFAULT_OUTPUT_DIRECTORY = "outputs";
 	String DEFAULT_PROJECT_NAME = "default_project";
 	public OpenAPI openapi;
-	public String output_dir = DEFAULT_OUTPUT_DIRECTORY;
+
+	@JsonProperty(ConfigPropertyNames.OUTPUT_DIR)
+	public String outputDir = DEFAULT_OUTPUT_DIRECTORY;
+
+	@JsonProperty(ConfigPropertyNames.NAME)
 	public String name = DEFAULT_PROJECT_NAME;
+
 	public Set<String> paths;
 	public Set<String> ontologies;
 	private EndpointConfig endpoint;
 	private AuthConfig auth;
 	public FirebaseConfig firebase;
 	public Map<String, List<RelationConfig>> relations;
-	private LinkedHashMap<String, PathItem> custom_paths = null;
+	private LinkedHashMap<String, PathItem> customPaths = null;
 	public Set<String> classes;
-	public AnnotationConfig annotation_config;
-	public PathConfig path_config;
+
+	@JsonProperty(ConfigPropertyNames.ANNOTATION_CONFIG)
+	private final AnnotationConfig annotationConfig = new AnnotationConfig();
+
+	@JsonProperty(ConfigPropertyNames.PATH_CONFIG)
+	private final PathConfig pathConfig = new PathConfig();
 
 	public YamlConfig() {
-		this.configFlags.putAll(
-				Map.ofEntries(
-						Map.entry(ConfigFlagType.ALWAYS_GENERATE_ARRAYS, true),
-						Map.entry(ConfigFlagType.DEFAULT_DESCRIPTIONS, true),
-						Map.entry(ConfigFlagType.DEFAULT_PROPERTIES, true),
-						Map.entry(ConfigFlagType.FIX_SINGULAR_PLURAL_PROPERTY_NAMES, false),
-						Map.entry(ConfigFlagType.FOLLOW_REFERENCES, true),
-						Map.entry(ConfigFlagType.GENERATE_JSON_FILE, false),
-						Map.entry(ConfigFlagType.REQUIRED_PROPERTIES_FROM_CARDINALITY, false),
-						Map.entry(ConfigFlagType.USE_INHERITANCE_REFERENCES, false),
-						Map.entry(ConfigFlagType.VALIDATE_GENERATED_OPENAPI_FILE, true)));
+		GlobalFlags.setFlag(ConfigPropertyNames.ALWAYS_GENERATE_ARRAYS, true);
+		GlobalFlags.setFlag(ConfigPropertyNames.DEFAULT_DESCRIPTIONS, true);
+		GlobalFlags.setFlag(ConfigPropertyNames.DEFAULT_PROPERTIES, true);
+		GlobalFlags.setFlag(ConfigPropertyNames.FIX_SINGULAR_PLURAL_PROPERTY_NAMES, false);
+		GlobalFlags.setFlag(ConfigPropertyNames.FOLLOW_REFERENCES, true);
+		GlobalFlags.setFlag(ConfigPropertyNames.GENERATE_JSON_FILE, false);
+		GlobalFlags.setFlag(ConfigPropertyNames.REQUIRED_PROPERTIES_FROM_CARDINALITY, false);
+		GlobalFlags.setFlag(ConfigPropertyNames.USE_INHERITANCE_REFERENCES, false);
+		GlobalFlags.setFlag(ConfigPropertyNames.VALIDATE_GENERATED_OPENAPI_FILE, true);
+	}
+
+	public String getOutputDir() {
+		return this.outputDir;
+	}
+
+	public String getName() {
+		return this.name;
 	}
 
 	/**
@@ -49,48 +65,8 @@ public class YamlConfig extends ConfigFlags {
 	 *
 	 * @return a {@link PathConfig}
 	 */
-	public PathConfig getPath_config() {
-		return this.path_config;
-	}
-
-	/**
-	 * Set the PathConfig, if it exists in the config file. This is the configuration for all
-	 * paths/operations.
-	 *
-	 * @param {path_config} a {@link PathConfig}
-	 */
-	public void setPath_config(PathConfig path_config) {
-		if (path_config == null) {
-			this.path_config = new PathConfig();
-		} else {
-			this.path_config = path_config;
-		}
-
-		this.configFlags.putAll(this.path_config.getConfigFlags());
-	}
-
-	public String getOutput_dir() {
-		return this.output_dir;
-	}
-
-	public void setOutput_dir(String output_dir) {
-		this.output_dir = output_dir;
-	}
-
-	public String getName() {
-		return this.name;
-	}
-
-	public void setName(String name) {
-		this.name = name;
-	}
-
-	public Set<String> getPaths() {
-		return this.paths;
-	}
-
-	public void setPaths(Set<String> paths) {
-		this.paths = paths;
+	public PathConfig getPathConfig() {
+		return this.pathConfig;
 	}
 
 	public Set<String> getOntologies() {
@@ -125,12 +101,12 @@ public class YamlConfig extends ConfigFlags {
 		this.relations = relations;
 	}
 
-	public LinkedHashMap<String, PathItem> getCustom_paths() {
-		return this.custom_paths;
+	public LinkedHashMap<String, PathItem> getCustomPaths() {
+		return this.customPaths;
 	}
 
-	public void setCustom_paths(LinkedHashMap<String, PathItem> custom_paths) {
-		this.custom_paths = custom_paths;
+	public void setCustomPaths(LinkedHashMap<String, PathItem> customPaths) {
+		this.customPaths = customPaths;
 	}
 
 	public OpenAPI getOpenapi() {
@@ -149,80 +125,53 @@ public class YamlConfig extends ConfigFlags {
 		this.classes = classes;
 	}
 
-	public Boolean getAlways_generate_arrays() {
-		return this.configFlags.get(ConfigFlagType.ALWAYS_GENERATE_ARRAYS);
+	@JsonSetter(ConfigPropertyNames.ALWAYS_GENERATE_ARRAYS)
+	public void setAlwaysGenerateArrays(Boolean alwaysGenerateArrays) {
+		GlobalFlags.setFlag(ConfigPropertyNames.ALWAYS_GENERATE_ARRAYS, alwaysGenerateArrays);
 	}
 
-	public void setAlways_generate_arrays(Boolean always_generate_arrays) {
-		this.configFlags.put(ConfigFlagType.ALWAYS_GENERATE_ARRAYS, always_generate_arrays);
+	@JsonSetter(ConfigPropertyNames.FIX_SINGULAR_PLURAL_PROPERTY_NAMES)
+	public void setFixSingularPluralPropertyNames(Boolean fixSingularPluralPropertyNames) {
+		GlobalFlags.setFlag(
+				ConfigPropertyNames.FIX_SINGULAR_PLURAL_PROPERTY_NAMES, fixSingularPluralPropertyNames);
 	}
 
-	public Boolean getFix_singular_plural_property_names() {
-		return this.configFlags.get(ConfigFlagType.FIX_SINGULAR_PLURAL_PROPERTY_NAMES);
+	@JsonSetter(ConfigPropertyNames.FOLLOW_REFERENCES)
+	public void setFollowReferences(Boolean followReferences) {
+		GlobalFlags.setFlag(ConfigPropertyNames.FOLLOW_REFERENCES, followReferences);
 	}
 
-	public void setFix_singular_plural_property_names(Boolean fix_singular_plural_property_names) {
-		this.configFlags.put(
-				ConfigFlagType.FIX_SINGULAR_PLURAL_PROPERTY_NAMES, fix_singular_plural_property_names);
+	@JsonSetter(ConfigPropertyNames.USE_INHERITANCE_REFERENCES)
+	public void setUseInheritanceReferences(Boolean useInheritanceReferences) {
+		GlobalFlags.setFlag(ConfigPropertyNames.USE_INHERITANCE_REFERENCES, useInheritanceReferences);
 	}
 
-	public Boolean getFollow_references() {
-		return this.configFlags.get(ConfigFlagType.FOLLOW_REFERENCES);
+	@JsonSetter(ConfigPropertyNames.DEFAULT_DESCRIPTIONS)
+	public void setDefaultDescriptions(Boolean defaultDescriptions) {
+		GlobalFlags.setFlag(ConfigPropertyNames.DEFAULT_DESCRIPTIONS, defaultDescriptions);
 	}
 
-	public void setFollow_references(Boolean follow_references) {
-		this.configFlags.put(ConfigFlagType.FOLLOW_REFERENCES, follow_references);
+	@JsonSetter(ConfigPropertyNames.DEFAULT_PROPERTIES)
+	public void setDefaultProperties(Boolean defaultProperties) {
+		GlobalFlags.setFlag(ConfigPropertyNames.DEFAULT_PROPERTIES, defaultProperties);
 	}
 
-	public Boolean getUse_inheritance_references() {
-		return this.configFlags.get(ConfigFlagType.USE_INHERITANCE_REFERENCES);
+	@JsonSetter(ConfigPropertyNames.REQUIRED_PROPERTIES_FROM_CARDINALITY)
+	public void setRequiredPropertiesFromCardinality(Boolean requiredPropertiesFromCardinality) {
+		GlobalFlags.setFlag(
+				ConfigPropertyNames.REQUIRED_PROPERTIES_FROM_CARDINALITY,
+				requiredPropertiesFromCardinality);
 	}
 
-	public void setUse_inheritance_references(Boolean use_inheritance_references) {
-		this.configFlags.put(ConfigFlagType.USE_INHERITANCE_REFERENCES, use_inheritance_references);
+	@JsonSetter(ConfigPropertyNames.GENERATE_JSON_FILE)
+	public void setGenerateJsonFile(Boolean generateJsonFile) {
+		GlobalFlags.setFlag(ConfigPropertyNames.GENERATE_JSON_FILE, generateJsonFile);
 	}
 
-	public Boolean getDefault_descriptions() {
-		return this.configFlags.get(ConfigFlagType.DEFAULT_DESCRIPTIONS);
-	}
-
-	public void setDefault_descriptions(Boolean default_descriptions) {
-		this.configFlags.put(ConfigFlagType.DEFAULT_DESCRIPTIONS, default_descriptions);
-	}
-
-	public Boolean getDefault_properties() {
-		return this.configFlags.get(ConfigFlagType.DEFAULT_PROPERTIES);
-	}
-
-	public void setDefault_properties(Boolean default_properties) {
-		this.configFlags.put(ConfigFlagType.DEFAULT_PROPERTIES, default_properties);
-	}
-
-	public Boolean getRequired_properties_from_cardinality() {
-		return this.configFlags.get(ConfigFlagType.REQUIRED_PROPERTIES_FROM_CARDINALITY);
-	}
-
-	public void setRequired_properties_from_cardinality(
-			Boolean required_properties_from_cardinality) {
-		this.configFlags.put(
-				ConfigFlagType.REQUIRED_PROPERTIES_FROM_CARDINALITY, required_properties_from_cardinality);
-	}
-
-	public Boolean getGenerate_json_file() {
-		return this.configFlags.get(ConfigFlagType.GENERATE_JSON_FILE);
-	}
-
-	public void setGenerate_json_file(Boolean generate_json_file) {
-		this.configFlags.put(ConfigFlagType.GENERATE_JSON_FILE, generate_json_file);
-	}
-
-	public Boolean getValidate_generated_openapi_file() {
-		return this.configFlags.get(ConfigFlagType.VALIDATE_GENERATED_OPENAPI_FILE);
-	}
-
-	public void setValidate_generated_openapi_file(Boolean validate_generated_openapi_file) {
-		this.configFlags.put(
-				ConfigFlagType.VALIDATE_GENERATED_OPENAPI_FILE, validate_generated_openapi_file);
+	@JsonSetter(ConfigPropertyNames.VALIDATE_GENERATED_OPENAPI_FILE)
+	public void setValidateGeneratedOpenapiFile(Boolean validateGeneratedOpenapiFile) {
+		GlobalFlags.setFlag(
+				ConfigPropertyNames.VALIDATE_GENERATED_OPENAPI_FILE, validateGeneratedOpenapiFile);
 	}
 
 	public AuthConfig getAuth() {
@@ -238,11 +187,7 @@ public class YamlConfig extends ConfigFlags {
 	 *
 	 * @return a {@link AnnotationConfig}
 	 */
-	public AnnotationConfig getAnnotation_config() {
-		return this.annotation_config;
-	}
-
-	public void setAnnotation_config(AnnotationConfig annotation_config) {
-		this.annotation_config = annotation_config;
+	public AnnotationConfig getAnnotationConfig() {
+		return this.annotationConfig;
 	}
 }
