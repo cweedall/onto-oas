@@ -1,99 +1,62 @@
 package edu.isi.oba.config.paths;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import edu.isi.oba.config.flags.ConfigFlagType;
-import edu.isi.oba.config.flags.ConfigFlags;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonRootName;
+import com.fasterxml.jackson.annotation.JsonSetter;
+import edu.isi.oba.config.ConfigPropertyNames;
+import edu.isi.oba.config.flags.GlobalFlags;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-public final class SearchPathsConfig extends ConfigFlags {
-	private Search_By_Post search_by_post;
-
-	/**
-	 * Get the {@link Search_By_Post} config (a sub-property within {@link SearchPathsConfig}).
-	 *
-	 * @return a {@link Search_By_Post}
-	 */
-	public Search_By_Post getSearch_by_post() {
-		return this.search_by_post;
-	}
-
-	/**
-	 * Set the {@link Search_By_Post}, if it exists in the config file. This is the configuration for
-	 * POST paths.
-	 *
-	 * @param {search_by_post} A {@link Search_By_Post}
-	 */
-	public void setSearch_by_post(Search_By_Post search_by_post) {
-		if (search_by_post == null) {
-			this.search_by_post = new Search_By_Post();
-		} else {
-			this.search_by_post = search_by_post;
-		}
-
-		this.configFlags.putAll(this.search_by_post.getConfigFlags());
-	}
+@JsonRootName(ConfigPropertyNames.SEARCH_PATHS)
+public final class SearchPathsConfig {
+	@JsonProperty(ConfigPropertyNames.SEARCH_BY_POST)
+	public final SearchByPost searchByPost = new SearchByPost();
 
 	@JsonIgnoreProperties(ignoreUnknown = true)
-	public static class Search_By_Post extends ConfigFlags {
+	@JsonRootName(ConfigPropertyNames.SEARCH_BY_POST)
+	public static class SearchByPost {
 		// Default path suffix to be "_search";
-		private String path_suffix = "_search";
-		private List<String> search_properties = new ArrayList<>();
-		private List<PathKeyType> search_property_types = new ArrayList<>();
-		private List<String> search_property_datatypes = new ArrayList<>();
+		@JsonProperty(ConfigPropertyNames.PATH_SUFFIX)
+		private String pathSuffix = "_search";
 
-		Search_By_Post() {
-			configFlags.putAll(Map.ofEntries(Map.entry(ConfigFlagType.PATH_SEARCH_BY_POST, false)));
+		@JsonProperty(ConfigPropertyNames.SEARCH_PROPERTIES)
+		private List<String> searchProperties = new ArrayList<>();
+
+		private List<PathKeyType> searchPropertyTypes = new ArrayList<>();
+
+		SearchByPost() {
+			GlobalFlags.setFlag(ConfigPropertyNames.SEARCH_BY_POST_ENABLE, false);
 		}
 
-		public Boolean getEnable() {
-			return this.configFlags.get(ConfigFlagType.PATH_SEARCH_BY_POST);
-		}
-
-		public void setEnable(Boolean enable) {
+		@JsonSetter(ConfigPropertyNames.ENABLE)
+		private void setEnable(Boolean enable) {
 			if (enable != null) {
-				this.configFlags.put(ConfigFlagType.PATH_SEARCH_BY_POST, enable);
+				GlobalFlags.setFlag(ConfigPropertyNames.SEARCH_BY_POST_ENABLE, enable);
 			}
 		}
 
-		public String getPath_suffix() {
-			return path_suffix;
+		public String getPathSuffix() {
+			return pathSuffix;
 		}
 
-		public void setPath_suffix(String path_suffix) {
-			if (path_suffix != null && !path_suffix.isBlank()) {
-				this.path_suffix = path_suffix;
-			}
+		public List<String> getSearchProperties() {
+			return this.searchProperties;
 		}
 
-		public List<String> getSearch_properties() {
-			return this.search_properties;
+		public List<PathKeyType> getSearchPropertyTypes() {
+			return this.searchPropertyTypes;
 		}
 
-		public void setSearch_properties(List<String> search_properties) {
-			this.search_properties = search_properties;
-			if (search_properties != null && !search_properties.isEmpty()) {
-				this.search_properties = search_properties;
-			}
-		}
-
-		public List<PathKeyType> getSearch_property_types() {
-			return this.search_property_types;
-		}
-
-		public List<String> getKey_datatype() {
-			return this.search_property_datatypes;
-		}
-
-		public void setSearch_property_datatypes(List<String> search_property_datatypes) {
-			if (search_property_datatypes != null && !search_property_datatypes.isEmpty()) {
-				search_property_datatypes.forEach(
+		@JsonSetter(ConfigPropertyNames.SEARCH_PROPERTY_TYPES)
+		public void setSearchPropertyTypes(List<String> searchPropertyTypes) {
+			if (searchPropertyTypes != null && !searchPropertyTypes.isEmpty()) {
+				searchPropertyTypes.forEach(
 						(datatype) -> {
-							this.search_property_types.add(PathKeyType.valueOfLabel(datatype));
+							this.searchPropertyTypes.add(PathKeyType.valueOfLabel(datatype));
 						});
-				this.search_property_datatypes = search_property_datatypes;
 			}
 		}
 	}

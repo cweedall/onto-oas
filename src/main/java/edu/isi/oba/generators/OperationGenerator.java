@@ -1,7 +1,8 @@
 package edu.isi.oba.generators;
 
+import edu.isi.oba.config.ConfigPropertyNames;
 import edu.isi.oba.config.YamlConfig;
-import edu.isi.oba.config.flags.ConfigFlagType;
+import edu.isi.oba.config.flags.GlobalFlags;
 import edu.isi.oba.config.paths.OperationType;
 import edu.isi.oba.config.paths.PathKeyType;
 import edu.isi.oba.utils.StringUtils;
@@ -57,18 +58,15 @@ public class OperationGenerator {
 
 		// Create new Operation object for the given Schema and the specified method / cardinality.
 		final var operation =
-				OperationGenerator.getOperationTemplate(schema, schemaIRI, method, cardinality, configData);
+				OperationGenerator.getOperationTemplate(schema, schemaIRI, operationType, configData);
 
 		final var parameters = new HashSet<Parameter>();
 		final var apiResponses = new ApiResponses();
 
 		final var auth = configData.getAuth() == null ? false : configData.getAuth().getEnable();
 
-		final var operationIdSuffix =
-				OperationGenerator.getOperationIdSuffix(method, cardinality, configData);
-
 		// Set key parameter, if configured.
-		parameters.addAll(OperationGenerator.setPathKeyParameter(method, cardinality, configData));
+		parameters.addAll(OperationGenerator.setPathKeyParameter(operationType, configData));
 
 		// Depending on the method, get parameters, request body, and/or responses.
 		switch (method) {
@@ -139,58 +137,61 @@ public class OperationGenerator {
 			operation.setResponses(apiResponses);
 		}
 
-		final var operationId =
-				StringUtils.getLowerCasePluralOf(
-								StringUtils.pascalCaseToKebabCase(method.name() + schema.getName()))
-						+ (operationIdSuffix == null ? "" : "-" + operationIdSuffix.toLowerCase());
-		operation.setOperationId(operationId);
+		operation.setOperationId(OperationGenerator.getOperationId(schema, operationType, configData));
 
 		return operation;
 	}
 
+	private static String getOperationId(
+			Schema schema, OperationType operationType, YamlConfig configData) {
+		final var operationId =
+				StringUtils.getLowerCasePluralOf(
+								StringUtils.pascalCaseToKebabCase(operationType.name() + "-" + schema.getName()))
+						.replaceAll("_", "-");
+
+		return operationId;
+	}
+
 	private static Operation getOperationTemplate(
-			Schema schema,
-			IRI schemaIRI,
-			HttpMethod method,
-			CardinalityType cardinality,
-			YamlConfig configData) {
+			Schema schema, IRI schemaIRI, OperationType operationType, YamlConfig configData) {
 		final var schemaName = schema.getName();
 		final var iriString = schemaIRI.getIRIString();
-		final var pathIdNameInText =
-				OperationGenerator.getPathKeyNameInText(method, cardinality, configData);
+		final var pathIdNameInText = OperationGenerator.getPathKeyNameInText(operationType, configData);
 
 		String operationDescription = null;
 		String operationSummary = null;
 
-		switch (method) {
+		final var cardinality = operationType.getCardinalityType();
+
+		switch (operationType.getHttpMethod()) {
 			case DELETE:
 				if (CardinalityType.SINGULAR.equals(cardinality)) {
 					operationDescription =
-							"Delete an existing instance of ["
+							"Delete an instance of ["
 									+ schemaName
 									+ "]("
 									+ iriString
 									+ ") by its "
 									+ pathIdNameInText
 									+ ".";
-					operationSummary = "Delete an existing " + schemaName;
+					operationSummary = "Delete one " + schemaName + " record";
 				}
 				break;
 			case GET:
 				if (CardinalityType.SINGULAR.equals(cardinality)) {
 					operationDescription =
-							"Gets the details of a given ["
+							"Gets an instance of ["
 									+ schemaName
 									+ "]("
 									+ iriString
 									+ ") by its "
 									+ pathIdNameInText
 									+ ".";
-					operationSummary = "Get a single " + schemaName;
+					operationSummary = "Get one " + schemaName + " record";
 				} else {
 					operationDescription =
-							"Gets the details of all instances of [" + schemaName + "](" + iriString + ")" + ".";
-					operationSummary = "Gets all instances of " + schemaName;
+							"Gets all instances of [" + schemaName + "](" + iriString + ")" + ".";
+					operationSummary = "Gets all " + schemaName + " record(s)";
 				}
 				break;
 			case PATCH:
@@ -201,11 +202,11 @@ public class OperationGenerator {
 				if (CardinalityType.SINGULAR.equals(cardinality)) {
 					operationDescription =
 							"Create a new instance of [" + schemaName + "](" + iriString + ")" + ".";
-					operationSummary = "Create one " + schemaName;
+					operationSummary = "Create one " + schemaName + " record";
 				} else {
 					operationDescription =
 							"Create one or more new instances of [" + schemaName + "](" + iriString + ")" + ".";
-					operationSummary = "Create one or more " + schemaName;
+					operationSummary = "Create one or more " + schemaName + " record(s)";
 				}
 
 				break;
@@ -219,11 +220,11 @@ public class OperationGenerator {
 									+ ") by its "
 									+ pathIdNameInText
 									+ ".";
-					operationSummary = "Update an existing " + schemaName;
+					operationSummary = "Update an existing " + schemaName + " record";
 				} else {
 					operationDescription =
 							"Update one or more instances of [" + schemaName + "](" + iriString + ").";
-					operationSummary = "Update one or more " + schemaName;
+					operationSummary = "Update one or more " + schemaName + " record(s)";
 				}
 				break;
 			case SEARCH:
@@ -234,7 +235,7 @@ public class OperationGenerator {
 				} else {
 					operationDescription =
 							"Search for instances of  [" + schemaName + "](" + iriString + ")" + ".";
-					operationSummary = "Search for one or more " + schemaName;
+					operationSummary = "Search for one or more " + schemaName + " record(s)";
 				}
 				break;
 			default:
@@ -262,54 +263,17 @@ public class OperationGenerator {
 		}
 	}
 
-	private static String getOperationIdSuffix(
-			HttpMethod method, CardinalityType cardinality, YamlConfig configData) {
-		final var pathConfig = configData.getPath_config();
+	private static String getPathKeyName(OperationType operationType, YamlConfig configData) {
+		if (CardinalityType.SINGULAR.equals(operationType.getCardinalityType())) {
+			final var pathConfig = configData.getPathConfig();
 
-		switch (method) {
-			case DELETE:
-				if (CardinalityType.SINGULAR.equals(cardinality)) {
-					return pathConfig.getDelete_paths().getDelete_by_key().getKey_name();
-				} else {
-					return null;
-				}
-			case GET:
-				if (CardinalityType.SINGULAR.equals(cardinality)) {
-					return pathConfig.getGet_paths().getGet_by_key().getKey_name();
-				} else {
-					return null;
-				}
-			case POST:
-				if (CardinalityType.SINGULAR.equals(cardinality)) {
-					return null;
-				} else {
-					return pathConfig.getPost_paths().getPost_bulk().getPath_suffix();
-				}
-			case PUT:
-				if (CardinalityType.SINGULAR.equals(cardinality)) {
-					return pathConfig.getPut_paths().getPut_by_key().getKey_name();
-				} else {
-					return pathConfig.getPut_paths().getPut_bulk().getPath_suffix();
-				}
-			default:
-				break;
-		}
-
-		return null;
-	}
-
-	private static String getPathKeyName(
-			HttpMethod method, CardinalityType cardinality, YamlConfig configData) {
-		if (CardinalityType.SINGULAR.equals(cardinality)) {
-			final var pathConfig = configData.getPath_config();
-
-			switch (method) {
+			switch (operationType.getHttpMethod()) {
 				case GET:
-					return pathConfig.getGet_paths().getGet_by_key().getKey_name();
+					return pathConfig.getGetPaths().getByKey.getKeyName();
 				case PUT:
-					return pathConfig.getPut_paths().getPut_by_key().getKey_name();
+					return pathConfig.getPutPaths().putByKey.getKeyName();
 				case DELETE:
-					return pathConfig.getDelete_paths().getDelete_by_key().getKey_name();
+					return pathConfig.getDeletePaths().deleteByKey.getKeyName();
 				default:
 					break;
 			}
@@ -318,18 +282,17 @@ public class OperationGenerator {
 		return null;
 	}
 
-	private static String getPathKeyNameInText(
-			HttpMethod method, CardinalityType cardinality, YamlConfig configData) {
-		if (CardinalityType.SINGULAR.equals(cardinality)) {
-			final var pathConfig = configData.getPath_config();
+	private static String getPathKeyNameInText(OperationType operationType, YamlConfig configData) {
+		if (CardinalityType.SINGULAR.equals(operationType.getCardinalityType())) {
+			final var pathConfig = configData.getPathConfig();
 
-			switch (method) {
+			switch (operationType.getHttpMethod()) {
 				case GET:
-					return pathConfig.getGet_paths().getGet_by_key().getKey_name_in_text();
+					return pathConfig.getGetPaths().getByKey.getKeyNameInText();
 				case PUT:
-					return pathConfig.getPut_paths().getPut_by_key().getKey_name_in_text();
+					return pathConfig.getPutPaths().putByKey.getKeyNameInText();
 				case DELETE:
-					return pathConfig.getDelete_paths().getDelete_by_key().getKey_name_in_text();
+					return pathConfig.getDeletePaths().deleteByKey.getKeyNameInText();
 				default:
 					break;
 			}
@@ -338,18 +301,17 @@ public class OperationGenerator {
 		return null;
 	}
 
-	private static PathKeyType getPathKeyType(
-			HttpMethod method, CardinalityType cardinality, YamlConfig configData) {
-		if (CardinalityType.SINGULAR.equals(cardinality)) {
-			final var pathConfig = configData.getPath_config();
+	private static PathKeyType getPathKeyType(OperationType operationType, YamlConfig configData) {
+		if (CardinalityType.SINGULAR.equals(operationType.getCardinalityType())) {
+			final var pathConfig = configData.getPathConfig();
 
-			switch (method) {
+			switch (operationType.getHttpMethod()) {
 				case DELETE:
-					return pathConfig.getDelete_paths().getDelete_by_key().getKey_type();
+					return pathConfig.getDeletePaths().deleteByKey.getKeyType();
 				case GET:
-					return pathConfig.getGet_paths().getGet_by_key().getKey_type();
+					return pathConfig.getGetPaths().getByKey.getKeyType();
 				case PUT:
-					return pathConfig.getPut_paths().getPut_by_key().getKey_type();
+					return pathConfig.getPutPaths().putByKey.getKeyType();
 				default:
 					break;
 			}
@@ -359,11 +321,10 @@ public class OperationGenerator {
 	}
 
 	private static Set<Parameter> setPathKeyParameter(
-			HttpMethod method, CardinalityType cardinality, YamlConfig configData) {
-		if (CardinalityType.SINGULAR.equals(cardinality)) {
-			final var keyName = OperationGenerator.getPathKeyName(method, cardinality, configData);
-			final var keyNameInText =
-					OperationGenerator.getPathKeyNameInText(method, cardinality, configData);
+			OperationType operationType, YamlConfig configData) {
+		if (CardinalityType.SINGULAR.equals(operationType.getCardinalityType())) {
+			final var keyName = OperationGenerator.getPathKeyName(operationType, configData);
+			final var keyNameInText = OperationGenerator.getPathKeyNameInText(operationType, configData);
 
 			if (keyName != null) {
 				final var descriptionText = "The " + keyNameInText + " of the endpoint resource.";
@@ -376,7 +337,7 @@ public class OperationGenerator {
 										.required(true)
 										.schema(
 												OperationGenerator.getSchemaBasedOnPathKeyType(
-														OperationGenerator.getPathKeyType(method, cardinality, configData))));
+														OperationGenerator.getPathKeyType(operationType, configData))));
 					}
 				};
 			}
@@ -391,7 +352,7 @@ public class OperationGenerator {
 	}
 
 	private static ApiResponses getDeleteResponses(YamlConfig configData) {
-		if (configData.getConfigFlagValue(ConfigFlagType.USE_COMMON_DEFAULT_PATH_RESPONSES)) {
+		if (GlobalFlags.getFlag(ConfigPropertyNames.USE_COMMON_DEFAULT_PATH_RESPONSES)) {
 			// Set the response
 			return new ApiResponses()
 					.addApiResponse(
@@ -497,7 +458,7 @@ public class OperationGenerator {
 				{
 					MediaType mediaType = null;
 					final var refSchema = new Schema().$ref("#/components/schemas/" + schema.getName());
-					if (configData.getConfigFlagValue(ConfigFlagType.PATH_GET_BY_ID_RESPONSE_ARRAY)) {
+					if (GlobalFlags.getFlag(ConfigPropertyNames.GET_BY_KEY_RESPONSE_ARRAY_ENABLE)) {
 						final var oneOfSchema = new Schema();
 						oneOfSchema.addOneOfItem(new ArraySchema().items(refSchema));
 						oneOfSchema.addOneOfItem(
@@ -525,7 +486,7 @@ public class OperationGenerator {
 				}
 		}
 
-		if (configData.getConfigFlagValue(ConfigFlagType.USE_COMMON_DEFAULT_PATH_RESPONSES)) {
+		if (GlobalFlags.getFlag(ConfigPropertyNames.USE_COMMON_DEFAULT_PATH_RESPONSES)) {
 			apiResponses
 					.addApiResponse(
 							"400",
@@ -589,7 +550,7 @@ public class OperationGenerator {
 	}
 
 	private static ApiResponses getPostResponses(YamlConfig configData) {
-		if (configData.getConfigFlagValue(ConfigFlagType.USE_COMMON_DEFAULT_PATH_RESPONSES)) {
+		if (GlobalFlags.getFlag(ConfigPropertyNames.USE_COMMON_DEFAULT_PATH_RESPONSES)) {
 			// Set the response
 			return new ApiResponses()
 					.addApiResponse(
@@ -639,7 +600,7 @@ public class OperationGenerator {
 	}
 
 	private static ApiResponses getPutResponses(YamlConfig configData) {
-		if (configData.getConfigFlagValue(ConfigFlagType.USE_COMMON_DEFAULT_PATH_RESPONSES)) {
+		if (GlobalFlags.getFlag(ConfigPropertyNames.USE_COMMON_DEFAULT_PATH_RESPONSES)) {
 			// Set the response
 			new ApiResponses()
 					.addApiResponse(
@@ -675,7 +636,7 @@ public class OperationGenerator {
 	private static RequestBody getSearchByPostRequestBody(
 			Schema schema, IRI schemaIRI, YamlConfig configData) {
 		String requestDescription =
-				"Search criteria for instance(s) of the ["
+				"Search criteria for instance(s) of ["
 						+ schema.getName()
 						+ "]("
 						+ schemaIRI.getIRIString()
@@ -685,17 +646,16 @@ public class OperationGenerator {
 		final var searchCriteriaMap = new HashMap<String, Schema>();
 		final var searchExamplesMap = new HashMap<String, Object>();
 
-		final var searchByPost = configData.getPath_config().getSearch_paths().getSearch_by_post();
+		final var searchByPost = configData.getPathConfig().getSearchPaths().searchByPost;
 
-		if (searchByPost.getSearch_properties().size()
-				!= searchByPost.getSearch_property_types().size()) {
+		if (searchByPost.getSearchProperties().size() != searchByPost.getSearchPropertyTypes().size()) {
 			System.out.println(
 					"Search by POST properties and property types do not contain the same number of items.");
 			System.exit(1);
 		}
 
-		final var searchPropertiesIterator = searchByPost.getSearch_properties().iterator();
-		final var searchPropertyTypesIterator = searchByPost.getSearch_property_types().iterator();
+		final var searchPropertiesIterator = searchByPost.getSearchProperties().iterator();
+		final var searchPropertyTypesIterator = searchByPost.getSearchPropertyTypes().iterator();
 
 		while (searchPropertiesIterator.hasNext() && searchPropertyTypesIterator.hasNext()) {
 			final var searchProperty = searchPropertiesIterator.next();
@@ -754,16 +714,15 @@ public class OperationGenerator {
 		ArraySchema arraySchema = new ArraySchema();
 		arraySchema.setItems(new Schema().$ref("#/components/schemas/" + schema.getName()));
 
-		var mediaType = new MediaType().schema(arraySchema);
-		final var content = new Content().addMediaType("application/json", mediaType);
+		final var mediaType = new MediaType().schema(arraySchema);
 		final var responseOk =
 				new ApiResponse()
 						.description(EnglishReasonPhraseCatalog.INSTANCE.getReason(200, Locale.ENGLISH))
-						.content(content);
+						.content(new Content().addMediaType("application/json", mediaType));
 
 		final var apiResponses = new ApiResponses().addApiResponse("200", responseOk);
 
-		if (configData.getConfigFlagValue(ConfigFlagType.USE_COMMON_DEFAULT_PATH_RESPONSES)) {
+		if (GlobalFlags.getFlag(ConfigPropertyNames.USE_COMMON_DEFAULT_PATH_RESPONSES)) {
 			// Set the response
 			apiResponses
 					.addApiResponse(
@@ -788,6 +747,6 @@ public class OperationGenerator {
 									.description(EnglishReasonPhraseCatalog.INSTANCE.getReason(500, Locale.ENGLISH)));
 		}
 
-		return new ApiResponses();
+		return apiResponses;
 	}
 }

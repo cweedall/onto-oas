@@ -2,8 +2,9 @@ package edu.isi.oba;
 
 import static edu.isi.oba.Oba.logger;
 
+import edu.isi.oba.config.ConfigPropertyNames;
 import edu.isi.oba.config.YamlConfig;
-import edu.isi.oba.config.flags.ConfigFlagType;
+import edu.isi.oba.config.flags.GlobalFlags;
 import edu.isi.oba.utils.ObaUtils;
 import io.swagger.v3.oas.models.media.ArraySchema;
 import io.swagger.v3.oas.models.media.ObjectSchema;
@@ -200,10 +201,10 @@ public class ObjectVisitor implements OWLObjectVisitor {
 				ObaUtils.getDescription(
 						this.baseClass,
 						this.baseClassOntology,
-						this.configData.getConfigFlagValue(ConfigFlagType.DEFAULT_DESCRIPTIONS)));
+						GlobalFlags.getFlag(ConfigPropertyNames.DEFAULT_DESCRIPTIONS)));
 		MapperProperty.setSchemaType(basicClassSchema, "object");
 
-		if (this.configData.getConfigFlagValue(ConfigFlagType.DEFAULT_PROPERTIES)) {
+		if (GlobalFlags.getFlag(ConfigPropertyNames.DEFAULT_PROPERTIES)) {
 			/**
 			 * Not using {@link Schema#setProperties()}, because it creates immutability which breaks unit
 			 * tests.
@@ -263,17 +264,17 @@ public class ObjectVisitor implements OWLObjectVisitor {
 		}
 
 		// Generate the required properties for the class, if applicable.
-		if (this.configData.getConfigFlagValue(ConfigFlagType.REQUIRED_PROPERTIES_FROM_CARDINALITY)) {
+		if (GlobalFlags.getFlag(ConfigPropertyNames.REQUIRED_PROPERTIES_FROM_CARDINALITY)) {
 			this.generateRequiredPropertiesForClassSchemas();
 		}
 
 		// Convert non-array property items, if applicable.
-		if (!this.configData.getConfigFlagValue(ConfigFlagType.ALWAYS_GENERATE_ARRAYS)) {
+		if (!GlobalFlags.getFlag(ConfigPropertyNames.ALWAYS_GENERATE_ARRAYS)) {
 			MapperProperty.convertArrayToNonArrayPropertySchemas(
 					this.classSchema,
 					this.enumProperties,
 					this.functionalProperties,
-					this.configData.getConfigFlagValue(ConfigFlagType.FIX_SINGULAR_PLURAL_PROPERTY_NAMES));
+					GlobalFlags.getFlag(ConfigPropertyNames.FIX_SINGULAR_PLURAL_PROPERTY_NAMES));
 
 			// If there are required properties, they may have changes (i.e. pluralized or singularized).
 			// Make sure to clear and re-populate the Set/List.  (Primiarily done to keep everything in
@@ -296,8 +297,8 @@ public class ObjectVisitor implements OWLObjectVisitor {
 		// ExchangeStudent, we do not want to inherit from Person AND Student. We only need to inherit
 		// from Student [which automatically inherits everything from Person also].)
 		if (this.classSchema.getEnum() == null
-				&& this.configData.getConfigFlagValue(ConfigFlagType.FOLLOW_REFERENCES)
-				&& this.configData.getConfigFlagValue(ConfigFlagType.USE_INHERITANCE_REFERENCES)) {
+				&& GlobalFlags.getFlag(ConfigPropertyNames.FOLLOW_REFERENCES)
+				&& GlobalFlags.getFlag(ConfigPropertyNames.USE_INHERITANCE_REFERENCES)) {
 
 			// If adding for the first time, need to include a "type: object" entry.
 			if (this.classSchema.getAllOf() == null || this.classSchema.getAllOf().isEmpty()) {
@@ -497,8 +498,8 @@ public class ObjectVisitor implements OWLObjectVisitor {
 			this.processedClasses.add(ce);
 
 			// If using inheritance references, make sure to add super classes.
-			if (this.configData.getConfigFlagValue(ConfigFlagType.FOLLOW_REFERENCES)
-					&& this.configData.getConfigFlagValue(ConfigFlagType.USE_INHERITANCE_REFERENCES)) {
+			if (GlobalFlags.getFlag(ConfigPropertyNames.FOLLOW_REFERENCES)
+					&& GlobalFlags.getFlag(ConfigPropertyNames.USE_INHERITANCE_REFERENCES)) {
 				// Add the base and super classes to the referenced class set.
 				this.referencedClasses.add(ce);
 			}
@@ -542,7 +543,7 @@ public class ObjectVisitor implements OWLObjectVisitor {
 		} else {
 			// If this is a superclass AND we are using inheritance/superclass references, still add the
 			// properties to the properties map.
-			if (!this.configData.getConfigFlagValue(ConfigFlagType.USE_INHERITANCE_REFERENCES)) {
+			if (!GlobalFlags.getFlag(ConfigPropertyNames.USE_INHERITANCE_REFERENCES)) {
 				this.basePropertiesMap.putAll(this.getObjectPropertySchemasForClass(ce));
 				this.basePropertiesMap.putAll(this.getDataPropertySchemasForClass(ce));
 
@@ -710,12 +711,11 @@ public class ObjectVisitor implements OWLObjectVisitor {
 												ObaUtils.getDescription(
 														entity,
 														this.baseClassOntology,
-														this.configData.getConfigFlagValue(
-																ConfigFlagType.DEFAULT_DESCRIPTIONS));
+														GlobalFlags.getFlag(ConfigPropertyNames.DEFAULT_DESCRIPTIONS));
 										MapperProperty.setSchemaDescription(propertySchema, propertyDescription);
 									}
 
-									final var annotationConfig = this.configData.getAnnotation_config();
+									final var annotationConfig = this.configData.getAnnotationConfig();
 									if (annotationConfig != null) {
 										final var annotationPropertyName =
 												annotation.getProperty().getIRI().getShortForm();
@@ -781,7 +781,7 @@ public class ObjectVisitor implements OWLObjectVisitor {
 													this.classSchema.getProperties().get(this.currentlyProcessedPropertyName);
 
 							if (propertySchema != null) {
-								final var annotationConfig = this.configData.getAnnotation_config();
+								final var annotationConfig = this.configData.getAnnotationConfig();
 								if (annotationConfig != null) {
 									final var annotationPropertyName =
 											annotation.getProperty().getIRI().getShortForm();
@@ -834,7 +834,7 @@ public class ObjectVisitor implements OWLObjectVisitor {
 	 * @param entity an {@link OWLEntity} with the class/property associated with the annotation.
 	 */
 	private void addMarkdownAnnotationsToMap(OWLAnnotation annotation, String annotationMappedTo) {
-		final var annotationConfig = this.configData.getAnnotation_config();
+		final var annotationConfig = this.configData.getAnnotationConfig();
 		if (annotationConfig != null) {
 			final var annotationPropertyName = annotation.getProperty().getIRI().getShortForm();
 
@@ -1066,7 +1066,7 @@ public class ObjectVisitor implements OWLObjectVisitor {
 		if (objPropRanges != null) {
 			objPropRanges.forEach(
 					objPropRange -> {
-						if (this.configData.getConfigFlagValue(ConfigFlagType.FOLLOW_REFERENCES)) {
+						if (GlobalFlags.getFlag(ConfigPropertyNames.FOLLOW_REFERENCES)) {
 							propertyRanges.add(this.getPrefixedSchemaName(objPropRange.asOWLClass()));
 
 							// Add the range to the referenced class set.
@@ -1092,7 +1092,7 @@ public class ObjectVisitor implements OWLObjectVisitor {
 				.forEach(
 						(objPropRangeAxiom) -> {
 							if (objPropRangeAxiom.getRange() instanceof OWLClass) {
-								if (this.configData.getConfigFlagValue(ConfigFlagType.FOLLOW_REFERENCES)) {
+								if (GlobalFlags.getFlag(ConfigPropertyNames.FOLLOW_REFERENCES)) {
 									propertyRanges.add(
 											this.getPrefixedSchemaName(objPropRangeAxiom.getRange().asOWLClass()));
 
@@ -1141,7 +1141,7 @@ public class ObjectVisitor implements OWLObjectVisitor {
 					ObaUtils.getDescription(
 							op,
 							this.baseClassOntology,
-							this.configData.getConfigFlagValue(ConfigFlagType.DEFAULT_DESCRIPTIONS));
+							GlobalFlags.getFlag(ConfigPropertyNames.DEFAULT_DESCRIPTIONS));
 
 			// Workaround for handling unionOf/intersectionOf/oneOf cases which may be set already above.
 			if (objPropertySchema == null) {
@@ -1164,7 +1164,7 @@ public class ObjectVisitor implements OWLObjectVisitor {
 				MapperObjectProperty.setFunctionalForPropertySchema(objPropertySchema);
 			}
 
-			final var annotationConfig = this.configData.getAnnotation_config();
+			final var annotationConfig = this.configData.getAnnotationConfig();
 			if (annotationConfig != null) {
 				final var propertyAnnotations = annotationConfig.getProperty_annotations();
 
@@ -1501,8 +1501,7 @@ public class ObjectVisitor implements OWLObjectVisitor {
 												ObaUtils.getDescription(
 														dp,
 														this.baseClassOntology,
-														this.configData.getConfigFlagValue(
-																ConfigFlagType.DEFAULT_DESCRIPTIONS));
+														GlobalFlags.getFlag(ConfigPropertyNames.DEFAULT_DESCRIPTIONS));
 
 										// In cases, such as unionOf/intersectionOf/oneOf , the property schema may
 										// already be set.  Get it, if so.
@@ -1538,7 +1537,7 @@ public class ObjectVisitor implements OWLObjectVisitor {
 											MapperDataProperty.setFunctionalForPropertySchema(dataPropertySchema);
 										}
 
-										final var annotationConfig = this.configData.getAnnotation_config();
+										final var annotationConfig = this.configData.getAnnotationConfig();
 										if (annotationConfig != null) {
 											final var propertyAnnotations = annotationConfig.getProperty_annotations();
 
@@ -1739,7 +1738,7 @@ public class ObjectVisitor implements OWLObjectVisitor {
 			MapperProperty.setSchemaName(currentPropertySchema, propertyName);
 
 			final var propertyDescription =
-					this.configData.getConfigFlagValue(ConfigFlagType.DEFAULT_DESCRIPTIONS)
+					GlobalFlags.getFlag(ConfigPropertyNames.DEFAULT_DESCRIPTIONS)
 							? ObaUtils.DEFAULT_DESCRIPTION
 							: null;
 			MapperProperty.setSchemaDescription(currentPropertySchema, propertyDescription);
@@ -1905,7 +1904,7 @@ public class ObjectVisitor implements OWLObjectVisitor {
 
 		currentPropertySchema.setItems(
 				MapperObjectProperty.getComplexObjectComposedSchema(
-						ce, this.configData.getConfigFlagValue(ConfigFlagType.FOLLOW_REFERENCES)));
+						ce, GlobalFlags.getFlag(ConfigPropertyNames.FOLLOW_REFERENCES)));
 		MapperObjectProperty.setSchemaType(currentPropertySchema, "array");
 	}
 
@@ -1943,7 +1942,7 @@ public class ObjectVisitor implements OWLObjectVisitor {
 			final var complexObjectRange =
 					MapperObjectProperty.getComplexObjectComposedSchema(
 							(OWLNaryBooleanClassExpression) ce,
-							this.configData.getConfigFlagValue(ConfigFlagType.FOLLOW_REFERENCES));
+							GlobalFlags.getFlag(ConfigPropertyNames.FOLLOW_REFERENCES));
 
 			if (or instanceof OWLObjectSomeValuesFrom) {
 				MapperObjectProperty.addSomeValuesFromToObjectPropertySchema(
@@ -1958,7 +1957,7 @@ public class ObjectVisitor implements OWLObjectVisitor {
 							? ((OWLObjectCardinalityRestriction) or).getCardinality()
 							: null;
 			final var objRestrictionRange =
-					this.configData.getConfigFlagValue(ConfigFlagType.FOLLOW_REFERENCES)
+					GlobalFlags.getFlag(ConfigPropertyNames.FOLLOW_REFERENCES)
 							? this.getPrefixedSchemaName(ce.asOWLClass())
 							: null;
 

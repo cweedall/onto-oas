@@ -1,7 +1,8 @@
 package edu.isi.oba.generators;
 
+import edu.isi.oba.config.ConfigPropertyNames;
 import edu.isi.oba.config.YamlConfig;
-import edu.isi.oba.config.flags.ConfigFlagType;
+import edu.isi.oba.config.flags.GlobalFlags;
 import edu.isi.oba.config.paths.OperationType;
 import edu.isi.oba.utils.StringUtils;
 import io.swagger.v3.oas.models.Operation;
@@ -61,7 +62,7 @@ public class PathGenerator {
 
 		final var pluralPathName =
 				"/"
-						+ (configData.getConfigFlagValue(ConfigFlagType.USE_KEBAB_CASE_PATHS)
+						+ (GlobalFlags.getFlag(ConfigPropertyNames.USE_KEBAB_CASE_PATHS)
 								? StringUtils.getLowerCasePluralOf(
 										StringUtils.pascalCaseToKebabCase(schema.getName()))
 								: StringUtils.getLowerCasePluralOf(schema.getName()));
@@ -87,12 +88,12 @@ public class PathGenerator {
 	private static Map<String, PathItem> generatePathSuffixPathItems(
 			Schema schema, IRI schemaIRI, YamlConfig configData) {
 		final var suffixPathItemsMap = new HashMap<String, PathItem>();
-		final var pathConfig = configData.getPath_config();
+		final var pathConfig = configData.getPathConfig();
 
 		// -----------------------------
 		// PLURAL records
 		// -----------------------------
-		if ((configData.getConfigFlagValue(ConfigFlagType.PATH_GET_ALL)
+		if ((GlobalFlags.getFlag(ConfigPropertyNames.GET_ALL_ENABLE)
 						&& !pathConfig
 								.getPathsForClasses(schemaIRI)
 								.denyOperationsContains(OperationType.GET_ALL))
@@ -106,14 +107,14 @@ public class PathGenerator {
 									schema, schemaIRI, OperationType.GET_ALL, configData));
 		}
 
-		if ((configData.getConfigFlagValue(ConfigFlagType.PATH_POST_BULK)
+		if ((GlobalFlags.getFlag(ConfigPropertyNames.POST_BULK_ENABLE)
 						&& !pathConfig
 								.getPathsForClasses(schemaIRI)
 								.denyOperationsContains(OperationType.POST_BULK))
 				|| pathConfig
 						.getPathsForClasses(schemaIRI)
 						.allowOperationsContains(OperationType.POST_BULK)) {
-			final var postBulkSuffix = pathConfig.getPost_paths().getPost_bulk().getPath_suffix();
+			final var postBulkSuffix = pathConfig.getPostPaths().postBulk.getPath_suffix();
 			suffixPathItemsMap
 					.computeIfAbsent(postBulkSuffix, k -> new PathItem())
 					.post(
@@ -121,14 +122,14 @@ public class PathGenerator {
 									schema, schemaIRI, OperationType.POST_BULK, configData));
 		}
 
-		if ((configData.getConfigFlagValue(ConfigFlagType.PATH_PUT_BULK)
+		if ((GlobalFlags.getFlag(ConfigPropertyNames.PUT_BULK_ENABLE)
 						&& !pathConfig
 								.getPathsForClasses(schemaIRI)
 								.denyOperationsContains(OperationType.PUT_BULK))
 				|| pathConfig
 						.getPathsForClasses(schemaIRI)
 						.allowOperationsContains(OperationType.PUT_BULK)) {
-			final var putBulkSuffix = pathConfig.getPut_paths().getPut_bulk().getPath_suffix();
+			final var putBulkSuffix = pathConfig.getPutPaths().putBulk.getPathSuffix();
 			suffixPathItemsMap
 					.computeIfAbsent(putBulkSuffix, k -> new PathItem())
 					.put(
@@ -139,15 +140,14 @@ public class PathGenerator {
 		// SEARCH - these are always PLURAL records
 		// Currently - only supports searches via the POST operation (e.g. POST
 		// /{resource-name}/_search).
-		if ((configData.getConfigFlagValue(ConfigFlagType.PATH_SEARCH_BY_POST)
+		if ((GlobalFlags.getFlag(ConfigPropertyNames.SEARCH_BY_POST_ENABLE)
 						&& !pathConfig
 								.getPathsForClasses(schemaIRI)
 								.denyOperationsContains(OperationType.SEARCH_BY_POST))
 				|| pathConfig
 						.getPathsForClasses(schemaIRI)
 						.allowOperationsContains(OperationType.SEARCH_BY_POST)) {
-			final var searchByPostSuffix =
-					pathConfig.getSearch_paths().getSearch_by_post().getPath_suffix();
+			final var searchByPostSuffix = pathConfig.getSearchPaths().searchByPost.getPathSuffix();
 			suffixPathItemsMap
 					.computeIfAbsent(searchByPostSuffix, k -> new PathItem())
 					.post(
@@ -158,14 +158,14 @@ public class PathGenerator {
 		// -----------------------------
 		// SINGULAR records
 		// -----------------------------
-		if ((configData.getConfigFlagValue(ConfigFlagType.PATH_GET_BY_ID)
+		if ((GlobalFlags.getFlag(ConfigPropertyNames.GET_BY_KEY_ENABLE)
 						&& !pathConfig
 								.getPathsForClasses(schemaIRI)
 								.denyOperationsContains(OperationType.GET_BY_KEY))
 				|| pathConfig
 						.getPathsForClasses(schemaIRI)
 						.allowOperationsContains(OperationType.GET_BY_KEY)) {
-			final var getSuffix = "{" + pathConfig.getGet_paths().getGet_by_key().getKey_name() + "}";
+			final var getSuffix = "{" + pathConfig.getGetPaths().getByKey.getKeyName() + "}";
 			suffixPathItemsMap
 					.computeIfAbsent(getSuffix, k -> new PathItem())
 					.get(
@@ -173,15 +173,14 @@ public class PathGenerator {
 									schema, schemaIRI, OperationType.GET_BY_KEY, configData));
 		}
 
-		if ((configData.getConfigFlagValue(ConfigFlagType.PATH_DELETE_BY_ID)
+		if ((GlobalFlags.getFlag(ConfigPropertyNames.DELETE_BY_KEY_ENABLE)
 						&& !pathConfig
 								.getPathsForClasses(schemaIRI)
 								.denyOperationsContains(OperationType.DELETE_BY_KEY))
 				|| pathConfig
 						.getPathsForClasses(schemaIRI)
 						.allowOperationsContains(OperationType.DELETE_BY_KEY)) {
-			final var deleteSuffix =
-					"{" + pathConfig.getDelete_paths().getDelete_by_key().getKey_name() + "}";
+			final var deleteSuffix = "{" + pathConfig.getDeletePaths().deleteByKey.getKeyName() + "}";
 			suffixPathItemsMap
 					.computeIfAbsent(deleteSuffix, k -> new PathItem())
 					.delete(
@@ -189,7 +188,7 @@ public class PathGenerator {
 									schema, schemaIRI, OperationType.DELETE_BY_KEY, configData));
 		}
 
-		if ((configData.getConfigFlagValue(ConfigFlagType.PATH_POST_SINGLE)
+		if ((GlobalFlags.getFlag(ConfigPropertyNames.POST_SINGLE_ENABLE)
 						&& !pathConfig
 								.getPathsForClasses(schemaIRI)
 								.denyOperationsContains(OperationType.POST_SINGLE))
@@ -203,14 +202,14 @@ public class PathGenerator {
 									schema, schemaIRI, OperationType.POST_SINGLE, configData));
 		}
 
-		if ((configData.getConfigFlagValue(ConfigFlagType.PATH_PUT_BY_ID)
+		if ((GlobalFlags.getFlag(ConfigPropertyNames.PUT_BY_KEY_ENABLE)
 						&& !pathConfig
 								.getPathsForClasses(schemaIRI)
 								.denyOperationsContains(OperationType.PUT_BY_KEY))
 				|| pathConfig
 						.getPathsForClasses(schemaIRI)
 						.allowOperationsContains(OperationType.PUT_BY_KEY)) {
-			final var putSuffix = "{" + pathConfig.getPut_paths().getPut_by_key().getKey_name() + "}";
+			final var putSuffix = "{" + pathConfig.getPutPaths().putByKey.getKeyName() + "}";
 			suffixPathItemsMap
 					.computeIfAbsent(putSuffix, k -> new PathItem())
 					.put(

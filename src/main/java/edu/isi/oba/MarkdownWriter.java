@@ -16,7 +16,7 @@ public final class MarkdownWriter {
 
 	public static void writeMarkdownFile(YamlConfig configData, Mapper mapper) throws Exception {
 
-		final var annotationConfig = configData.getAnnotation_config();
+		final var annotationConfig = configData.getAnnotationConfig();
 		if (annotationConfig != null) {
 			final var tableOfContentsList = new ArrayList<String>();
 
@@ -24,7 +24,7 @@ public final class MarkdownWriter {
 
 			if (markdownFilename != null) {
 				final var destinationDir =
-						configData.getOutput_dir() + File.separator + configData.getName();
+						configData.getOutputDir() + File.separator + configData.getName();
 				final var destinationProjectDirectory = destinationDir + File.separator;
 				final var markdownFilePath = destinationProjectDirectory + markdownFilename;
 

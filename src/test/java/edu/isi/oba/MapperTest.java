@@ -27,7 +27,7 @@ public class MapperTest {
 		try {
 			final var configData = ObaUtils.get_yaml_data(configFilePath);
 			configData.setAuth(new AuthConfig());
-			outputPath = configData.getOutput_dir();
+			outputPath = configData.getOutputDir();
 
 			mapper = new Mapper(configData);
 			// Use temporary directory for unit testing
