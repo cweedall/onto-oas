@@ -51,7 +51,7 @@ public class Oba {
 			System.exit(1);
 		}
 
-		String destination_dir = config_data.getOutput_dir() + File.separator + config_data.getName();
+		String destination_dir = config_data.getOutputDir() + File.separator + config_data.getName();
 		FirebaseConfig firebase_data = config_data.getFirebase();
 		AuthConfig authConfig = config_data.getAuth();
 		if (authConfig != null) {
@@ -76,7 +76,7 @@ public class Oba {
 				e.printStackTrace();
 			}
 
-			LinkedHashMap<String, PathItem> custom_paths = config_data.getCustom_paths();
+			LinkedHashMap<String, PathItem> custom_paths = config_data.getCustomPaths();
 			OpenAPI openapi_base = config_data.getOpenapi();
 
 			// get schema and paths

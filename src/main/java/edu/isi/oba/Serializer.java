@@ -13,8 +13,9 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.fasterxml.jackson.dataformat.yaml.YAMLGenerator;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import edu.isi.oba.config.ConfigPropertyNames;
 import edu.isi.oba.config.YamlConfig;
-import edu.isi.oba.config.flags.ConfigFlagType;
+import edu.isi.oba.config.flags.GlobalFlags;
 import edu.isi.oba.generators.ExamplesGenerator;
 import io.swagger.v3.jaxrs2.integration.JaxrsOpenApiContext;
 import io.swagger.v3.oas.integration.SwaggerConfiguration;
@@ -52,7 +53,7 @@ class Serializer {
 			throws Exception {
 		final var extensions = new HashMap<String, Object>();
 		final String openapi_file =
-				configData.getConfigFlagValue(ConfigFlagType.GENERATE_JSON_FILE)
+				GlobalFlags.getFlag(ConfigPropertyNames.GENERATE_JSON_FILE)
 						? "openapi.json"
 						: "openapi.yaml";
 
@@ -139,7 +140,8 @@ class Serializer {
 						openAPI.getPaths().addPathItem(k, v);
 					});
 
-		openAPI.setPaths(ExamplesGenerator.generatePathExamples(openAPI.getPaths(), examples));
+		openAPI.setPaths(
+				ExamplesGenerator.generatePathExamples(openAPI.getPaths(), examples, configData));
 
 		// Don't use .sortedOutput(true) because we are using SortedSchemaMixin to alphabetically sort
 		// the desired entries.  Sorting _everything_ alphabetically messes up the YAML file by moving
@@ -236,7 +238,7 @@ class Serializer {
 
 		// Get the file contents as either JSON or YAML (default) based on the configuration file.
 		final var content =
-				configData.getConfigFlagValue(ConfigFlagType.GENERATE_JSON_FILE)
+				GlobalFlags.getFlag(ConfigPropertyNames.GENERATE_JSON_FILE)
 						? ctx.getOutputJsonMapper()
 								.writer(new DefaultPrettyPrinter())
 								.writeValueAsString(openAPI)
@@ -255,7 +257,7 @@ class Serializer {
 		writer.write(content);
 		writer.close();
 
-		if (configData.getConfigFlagValue(ConfigFlagType.VALIDATE_GENERATED_OPENAPI_FILE)) {
+		if (GlobalFlags.getFlag(ConfigPropertyNames.VALIDATE_GENERATED_OPENAPI_FILE)) {
 			this.validate();
 		}
 	}

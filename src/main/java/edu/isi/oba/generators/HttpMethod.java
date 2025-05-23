@@ -45,5 +45,5 @@ public enum HttpMethod {
 	UNLOCK, // no 	yes 	[RFC4918, Section 9.11]
 	UPDATE, // no 	yes 	[RFC3253, Section 7.1]
 	UPDATEREDIRECTREF, // no 	yes 	[RFC4437, Section 7]
-	VERSION_CONTROL, // no 	yes 	[RFC3253, Section 3.5]
+	VERSION_CONTROL; // no 	yes 	[RFC3253, Section 3.5]
 }

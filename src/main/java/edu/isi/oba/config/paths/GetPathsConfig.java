@@ -1,151 +1,86 @@
 package edu.isi.oba.config.paths;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import edu.isi.oba.config.flags.ConfigFlagType;
-import edu.isi.oba.config.flags.ConfigFlags;
-import java.util.Map;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonRootName;
+import com.fasterxml.jackson.annotation.JsonSetter;
+import edu.isi.oba.config.ConfigPropertyNames;
+import edu.isi.oba.config.flags.GlobalFlags;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-public final class GetPathsConfig extends ConfigFlags {
-	private Get_All get_all;
-	private Get_By_Key get_by_key;
+@JsonRootName(ConfigPropertyNames.GET_PATHS)
+public final class GetPathsConfig {
+	@JsonProperty(ConfigPropertyNames.GET_ALL)
+	public final GetAll getAll = new GetAll();
 
-	/**
-	 * Get the {@link Get_All} config (a sub-property within {@link GetPathsConfig}).
-	 *
-	 * @return a {@link Get_All}
-	 */
-	public Get_All getGet_all() {
-		return this.get_all;
-	}
-
-	/**
-	 * Set the {@link Get_All}, if it exists in the config file. This is the configuration for GET
-	 * paths.
-	 *
-	 * @param {get_all} A {@link Get_All}
-	 */
-	public void setGet_all(Get_All get_all) {
-		if (get_all == null) {
-			this.get_all = new Get_All();
-		} else {
-			this.get_all = get_all;
-		}
-
-		this.configFlags.putAll(this.get_all.getConfigFlags());
-	}
-
-	/**
-	 * Get the {@link Get_By_Key} config (a sub-property within {@link GetPathsConfig}).
-	 *
-	 * @return a {@link GetPathsConfig}
-	 */
-	public Get_By_Key getGet_by_key() {
-		return get_by_key;
-	}
-
-	/**
-	 * Set the {@link Get_By_Key}, if it exists in the config file. This is the configuration for GET
-	 * paths.
-	 *
-	 * @param {get_by_key} A {@link Get_By_Key}
-	 */
-	public void setGet_by_key(Get_By_Key get_by_key) {
-		if (get_by_key == null) {
-			this.get_by_key = new Get_By_Key();
-		} else {
-			this.get_by_key = get_by_key;
-		}
-
-		this.configFlags.putAll(this.get_by_key.getConfigFlags());
-	}
+	@JsonProperty(ConfigPropertyNames.GET_BY_KEY)
+	public final GetByKey getByKey = new GetByKey();
 
 	@JsonIgnoreProperties(ignoreUnknown = true)
-	public static class Get_All extends ConfigFlags {
-		Get_All() {
-			this.configFlags.putAll(Map.ofEntries(Map.entry(ConfigFlagType.PATH_GET_ALL, true)));
+	@JsonRootName(ConfigPropertyNames.GET_ALL)
+	public static class GetAll {
+		GetAll() {
+			GlobalFlags.setFlag(ConfigPropertyNames.GET_ALL_ENABLE, true);
 		}
 
-		public Boolean getEnable() {
-			return this.configFlags.get(ConfigFlagType.PATH_GET_ALL);
-		}
-
-		public void setEnable(Boolean enable) {
+		@JsonSetter(ConfigPropertyNames.ENABLE)
+		private void setEnable(Boolean enable) {
 			if (enable != null) {
-				this.configFlags.put(ConfigFlagType.PATH_GET_ALL, enable);
+				GlobalFlags.setFlag(ConfigPropertyNames.GET_ALL_ENABLE, enable);
 			}
 		}
 	}
 
 	@JsonIgnoreProperties(ignoreUnknown = true)
-	public static class Get_By_Key extends ConfigFlags {
+	@JsonRootName(ConfigPropertyNames.GET_BY_KEY)
+	public static class GetByKey {
 		// Default key name to be "id";
-		private String key_name = "id";
-		private String key_name_in_text = this.key_name;
+		@JsonSetter(ConfigPropertyNames.KEY_NAME)
+		private String keyName = "id";
+
+		@JsonSetter(ConfigPropertyNames.KEY_NAME_IN_TEXT)
+		private String keyNameInText = this.keyName;
 
 		// Default key type to be STRING.  Used within the application for enum convenience.
-		private PathKeyType key_type = PathKeyType.STRING;
-		// Default key type to be "string".  Used as a convenience for setting the values from the
-		// configuration file.
-		private String key_datatype = key_type.toString();
+		private PathKeyType keyType = PathKeyType.STRING;
 
-		Get_By_Key() {
-			this.configFlags.putAll(
-					Map.ofEntries(
-							Map.entry(ConfigFlagType.PATH_GET_BY_ID, true),
-							Map.entry(ConfigFlagType.PATH_GET_BY_ID_RESPONSE_ARRAY, false)));
+		GetByKey() {
+			GlobalFlags.setFlag(ConfigPropertyNames.GET_BY_KEY_ENABLE, true);
+			GlobalFlags.setFlag(ConfigPropertyNames.GET_BY_KEY_RESPONSE_ARRAY_ENABLE, false);
 		}
 
-		public Boolean getEnable() {
-			return this.configFlags.get(ConfigFlagType.PATH_GET_BY_ID);
-		}
-
-		public void setEnable(Boolean enable) {
+		@JsonSetter(ConfigPropertyNames.ENABLE)
+		private void setEnable(Boolean enable) {
 			if (enable != null) {
-				this.configFlags.put(ConfigFlagType.PATH_GET_BY_ID, enable);
+				GlobalFlags.setFlag(ConfigPropertyNames.GET_BY_KEY_ENABLE, enable);
 			}
 		}
 
 		public Boolean getResponse_array() {
-			return this.configFlags.get(ConfigFlagType.PATH_GET_BY_ID_RESPONSE_ARRAY);
+			return GlobalFlags.getFlag(ConfigPropertyNames.GET_BY_KEY_RESPONSE_ARRAY_ENABLE);
 		}
 
-		public void setResponse_array(Boolean enable) {
-			this.configFlags.put(ConfigFlagType.PATH_GET_BY_ID_RESPONSE_ARRAY, enable);
+		@JsonSetter(ConfigPropertyNames.RESPONSE_ARRAY)
+		private void setResponseArray(Boolean enable) {
+			GlobalFlags.setFlag(ConfigPropertyNames.GET_BY_KEY_RESPONSE_ARRAY_ENABLE, enable);
 		}
 
-		public String getKey_name() {
-			return key_name;
+		public String getKeyName() {
+			return keyName;
 		}
 
-		public void setKey_name(String key_name) {
-			if (key_name != null && !key_name.isBlank()) {
-				this.key_name = key_name;
-			}
+		public String getKeyNameInText() {
+			return this.keyNameInText;
 		}
 
-		public String getKey_name_in_text() {
-			return this.key_name_in_text;
+		public PathKeyType getKeyType() {
+			return this.keyType;
 		}
 
-		public void setKey_name_in_text(String key_name_in_text) {
-			if (key_name_in_text != null && !key_name_in_text.isBlank()) {
-				this.key_name_in_text = key_name_in_text;
-			}
-		}
-
-		public PathKeyType getKey_type() {
-			return this.key_type;
-		}
-
-		public String getKey_datatype() {
-			return this.key_datatype;
-		}
-
-		public void setKey_datatype(String key_datatype) {
-			if (key_datatype != null && !key_datatype.isBlank()) {
-				this.key_type = PathKeyType.valueOfLabel(key_datatype);
-				this.key_datatype = key_datatype;
+		@JsonSetter(ConfigPropertyNames.KEY_TYPE)
+		private void setKeyType(String keyType) {
+			if (keyType != null && !keyType.isBlank()) {
+				this.keyType = PathKeyType.valueOfLabel(keyType);
 			}
 		}
 	}

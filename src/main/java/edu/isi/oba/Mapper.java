@@ -2,8 +2,9 @@ package edu.isi.oba;
 
 import static edu.isi.oba.Oba.logger;
 
+import edu.isi.oba.config.ConfigPropertyNames;
 import edu.isi.oba.config.YamlConfig;
-import edu.isi.oba.config.flags.ConfigFlagType;
+import edu.isi.oba.config.flags.GlobalFlags;
 import edu.isi.oba.generators.PathGenerator;
 import edu.isi.oba.utils.ObaUtils;
 import io.swagger.v3.oas.models.Paths;
@@ -57,7 +58,7 @@ class Mapper {
 
 		Set<String> configOntologies = this.configData.getOntologies();
 		String destinationDir =
-				this.configData.getOutput_dir()
+				this.configData.getOutputDir()
 						+ File.separator
 						+ this.configData
 								.getName()
@@ -318,8 +319,8 @@ class Mapper {
 			final var mappedSchema = this.getSchema(cls, ontology);
 
 			// If not disabled, and class is allowed, then add the OpenAPI paths
-			if (!this.configData.getConfigFlagValue(ConfigFlagType.DISABLE_ALL_PATHS)) {
-				if (this.configData.getPath_config().getPathClasses().contains(cls.getIRI())) {
+			if (!GlobalFlags.getFlag(ConfigPropertyNames.DISABLE_ALL_PATHS)) {
+				if (this.configData.getPathConfig().getPathClasses().contains(cls.getIRI())) {
 					// Generate all paths for the class/schema and add to the current Paths object.
 					this.paths.putAll(
 							PathGenerator.generateAllPathItemsForSchema(
@@ -383,7 +384,7 @@ class Mapper {
 					"No ontologies specified in the YAML configuration file.  Nothing can be processed.");
 			System.exit(1);
 		} else {
-			final var allowedPathClassesByIRI = this.configData.getPath_config().getPathClasses();
+			final var allowedPathClassesByIRI = this.configData.getPathConfig().getPathClasses();
 			final var allowedNonPathClassesByIRI = this.configData.getClasses();
 
 			this.ontologies.forEach(

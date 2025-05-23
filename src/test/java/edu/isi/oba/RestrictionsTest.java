@@ -47,12 +47,12 @@ public class RestrictionsTest {
 	public void setupLoggerAndMapper() throws Exception {
 		this.initializeLogger();
 
-		this.configData.setAlways_generate_arrays(true);
-		this.configData.setDefault_descriptions(true);
-		this.configData.setDefault_properties(true);
-		this.configData.setFix_singular_plural_property_names(false);
-		this.configData.setFollow_references(true);
-		this.configData.setRequired_properties_from_cardinality(false);
+		this.configData.setAlwaysGenerateArrays(true);
+		this.configData.setDefaultDescriptions(true);
+		this.configData.setDefaultProperties(true);
+		this.configData.setFixSingularPluralPropertyNames(false);
+		this.configData.setFollowReferences(true);
+		this.configData.setRequiredPropertiesFromCardinality(false);
 
 		this.setupMapper();
 	}
@@ -234,7 +234,7 @@ public class RestrictionsTest {
 	public void testObjectExactCardinalityWithArraysGenerated()
 			throws OWLOntologyCreationException, Exception {
 		// Set up the mapper with non-default values.
-		this.configData.setAlways_generate_arrays(true);
+		this.configData.setAlwaysGenerateArrays(true);
 		this.setupMapper();
 
 		// Expected value
@@ -261,8 +261,8 @@ public class RestrictionsTest {
 	public void testObjectExactCardinalityWithRequiredPropertiesAndWithoutArraysGenerated()
 			throws OWLOntologyCreationException, Exception {
 		// Set up the mapper with non-default values.
-		this.configData.setAlways_generate_arrays(false);
-		this.configData.setRequired_properties_from_cardinality(true);
+		this.configData.setAlwaysGenerateArrays(false);
+		this.configData.setRequiredPropertiesFromCardinality(true);
 		this.setupMapper();
 
 		// Expected value
@@ -311,8 +311,8 @@ public class RestrictionsTest {
 			testObjectExactCardinalityOfFunctionalPropertyWithRequiredPropertiesAndWithoutArraysGenerated()
 					throws OWLOntologyCreationException, Exception {
 		// Set up the mapper with non-default values.
-		this.configData.setAlways_generate_arrays(false);
-		this.configData.setRequired_properties_from_cardinality(true);
+		this.configData.setAlwaysGenerateArrays(false);
+		this.configData.setRequiredPropertiesFromCardinality(true);
 		this.setupMapper();
 
 		// Expected value

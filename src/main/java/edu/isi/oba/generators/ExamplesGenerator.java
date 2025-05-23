@@ -1,10 +1,15 @@
 package edu.isi.oba.generators;
 
+import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.json.JsonReadFeature;
+import com.fasterxml.jackson.core.json.JsonWriteFeature;
 import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import edu.isi.oba.config.YamlConfig;
 import edu.isi.oba.utils.StringUtils;
 import io.swagger.oas.inflector.examples.ExampleBuilder.RequestType;
 import io.swagger.v3.jaxrs2.integration.JaxrsOpenApiContext;
@@ -40,9 +45,45 @@ public class ExamplesGenerator {
 		// Don't use .sortedOutput(true) because we are using SortedSchemaMixin to alphabetically sort
 		// the desired entries.  Sorting _everything_ alphabetically messes up the YAML file by moving
 		// the info section away from the top of the document, for example.
-		final var openApiConfiguration = new SwaggerConfiguration().openAPI(openAPI);
+		final var openApiConfiguration = new SwaggerConfiguration().openAPI(openAPI).prettyPrint(true);
 
+		// Create the OpenAPI context for specifying the output/serialization settings.
 		final var ctx = new JaxrsOpenApiContext<>().openApiConfiguration(openApiConfiguration).init();
+
+		// ============================================================
+		// JSON serialization/output settings.
+		// ============================================================
+		// Get the JSON OutputMapper from the OpenAPI context.
+		final var ctxJsonObjectMapper = ctx.getOutputJsonMapper();
+		// ctx.getOutputYamlMapper().configure(MapperFeature.USE_ANNOTATIONS, true);
+		ctxJsonObjectMapper.enable(SerializationFeature.FLUSH_AFTER_WRITE_VALUE);
+		ctxJsonObjectMapper.enable(SerializationFeature.INDENT_OUTPUT);
+		ctxJsonObjectMapper.enable(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS);
+		ctxJsonObjectMapper.enable(SerializationFeature.WRITE_ENUM_KEYS_USING_INDEX);
+
+		// Get the JSON Factory of the JSON ObjectMapper.
+		final var ctxJsonFactory = ctxJsonObjectMapper.getFactory();
+		// Get the JSON Factory Builder, to be able to enable/disable specific features.
+		final var ctxJsonFactoryBuilder = ctxJsonFactory.rebuild();
+
+		ctxJsonFactory.enable(JsonGenerator.Feature.COMBINE_UNICODE_SURROGATES_IN_UTF8);
+		ctxJsonFactory.enable(JsonGenerator.Feature.WRITE_BIGDECIMAL_AS_PLAIN);
+
+		ctxJsonFactoryBuilder.enable(JsonWriteFeature.QUOTE_FIELD_NAMES);
+		ctxJsonFactoryBuilder.enable(JsonWriteFeature.WRITE_HEX_UPPER_CASE);
+		ctxJsonFactoryBuilder.enable(JsonReadFeature.ALLOW_SINGLE_QUOTES);
+		ctxJsonFactoryBuilder.enable(JsonReadFeature.ALLOW_TRAILING_DECIMAL_POINT_FOR_NUMBERS);
+		ctxJsonFactoryBuilder.disable(JsonReadFeature.ALLOW_UNQUOTED_FIELD_NAMES);
+		ctxJsonFactoryBuilder.enable(JsonReadFeature.ALLOW_YAML_COMMENTS);
+		ctxJsonFactoryBuilder.enable(com.fasterxml.jackson.core.JsonFactory.Feature.CHARSET_DETECTION);
+		ctxJsonFactoryBuilder.enable(
+				com.fasterxml.jackson.core.JsonFactory.Feature.CANONICALIZE_FIELD_NAMES);
+		ctxJsonFactoryBuilder.enable(com.fasterxml.jackson.core.JsonFactory.Feature.INTERN_FIELD_NAMES);
+		ctxJsonFactoryBuilder.enable(
+				com.fasterxml.jackson.core.JsonFactory.Feature.USE_THREAD_LOCAL_FOR_BUFFER_RECYCLING);
+
+		// Re-initialize the JSON OutputMapper for the OpenAPI context, based on the updated settings.
+		ctx.setOutputJsonMapper(ctxJsonObjectMapper.copyWith(ctxJsonFactoryBuilder.build()));
 
 		final var content =
 				ctx.getOutputJsonMapper().writer(new DefaultPrettyPrinter()).writeValueAsString(openAPI);
@@ -52,12 +93,12 @@ public class ExamplesGenerator {
 		parseOptions.setResolveFully(true);
 
 		final var parseResult = new OpenAPIV3Parser().readContents(content, null, parseOptions);
-		final var openAPITest = parseResult.getOpenAPI();
+		final var openAPIWithResolvedRefs = parseResult.getOpenAPI();
 
 		final var openAPIschemas =
 				ctx.getOutputJsonMapper()
 						.writer(new DefaultPrettyPrinter())
-						.writeValueAsString(openAPITest.getComponents().getSchemas());
+						.writeValueAsString(openAPIWithResolvedRefs.getComponents().getSchemas());
 
 		final var objMapper = new ObjectMapper();
 		try {
@@ -93,114 +134,117 @@ public class ExamplesGenerator {
 	private static Map<String, Object> iterateJsonNode(JsonNode node, RequestType requestType) {
 		final var newmap = new HashMap<String, Object>();
 
-		final var fields = node.fields();
+		final var nodeProperties = node.properties();
+		nodeProperties.forEach(
+				(entry) -> {
+					final var key = entry.getKey();
+					final var value = entry.getValue();
 
-		while (fields.hasNext()) {
-			final var field = fields.next();
-			final var key = field.getKey();
-			final var value = field.getValue();
+					if (key != null) {
+						if (value == null) {
+							newmap.put(key, null);
+						} else {
+							final var propertiesNode = value.get("properties");
 
-			if (key != null) {
-				if (value == null) {
-					newmap.put(key, null);
-				} else {
-					final var propertiesNode = value.get("properties");
+							if (propertiesNode == null) {
+								final var readOnlyNode = value.get("readOnly");
+								final var writeOnlyNode = value.get("writeOnly");
 
-					if (propertiesNode == null) {
-						final var readOnlyNode = value.get("readOnly");
-						final var writeOnlyNode = value.get("writeOnly");
+								final var isAllowedForReadOnly =
+										(writeOnlyNode == null ? true : !Boolean.parseBoolean(writeOnlyNode.asText()))
+												&& (readOnlyNode == null
+														? true
+														: Boolean.parseBoolean(readOnlyNode.asText()));
+								final var isAllowedForWriteOnly =
+										(readOnlyNode == null ? true : !Boolean.parseBoolean(readOnlyNode.asText()))
+												&& (writeOnlyNode == null
+														? true
+														: Boolean.parseBoolean(writeOnlyNode.asText()));
 
-						final var isAllowedForReadOnly =
-								(writeOnlyNode == null ? true : !Boolean.parseBoolean(writeOnlyNode.asText()))
-										&& (readOnlyNode == null ? true : Boolean.parseBoolean(readOnlyNode.asText()));
-						final var isAllowedForWriteOnly =
-								(readOnlyNode == null ? true : !Boolean.parseBoolean(readOnlyNode.asText()))
-										&& (writeOnlyNode == null
-												? true
-												: Boolean.parseBoolean(writeOnlyNode.asText()));
-
-						if (requestType == null
-								|| (requestType == RequestType.READ && isAllowedForReadOnly)
-								|| (requestType == RequestType.WRITE && isAllowedForWriteOnly)) {
-							final var defaultNode = value.get("default");
-							if (defaultNode == null) {
-								final var exampleNode = value.get("example");
-								if (exampleNode == null) {
-									final var enumNode = value.get("enum");
-									if (enumNode == null) {
-										final var typeNode = value.get("type");
-										if (typeNode == null) {
-											// If no type, treat as a default string.
-											// This should never happen!?
-											newmap.put(key, null);
-										} else {
-											if ("array".equals(typeNode.asText())) {
-												final var itemsNode = value.get("items");
-												if (itemsNode == null) {
+								if (requestType == null
+										|| (requestType == RequestType.READ && isAllowedForReadOnly)
+										|| (requestType == RequestType.WRITE && isAllowedForWriteOnly)) {
+									final var defaultNode = value.get("default");
+									if (defaultNode == null) {
+										final var exampleNode = value.get("example");
+										if (exampleNode == null) {
+											final var enumNode = value.get("enum");
+											if (enumNode == null) {
+												final var typeNode = value.get("type");
+												if (typeNode == null) {
+													// If no type, treat as a default string.
+													// This should never happen!?
 													newmap.put(key, null);
 												} else {
-													final var minItemsNode = value.get("minItems");
-													final var maxItemsNode = value.get("maxItems");
-													final var arrayNode = new ObjectMapper().createArrayNode();
-													final var arrayNodePOJOItem =
-															ExamplesGenerator.getObjectFromTypeAndFormat(itemsNode);
-													if (minItemsNode == null && maxItemsNode == null) {
-														arrayNode.addPOJO(arrayNodePOJOItem);
-													} else if (maxItemsNode != null) {
-														final var maxItemsNumber = Integer.parseInt(maxItemsNode.asText());
-														for (int i = 0; i < maxItemsNumber; i++) {
-															arrayNode.addPOJO(arrayNodePOJOItem);
+													if ("array".equals(typeNode.asText())) {
+														final var itemsNode = value.get("items");
+														if (itemsNode == null) {
+															newmap.put(key, null);
+														} else {
+															final var minItemsNode = value.get("minItems");
+															final var maxItemsNode = value.get("maxItems");
+															final var arrayNode = new ObjectMapper().createArrayNode();
+															final var arrayNodePOJOItem =
+																	ExamplesGenerator.getObjectFromTypeAndFormat(itemsNode);
+															if (minItemsNode == null && maxItemsNode == null) {
+																arrayNode.addPOJO(arrayNodePOJOItem);
+															} else if (maxItemsNode != null) {
+																final var maxItemsNumber = Integer.parseInt(maxItemsNode.asText());
+																for (int i = 0; i < maxItemsNumber; i++) {
+																	arrayNode.addPOJO(arrayNodePOJOItem);
+																}
+															} else {
+																final var minItemsNumber = Integer.parseInt(minItemsNode.asText());
+																for (int i = 0; i < minItemsNumber; i++) {
+																	arrayNode.addPOJO(arrayNodePOJOItem);
+																}
+															}
+															newmap.put(key, arrayNode);
 														}
 													} else {
-														final var minItemsNumber = Integer.parseInt(minItemsNode.asText());
-														for (int i = 0; i < minItemsNumber; i++) {
-															arrayNode.addPOJO(arrayNodePOJOItem);
-														}
+														newmap.put(key, ExamplesGenerator.getObjectFromTypeAndFormat(value));
 													}
-													newmap.put(key, arrayNode);
 												}
 											} else {
-												newmap.put(key, ExamplesGenerator.getObjectFromTypeAndFormat(value));
+												// If there is an enum list, it should always have at least one value.
+												// This is a safety check to avoid problems.
+												if (enumNode.size() > 0) {
+													newmap.put(key, enumNode.get(0));
+												} else {
+													newmap.put(key, String.valueOf(""));
+												}
 											}
+										} else {
+											newmap.put(key, exampleNode);
 										}
 									} else {
-										// If there is an enum list, it should always have at least one value.
-										// This is a safety check to avoid problems.
-										if (enumNode.size() > 0) {
-											newmap.put(key, enumNode.get(0));
-										} else {
-											newmap.put(key, String.valueOf(""));
-										}
+										newmap.put(key, defaultNode);
 									}
-								} else {
-									newmap.put(key, exampleNode);
 								}
 							} else {
-								newmap.put(key, defaultNode);
+								final var readOnlyNode = value.get("readOnly");
+								final var writeOnlyNode = value.get("writeOnly");
+
+								final var isAllowedForReadOnly =
+										(writeOnlyNode == null ? true : !Boolean.parseBoolean(writeOnlyNode.asText()))
+												&& (readOnlyNode == null
+														? true
+														: Boolean.parseBoolean(readOnlyNode.asText()));
+								final var isAllowedForWriteOnly =
+										(readOnlyNode == null ? true : !Boolean.parseBoolean(readOnlyNode.asText()))
+												&& (writeOnlyNode == null
+														? true
+														: Boolean.parseBoolean(writeOnlyNode.asText()));
+
+								if (requestType == null
+										|| (requestType == RequestType.READ && isAllowedForReadOnly)
+										|| (requestType == RequestType.WRITE && isAllowedForWriteOnly)) {
+									newmap.put(key, ExamplesGenerator.iterateJsonNode(propertiesNode, requestType));
+								}
 							}
 						}
-					} else {
-						final var readOnlyNode = value.get("readOnly");
-						final var writeOnlyNode = value.get("writeOnly");
-
-						final var isAllowedForReadOnly =
-								(writeOnlyNode == null ? true : !Boolean.parseBoolean(writeOnlyNode.asText()))
-										&& (readOnlyNode == null ? true : Boolean.parseBoolean(readOnlyNode.asText()));
-						final var isAllowedForWriteOnly =
-								(readOnlyNode == null ? true : !Boolean.parseBoolean(readOnlyNode.asText()))
-										&& (writeOnlyNode == null
-												? true
-												: Boolean.parseBoolean(writeOnlyNode.asText()));
-
-						if (requestType == null
-								|| (requestType == RequestType.READ && isAllowedForReadOnly)
-								|| (requestType == RequestType.WRITE && isAllowedForWriteOnly)) {
-							newmap.put(key, ExamplesGenerator.iterateJsonNode(propertiesNode, requestType));
-						}
 					}
-				}
-			}
-		}
+				});
 
 		return new TreeMap<>(newmap);
 	}
@@ -366,14 +410,22 @@ public class ExamplesGenerator {
 		return mergedExamplesMap;
 	}
 
-	public static Paths generatePathExamples(Paths paths, Map<String, Example> examples) {
+	public static Paths generatePathExamples(
+			Paths paths, Map<String, Example> examples, YamlConfig configData) {
 		final var updatedPaths = (Paths) paths.clone();
 		updatedPaths.forEach(
 				(k, v) -> {
 					v.readOperationsMap()
 							.forEach(
 									(httpMethod, operation) -> {
-										if (HttpMethod.GET.equals(httpMethod)) {
+										if (HttpMethod.GET.equals(httpMethod)
+												|| (k.endsWith(
+																configData
+																		.getPathConfig()
+																		.getSearchPaths()
+																		.searchByPost
+																		.getPathSuffix())
+														&& HttpMethod.POST.equals(httpMethod))) {
 											final var responses = operation.getResponses();
 											if (responses != null) {
 												responses.forEach(
