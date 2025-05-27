@@ -88,12 +88,14 @@ public class OperationGenerator {
 				break;
 			case POST:
 				parameters.addAll(OperationGenerator.getPostParameters()); // Placeholder
-				operation.setRequestBody(OperationGenerator.getPostRequestBody(schema, schemaIRI));
+				operation.setRequestBody(
+						OperationGenerator.getPostRequestBody(schema, schemaIRI, cardinality));
 				apiResponses.putAll(OperationGenerator.getPostResponses(configData));
 				break;
 			case PUT:
 				parameters.addAll(OperationGenerator.getPutParameters()); // Placeholder
-				operation.setRequestBody(OperationGenerator.getPutRequestBody(schema, schemaIRI));
+				operation.setRequestBody(
+						OperationGenerator.getPutRequestBody(schema, schemaIRI, cardinality));
 				apiResponses.putAll(OperationGenerator.getPutResponses(configData));
 				break;
 			case SEARCH: // Currently - only supports searches via the POST operation (e.g. POST
@@ -393,37 +395,29 @@ public class OperationGenerator {
 							.schema(new StringSchema()));
 		}
 
-		switch (cardinality) {
-			case PLURAL:
-				{
-					parameters.add(
-							new QueryParameter()
-									.name("label")
-									.description("Filter by label")
-									.required(false)
-									.schema(new StringSchema()));
-					parameters.add(
-							new QueryParameter()
-									.name("page")
-									.description("Page number")
-									.required(false)
-									.schema(new IntegerSchema()._default(1)));
-					parameters.add(
-							new QueryParameter()
-									.name("per_page")
-									.description("Items per page")
-									.required(false)
-									.schema(
-											new IntegerSchema()
-													._default(100)
-													.maximum(BigDecimal.valueOf(200))
-													.minimum(BigDecimal.valueOf(1))));
-					break;
-				}
-			case SINGULAR:
-				{
-					break;
-				}
+		if (CardinalityType.PLURAL.equals(cardinality)) {
+			parameters.add(
+					new QueryParameter()
+							.name("label")
+							.description("Filter by label")
+							.required(false)
+							.schema(new StringSchema()));
+			parameters.add(
+					new QueryParameter()
+							.name("page")
+							.description("Page number")
+							.required(false)
+							.schema(new IntegerSchema()._default(1)));
+			parameters.add(
+					new QueryParameter()
+							.name("per_page")
+							.description("Items per page")
+							.required(false)
+							.schema(
+									new IntegerSchema()
+											._default(100)
+											.maximum(BigDecimal.valueOf(200))
+											.minimum(BigDecimal.valueOf(1))));
 		}
 
 		return parameters;
@@ -438,52 +432,45 @@ public class OperationGenerator {
 			Schema schema, CardinalityType cardinality, YamlConfig configData) {
 		final var apiResponses = new ApiResponses();
 
-		switch (cardinality) {
-			case PLURAL:
-				{
-					// Set response
-					ArraySchema arraySchema = new ArraySchema();
-					arraySchema.setItems(new Schema().$ref("#/components/schemas/" + schema.getName()));
+		if (CardinalityType.PLURAL.equals(cardinality)) {
+			// Set response
+			ArraySchema arraySchema = new ArraySchema();
+			arraySchema.setItems(new Schema().$ref("#/components/schemas/" + schema.getName()));
 
-					var mediaType = new MediaType().schema(arraySchema);
-					final var content = new Content().addMediaType("application/json", mediaType);
-					final var responseOk =
-							new ApiResponse()
-									.description(EnglishReasonPhraseCatalog.INSTANCE.getReason(200, Locale.ENGLISH))
-									.content(content);
-					apiResponses.addApiResponse("200", responseOk);
-					break;
-				}
-			case SINGULAR:
-				{
-					MediaType mediaType = null;
-					final var refSchema = new Schema().$ref("#/components/schemas/" + schema.getName());
-					if (GlobalFlags.getFlag(ConfigPropertyNames.GET_BY_KEY_RESPONSE_ARRAY_ENABLE)) {
-						final var oneOfSchema = new Schema();
-						oneOfSchema.addOneOfItem(new ArraySchema().items(refSchema));
-						oneOfSchema.addOneOfItem(
-								new ArraySchema().items(new StringSchema()).maxItems(0).example(new ArrayList<>()));
+			var mediaType = new MediaType().schema(arraySchema);
+			final var content = new Content().addMediaType("application/json", mediaType);
+			final var responseOk =
+					new ApiResponse()
+							.description(EnglishReasonPhraseCatalog.INSTANCE.getReason(200, Locale.ENGLISH))
+							.content(content);
+			apiResponses.addApiResponse("200", responseOk);
+		} else {
+			MediaType mediaType = null;
+			final var refSchema = new Schema().$ref("#/components/schemas/" + schema.getName());
+			if (GlobalFlags.getFlag(ConfigPropertyNames.GET_BY_KEY_RESPONSE_ARRAY_ENABLE)) {
+				final var oneOfSchema = new Schema();
+				oneOfSchema.addOneOfItem(new ArraySchema().items(refSchema));
+				oneOfSchema.addOneOfItem(
+						new ArraySchema().items(new StringSchema()).maxItems(0).example(new ArrayList<>()));
 
-						// When flag for "get by id response array", we're following non-RESTful standards.  An
-						// empty array may be returned, instead of a "not found" HTTP response.  Therefore,
-						// include an empty array as one of the response examples.
-						mediaType =
-								new MediaType()
-										.schema(oneOfSchema)
-										.addExamples("empty_array", new Example().value(List.of()));
-					} else {
-						mediaType = new MediaType().schema(refSchema);
-					}
-					// Set request
-					var schemaExample = new Example();
-					schemaExample.$ref(schema.get$ref());
-					final var responseOk =
-							new ApiResponse()
-									.description(EnglishReasonPhraseCatalog.INSTANCE.getReason(200, Locale.ENGLISH))
-									.content(new Content().addMediaType("application/json", mediaType));
-					apiResponses.addApiResponse("200", responseOk);
-					break;
-				}
+				// When flag for "get by id response array", we're following non-RESTful standards.  An
+				// empty array may be returned, instead of a "not found" HTTP response.  Therefore,
+				// include an empty array as one of the response examples.
+				mediaType =
+						new MediaType()
+								.schema(oneOfSchema)
+								.addExamples("empty_array", new Example().value(List.of()));
+			} else {
+				mediaType = new MediaType().schema(refSchema);
+			}
+			// Set request
+			var schemaExample = new Example();
+			schemaExample.$ref(schema.get$ref());
+			final var responseOk =
+					new ApiResponse()
+							.description(EnglishReasonPhraseCatalog.INSTANCE.getReason(200, Locale.ENGLISH))
+							.content(new Content().addMediaType("application/json", mediaType));
+			apiResponses.addApiResponse("200", responseOk);
 		}
 
 		if (GlobalFlags.getFlag(ConfigPropertyNames.USE_COMMON_DEFAULT_PATH_RESPONSES)) {
@@ -529,7 +516,8 @@ public class OperationGenerator {
 		return new HashSet<Parameter>();
 	}
 
-	private static RequestBody getPostRequestBody(Schema schema, IRI schemaIRI) {
+	private static RequestBody getPostRequestBody(
+			Schema schema, IRI schemaIRI, CardinalityType cardinality) {
 		String requestDescription =
 				"Information about the ["
 						+ schema.getName()
@@ -538,9 +526,13 @@ public class OperationGenerator {
 						+ ") to be created.";
 
 		// Set request
-		MediaType mediaType =
-				new MediaType().schema(new Schema().$ref("#/components/schemas/" + schema.getName()));
-		Content content = new Content().addMediaType("application/json", mediaType);
+		var requestBodySchema = new Schema().$ref("#/components/schemas/" + schema.getName());
+		if (CardinalityType.PLURAL.equals(cardinality)) {
+			requestBodySchema = new ArraySchema().items(requestBodySchema);
+		}
+
+		final var mediaType = new MediaType().schema(requestBodySchema);
+		final var content = new Content().addMediaType("application/json", mediaType);
 
 		final var requestBody = new RequestBody();
 		requestBody.setContent(content);
@@ -583,14 +575,19 @@ public class OperationGenerator {
 		return new HashSet<Parameter>();
 	}
 
-	private static RequestBody getPutRequestBody(Schema schema, IRI schemaIRI) {
+	private static RequestBody getPutRequestBody(
+			Schema schema, IRI schemaIRI, CardinalityType cardinality) {
 		String requestDescription =
 				"An old [" + schema.getName() + "](" + schemaIRI.getIRIString() + ") to be updated.";
 
 		// Set request
-		MediaType mediaType =
-				new MediaType().schema(new Schema().$ref("#/components/schemas/" + schema.getName()));
-		Content content = new Content().addMediaType("application/json", mediaType);
+		var requestBodySchema = new Schema().$ref("#/components/schemas/" + schema.getName());
+		if (CardinalityType.PLURAL.equals(cardinality)) {
+			requestBodySchema = new ArraySchema().items(requestBodySchema);
+		}
+
+		final var mediaType = new MediaType().schema(requestBodySchema);
+		final var content = new Content().addMediaType("application/json", mediaType);
 
 		final var requestBody = new RequestBody();
 		requestBody.setContent(content);
