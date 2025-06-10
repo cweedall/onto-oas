@@ -1,34 +1,43 @@
 package edu.isi.oba.config.ontology.annotations;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonRootName;
+import edu.isi.oba.config.ConfigPropertyNames;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
+@JsonRootName(ConfigPropertyNames.PROPERTY_ANNOTATIONS)
 public class PropertyAnnotationConfig {
-	private String read_only_flag_name;
-	private String write_only_flag_name;
-	private String example_value_name;
+	@JsonProperty(ConfigPropertyNames.READ_ONLY_FLAG_NAME)
+	private String readOnlyFlagName;
 
-	public String getRead_only_flag_name() {
-		return read_only_flag_name;
+	@JsonProperty(ConfigPropertyNames.WRITE_ONLY_FLAG_NAME)
+	private String writeOnlyFlagName;
+
+	@JsonProperty(ConfigPropertyNames.EXAMPLE_VALUE_NAME)
+	private String exampleValueName;
+
+	public String getReadOnlyFlagName() {
+		return readOnlyFlagName;
 	}
 
-	public void setRead_only_flag_name(String read_only_flag_name) {
-		this.read_only_flag_name = read_only_flag_name;
+	public void setReadOnlyFlagName(String readOnlyFlagName) {
+		this.readOnlyFlagName = readOnlyFlagName;
 	}
 
-	public String getWrite_only_flag_name() {
-		return write_only_flag_name;
+	public String getWriteOnlyFlagName() {
+		return writeOnlyFlagName;
 	}
 
-	public void setWrite_only_flag_name(String write_only_flag_name) {
-		this.write_only_flag_name = write_only_flag_name;
+	public void setWriteOnlyFlagName(String writeOnlyFlagName) {
+		this.writeOnlyFlagName = writeOnlyFlagName;
 	}
 
-	public String getExample_value_name() {
-		return example_value_name;
+	public String getExampleValueName() {
+		return exampleValueName;
 	}
 
-	public void setExample_value_name(String example_value_name) {
-		this.example_value_name = example_value_name;
+	public void setExampleValueName(String exampleValueName) {
+		this.exampleValueName = exampleValueName;
 	}
 }
