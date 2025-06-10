@@ -20,7 +20,7 @@ public final class MarkdownWriter {
 		if (annotationConfig != null) {
 			final var tableOfContentsList = new ArrayList<String>();
 
-			final var markdownFilename = annotationConfig.getMarkdown_generation_filename();
+			final var markdownFilename = annotationConfig.getMarkdownGenerationFilename();
 
 			if (markdownFilename != null) {
 				final var destinationDir =
@@ -39,19 +39,19 @@ public final class MarkdownWriter {
 				writer.write("");
 
 				final var markdownGenerationAnnotations =
-						annotationConfig.getMarkdown_generation_annotations();
+						annotationConfig.getMarkdownGenerationAnnotations();
 				if (markdownGenerationAnnotations != null && !markdownGenerationAnnotations.isEmpty()) {
 					markdownGenerationAnnotations.forEach(
 							(markdownGenerationAnnotationConfig) -> {
 								final var currentMarkdownAnnotationName =
-										markdownGenerationAnnotationConfig.getAnnotation_name();
+										markdownGenerationAnnotationConfig.getAnnotationName();
 								try {
 									// For each annotation type, output its mapping details.
 									final var annotationDetailsMap =
 											mapper.getFullMarkdownMappings().get(currentMarkdownAnnotationName);
 									if (annotationDetailsMap != null && !annotationDetailsMap.isEmpty()) {
 										final var markdownHeading =
-												markdownGenerationAnnotationConfig.getMarkdown_heading();
+												markdownGenerationAnnotationConfig.getMarkdownHeading();
 										if (markdownHeading == null || markdownHeading.isBlank()) {
 											writer.append("# " + currentMarkdownAnnotationName);
 										} else {
@@ -62,7 +62,7 @@ public final class MarkdownWriter {
 										writer.newLine();
 
 										final var markdownDescription =
-												markdownGenerationAnnotationConfig.getMarkdown_description();
+												markdownGenerationAnnotationConfig.getMarkdownDescription();
 										if (markdownDescription != null && !markdownDescription.isBlank()) {
 											writer.append(markdownDescription);
 											writer.newLine();

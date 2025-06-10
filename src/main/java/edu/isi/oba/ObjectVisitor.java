@@ -720,13 +720,13 @@ public class ObjectVisitor implements OWLObjectVisitor {
 										final var annotationPropertyName =
 												annotation.getProperty().getIRI().getShortForm();
 
-										final var propertyAnnotations = annotationConfig.getProperty_annotations();
+										final var propertyAnnotations = annotationConfig.getPropertyAnnotations();
 
 										if (propertyAnnotations != null) {
 											// If property contains the annotation property (name is specified in
 											// configuration
 											// file) indicating it is read-only, then set value on the schema.
-											final var readOnlyAnnotation = propertyAnnotations.getRead_only_flag_name();
+											final var readOnlyAnnotation = propertyAnnotations.getReadOnlyFlagName();
 											if (readOnlyAnnotation != null
 													&& !readOnlyAnnotation.isBlank()
 													&& readOnlyAnnotation.equals(annotationPropertyName)) {
@@ -736,7 +736,7 @@ public class ObjectVisitor implements OWLObjectVisitor {
 											// If property contains the annotation property (name is specified in
 											// configuration
 											// file) indicating it is write-only, then set value on the schema.
-											final var writeOnlyAnnotation = propertyAnnotations.getWrite_only_flag_name();
+											final var writeOnlyAnnotation = propertyAnnotations.getWriteOnlyFlagName();
 											if (writeOnlyAnnotation != null
 													&& !writeOnlyAnnotation.isBlank()
 													&& writeOnlyAnnotation.equals(annotationPropertyName)) {
@@ -747,8 +747,7 @@ public class ObjectVisitor implements OWLObjectVisitor {
 											// configuration file) indicating what the example value is for a data
 											// property,
 											// then set value on the schema.
-											final var exampleValueAnnotation =
-													propertyAnnotations.getExample_value_name();
+											final var exampleValueAnnotation = propertyAnnotations.getExampleValueName();
 											if (entity.isOWLDataProperty()
 													&& exampleValueAnnotation != null
 													&& !exampleValueAnnotation.isBlank()
@@ -786,14 +785,14 @@ public class ObjectVisitor implements OWLObjectVisitor {
 									final var annotationPropertyName =
 											annotation.getProperty().getIRI().getShortForm();
 
-									final var propertyAnnotations = annotationConfig.getProperty_annotations();
+									final var propertyAnnotations = annotationConfig.getPropertyAnnotations();
 
 									if (propertyAnnotations != null) {
 
 										// If property contains the annotation property (name is specified in
 										// configuration
 										// file) indicating it is read-only, then set value on the schema.
-										final var readOnlyAnnotation = propertyAnnotations.getRead_only_flag_name();
+										final var readOnlyAnnotation = propertyAnnotations.getReadOnlyFlagName();
 										if (readOnlyAnnotation != null
 												&& !readOnlyAnnotation.isBlank()
 												&& readOnlyAnnotation.equals(annotationPropertyName)) {
@@ -803,7 +802,7 @@ public class ObjectVisitor implements OWLObjectVisitor {
 										// If property contains the annotation property (name is specified in
 										// configuration
 										// file) indicating it is write-only, then set value on the schema.
-										final var writeOnlyAnnotation = propertyAnnotations.getWrite_only_flag_name();
+										final var writeOnlyAnnotation = propertyAnnotations.getWriteOnlyFlagName();
 										if (writeOnlyAnnotation != null
 												&& !writeOnlyAnnotation.isBlank()
 												&& writeOnlyAnnotation.equals(annotationPropertyName)) {
@@ -813,7 +812,7 @@ public class ObjectVisitor implements OWLObjectVisitor {
 										// If property contains the annotation property (name is specified in
 										// configuration file) indicating what the example value is for a data property,
 										// then set value on the schema.
-										final var exampleValueAnnotation = propertyAnnotations.getExample_value_name();
+										final var exampleValueAnnotation = propertyAnnotations.getExampleValueName();
 										if (exampleValueAnnotation != null
 												&& !exampleValueAnnotation.isBlank()
 												&& exampleValueAnnotation.equals(annotationPropertyName)) {
@@ -838,12 +837,12 @@ public class ObjectVisitor implements OWLObjectVisitor {
 		if (annotationConfig != null) {
 			final var annotationPropertyName = annotation.getProperty().getIRI().getShortForm();
 
-			final var markdownGenAnnotations = annotationConfig.getMarkdown_generation_annotations();
+			final var markdownGenAnnotations = annotationConfig.getMarkdownGenerationAnnotations();
 			if (markdownGenAnnotations != null) {
 				final var markdownGenAnnotationSet = markdownGenAnnotations;
 				if (markdownGenAnnotationSet != null && !markdownGenAnnotationSet.isEmpty()) {
 					for (final var entry : markdownGenAnnotationSet) {
-						final var markdownAnnotationName = entry.getAnnotation_name();
+						final var markdownAnnotationName = entry.getAnnotationName();
 
 						if (annotationPropertyName.equals(markdownAnnotationName)) {
 							final var markdownAnnotationLiteralValue = annotation.getValue().literalValue();
@@ -1166,12 +1165,12 @@ public class ObjectVisitor implements OWLObjectVisitor {
 
 			final var annotationConfig = this.configData.getAnnotationConfig();
 			if (annotationConfig != null) {
-				final var propertyAnnotations = annotationConfig.getProperty_annotations();
+				final var propertyAnnotations = annotationConfig.getPropertyAnnotations();
 
 				if (propertyAnnotations != null) {
 					// If property contains the annotation property (name is specified in configuration file)
 					// indicating it is read-only, then set value on the schema.
-					final var readOnlyAnnotation = propertyAnnotations.getRead_only_flag_name();
+					final var readOnlyAnnotation = propertyAnnotations.getReadOnlyFlagName();
 					if (readOnlyAnnotation != null && !readOnlyAnnotation.isBlank()) {
 						if (EntitySearcher.getAnnotations(op, this.baseClassOntology)
 										.filter(
@@ -1186,7 +1185,7 @@ public class ObjectVisitor implements OWLObjectVisitor {
 
 					// If property contains the annotation property (name is specified in configuration file)
 					// indicating it is write-only, then set value on the schema.
-					final var writeOnlyAnnotation = propertyAnnotations.getWrite_only_flag_name();
+					final var writeOnlyAnnotation = propertyAnnotations.getWriteOnlyFlagName();
 					if (writeOnlyAnnotation != null && !writeOnlyAnnotation.isBlank()) {
 						if (EntitySearcher.getAnnotations(op, this.baseClassOntology)
 										.filter(
@@ -1539,13 +1538,13 @@ public class ObjectVisitor implements OWLObjectVisitor {
 
 										final var annotationConfig = this.configData.getAnnotationConfig();
 										if (annotationConfig != null) {
-											final var propertyAnnotations = annotationConfig.getProperty_annotations();
+											final var propertyAnnotations = annotationConfig.getPropertyAnnotations();
 
 											if (propertyAnnotations != null) {
 												// If property contains the annotation property (name is specified in
 												// configuration file) indicating it is read-only, then set value on the
 												// schema.
-												final var readOnlyAnnotation = propertyAnnotations.getRead_only_flag_name();
+												final var readOnlyAnnotation = propertyAnnotations.getReadOnlyFlagName();
 												if (readOnlyAnnotation != null && !readOnlyAnnotation.isBlank()) {
 													if (EntitySearcher.getAnnotations(dp, this.baseClassOntology)
 																	.filter(
@@ -1562,8 +1561,7 @@ public class ObjectVisitor implements OWLObjectVisitor {
 												// If property contains the annotation property (name is specified in
 												// configuration file) indicating it is write-only, then set value on the
 												// schema.
-												final var writeOnlyAnnotation =
-														propertyAnnotations.getWrite_only_flag_name();
+												final var writeOnlyAnnotation = propertyAnnotations.getWriteOnlyFlagName();
 												if (writeOnlyAnnotation != null && !writeOnlyAnnotation.isBlank()) {
 													if (EntitySearcher.getAnnotations(dp, this.baseClassOntology)
 																	.filter(
@@ -1582,7 +1580,7 @@ public class ObjectVisitor implements OWLObjectVisitor {
 												// property,
 												// then set value on the schema.
 												final var exampleValueAnnotation =
-														propertyAnnotations.getExample_value_name();
+														propertyAnnotations.getExampleValueName();
 												if (exampleValueAnnotation != null && !exampleValueAnnotation.isBlank()) {
 													for (final var annotation :
 															EntitySearcher.getAnnotations(dp, this.baseClassOntology)

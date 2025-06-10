@@ -1,14 +1,24 @@
 package edu.isi.oba.config.ontology.annotations;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonRootName;
+import edu.isi.oba.config.ConfigPropertyNames;
 import java.util.HashSet;
 import java.util.Set;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
+@JsonRootName(ConfigPropertyNames.ANNOTATION_CONFIG)
 public class AnnotationConfig {
-	public PropertyAnnotationConfig property_annotations;
-	private String markdown_generation_filename;
-	public Set<MarkdownAnnotationConfig> markdown_generation_annotations;
+	@JsonProperty(ConfigPropertyNames.PROPERTY_ANNOTATIONS)
+	private PropertyAnnotationConfig propertyAnnotations;
+
+	@JsonProperty(ConfigPropertyNames.MARKDOWN_GENERATION_FILENAME)
+	private String markdownGenerationFilename;
+
+	@JsonProperty(ConfigPropertyNames.MARKDOWN_GENERATION_ANNOTATIONS)
+	private Set<MarkdownAnnotationConfig> markdownGenerationAnnotations =
+			new HashSet<MarkdownAnnotationConfig>();
 
 	/**
 	 * Get the {@link PropertyAnnotationConfig} which may be null (because it doesn't exist in the
@@ -16,24 +26,24 @@ public class AnnotationConfig {
 	 *
 	 * @return a {@link PropertyAnnotationConfig}
 	 */
-	public PropertyAnnotationConfig getProperty_annotations() {
-		return this.property_annotations;
+	public PropertyAnnotationConfig getPropertyAnnotations() {
+		return this.propertyAnnotations;
 	}
 
-	public void setProperty_annotations(PropertyAnnotationConfig property_annotations) {
-		if (property_annotations == null) {
-			this.property_annotations = new PropertyAnnotationConfig();
+	public void setPropertyAnnotations(PropertyAnnotationConfig propertyAnnotations) {
+		if (propertyAnnotations == null) {
+			this.propertyAnnotations = new PropertyAnnotationConfig();
 		} else {
-			this.property_annotations = property_annotations;
+			this.propertyAnnotations = propertyAnnotations;
 		}
 	}
 
-	public String getMarkdown_generation_filename() {
-		return this.markdown_generation_filename;
+	public String getMarkdownGenerationFilename() {
+		return this.markdownGenerationFilename;
 	}
 
-	public void setMarkdown_generation_filename(String markdown_generation_filename) {
-		this.markdown_generation_filename = markdown_generation_filename;
+	public void setMarkdownGenerationFilename(String markdownGenerationFilename) {
+		this.markdownGenerationFilename = markdownGenerationFilename;
 	}
 
 	/**
@@ -41,16 +51,12 @@ public class AnnotationConfig {
 	 *
 	 * @return a {@link MarkdownAnnotationConfig}
 	 */
-	public Set<MarkdownAnnotationConfig> getMarkdown_generation_annotations() {
-		return this.markdown_generation_annotations;
+	public Set<MarkdownAnnotationConfig> getMarkdownGenerationAnnotations() {
+		return this.markdownGenerationAnnotations;
 	}
 
-	public void setMarkdown_generation_annotations(
-			Set<MarkdownAnnotationConfig> readme_generation_annotations) {
-		if (markdown_generation_annotations == null) {
-			this.markdown_generation_annotations = new HashSet<MarkdownAnnotationConfig>();
-		} else {
-			this.markdown_generation_annotations = readme_generation_annotations;
-		}
+	public void setMarkdownGenerationAnnotations(
+			Set<MarkdownAnnotationConfig> readmeGenerationAnnotations) {
+		this.markdownGenerationAnnotations = readmeGenerationAnnotations;
 	}
 }

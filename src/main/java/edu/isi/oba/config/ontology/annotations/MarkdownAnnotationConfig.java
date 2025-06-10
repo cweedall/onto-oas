@@ -1,34 +1,43 @@
 package edu.isi.oba.config.ontology.annotations;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonRootName;
+import edu.isi.oba.config.ConfigPropertyNames;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
+@JsonRootName(ConfigPropertyNames.MARKDOWN_GENERATION_ANNOTATIONS)
 public class MarkdownAnnotationConfig {
-	private String annotation_name;
-	private String markdown_heading;
-	private String markdown_description;
+	@JsonProperty(ConfigPropertyNames.ANNOTATION_NAME)
+	private String annotationName;
 
-	public String getAnnotation_name() {
-		return annotation_name;
+	@JsonProperty(ConfigPropertyNames.MARKDOWN_HEADING)
+	private String markdownHeading;
+
+	@JsonProperty(ConfigPropertyNames.MARKDOWN_DESCRIPTION)
+	private String markdownDescription;
+
+	public String getAnnotationName() {
+		return annotationName;
 	}
 
-	public void setAnnotation_name(String annotation_name) {
-		this.annotation_name = annotation_name;
+	public void setAnnotationName(String annotationName) {
+		this.annotationName = annotationName;
 	}
 
-	public String getMarkdown_heading() {
-		return markdown_heading;
+	public String getMarkdownHeading() {
+		return markdownHeading;
 	}
 
-	public void setMarkdown_heading(String markdown_heading) {
-		this.markdown_heading = markdown_heading;
+	public void setMarkdownHeading(String markdownHeading) {
+		this.markdownHeading = markdownHeading;
 	}
 
-	public String getMarkdown_description() {
-		return markdown_description;
+	public String getMarkdownDescription() {
+		return markdownDescription;
 	}
 
-	public void setMarkdown_description(String markdown_description) {
-		this.markdown_description = markdown_description;
+	public void setMarkdownDescription(String markdownDescription) {
+		this.markdownDescription = markdownDescription;
 	}
 }
