@@ -89,6 +89,7 @@ public class PathGenerator {
 			Schema schema, IRI schemaIRI, YamlConfig configData) {
 		final var suffixPathItemsMap = new HashMap<String, PathItem>();
 		final var pathConfig = configData.getPathConfig();
+		final var test = "";
 
 		// -----------------------------
 		// PLURAL records
