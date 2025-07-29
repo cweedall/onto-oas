@@ -1,6 +1,7 @@
 ontologies:
   #- http://purl.org/net/p-plan # Regularly unreachable...
-  - https://www.opmw.org/p-plan.owl
+  #- https://www.opmw.org/p-plan.owl # SSL server problems...
+  - https://vocab.linkeddata.es/p-plan/p-plan.owl
 name: p-plan
 output_dir: outputs
 
@@ -13,7 +14,8 @@ openapi:
   externalDocs:
     description: P-Plan
     #url: http://purl.org/net/p-plan
-    url: https://www.opmw.org/model/p-plan/
+    #url: https://www.opmw.org/model/p-plan/
+    url: https://lov.linkeddata.es/dataset/lov/vocabs/p-plan
 
 #not used for this example.
 endpoint:
