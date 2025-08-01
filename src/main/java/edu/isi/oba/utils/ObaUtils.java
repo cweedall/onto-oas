@@ -349,7 +349,7 @@ public class ObaUtils {
 			languageTag = "en";
 		}
 
-		var descriptionCount = 0;
+		long descriptionCount = 0;
 		if (entity instanceof OWLObjectProperty) {
 			for (final var description : ObaUtils.DESCRIPTION_PROPERTIES) {
 				descriptionCount +=
