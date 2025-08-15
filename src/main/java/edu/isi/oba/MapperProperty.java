@@ -78,6 +78,11 @@ public class MapperProperty {
 	 */
 	public static void setSchemaEnums(Schema schema, List<Object> enumValuesList) {
 		schema.setEnum(enumValuesList);
+
+		// Also add an example, if list is not empty
+		if (enumValuesList != null && !enumValuesList.isEmpty()) {
+			schema.setExample(enumValuesList.get(0));
+		}
 	}
 
 	/**
