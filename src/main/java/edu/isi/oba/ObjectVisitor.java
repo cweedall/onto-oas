@@ -1892,9 +1892,7 @@ public class ObjectVisitor implements OWLObjectVisitor {
 		final var currentPropertySchema =
 				this.getPropertySchemaForRestrictionVisit(this.currentlyProcessedPropertyName);
 
-		currentPropertySchema.setItems(
-				MapperObjectProperty.getComplexObjectComposedSchema(
-						ce, GlobalFlags.getFlag(ConfigPropertyNames.FOLLOW_REFERENCES)));
+		currentPropertySchema.setItems(MapperObjectProperty.getComplexObjectComposedSchema(ce));
 		MapperObjectProperty.setSchemaType(currentPropertySchema, "array");
 	}
 
@@ -1930,9 +1928,7 @@ public class ObjectVisitor implements OWLObjectVisitor {
 			ce.accept(this);
 		} else if (ce instanceof OWLObjectUnionOf || ce instanceof OWLObjectIntersectionOf) {
 			final var complexObjectRange =
-					MapperObjectProperty.getComplexObjectComposedSchema(
-							(OWLNaryBooleanClassExpression) ce,
-							GlobalFlags.getFlag(ConfigPropertyNames.FOLLOW_REFERENCES));
+					MapperObjectProperty.getComplexObjectComposedSchema((OWLNaryBooleanClassExpression) ce);
 
 			if (or instanceof OWLObjectSomeValuesFrom) {
 				MapperObjectProperty.addSomeValuesFromToObjectPropertySchema(
