@@ -17,6 +17,7 @@ import edu.isi.oba.config.ConfigPropertyNames;
 import edu.isi.oba.config.YamlConfig;
 import edu.isi.oba.config.flags.GlobalFlags;
 import edu.isi.oba.generators.ExamplesGenerator;
+import edu.isi.oba.utils.schema.SchemaRefUtils;
 import io.swagger.v3.jaxrs2.integration.JaxrsOpenApiContext;
 import io.swagger.v3.oas.integration.SwaggerConfiguration;
 import io.swagger.v3.oas.models.Components;
@@ -64,6 +65,13 @@ class Serializer {
 		openAPI.components(components);
 		final var examples = ExamplesGenerator.generateExamples(openAPI);
 		openAPI.getComponents().setExamples(examples);
+
+		if (!GlobalFlags.getFlag(ConfigPropertyNames.FOLLOW_REFERENCES)) {
+			openAPI
+					.getComponents()
+					.setSchemas(
+							SchemaRefUtils.getDereferencedSchemasParallel(openAPI.getComponents().getSchemas()));
+		}
 
 		// Remove existing Tags so that we make sure everything is in alphabetical order with
 		// the "tags" Set<Tag>.
