@@ -362,13 +362,13 @@ public class SchemaRefUtils {
 			refs.addAll(collectRefs(Collections.singletonList(schema)));
 
 			if (schema.getAllOf() != null) {
-				refs.addAll(collectRefs(new LinkedList<>(List.copyOf(schema.getAllOf()))));
+				refs.addAll(collectRefs(new LinkedList<>(schema.getAllOf())));
 			}
 			if (schema.getAnyOf() != null) {
-				refs.addAll(collectRefs(new LinkedList<>(List.copyOf(schema.getAnyOf()))));
+				refs.addAll(collectRefs(new LinkedList<>(schema.getAnyOf())));
 			}
 			if (schema.getOneOf() != null) {
-				refs.addAll(collectRefs(new LinkedList<>(List.copyOf(schema.getOneOf()))));
+				refs.addAll(collectRefs(new LinkedList<>(schema.getOneOf())));
 			}
 		}
 
