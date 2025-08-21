@@ -338,11 +338,12 @@ public class SchemaRefUtils {
 		return false;
 	}
 
-	private static Set<String> collectRefs(List<Schema<?>> schemas) throws NullPointerException {
+	private static Set<String> collectRefs(@SuppressWarnings("rawtypes") List<Schema> schemas)
+			throws NullPointerException {
 		final Set<String> refs = new HashSet<>();
 
 		if (schemas != null) {
-			for (Schema<?> s : schemas) {
+			for (final var s : schemas) {
 				if (s.get$ref() != null) {
 					refs.add(s.get$ref().replace("#/components/schemas/", ""));
 				}
