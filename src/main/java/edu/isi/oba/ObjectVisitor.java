@@ -606,17 +606,13 @@ public class ObjectVisitor implements OWLObjectVisitor {
 																.asOWLDataProperty();
 										this.currentlyProcessedPropertyName = property.getIRI().getShortForm();
 
-										if (GlobalFlags.getFlag(ConfigPropertyNames.FOLLOW_REFERENCES)) {
-											// Add any classes referenced by the restriction.
-											this.referencedClasses.addAll(ax.getSuperClass().getClassesInSignature());
-										}
+										// Add any classes referenced by the restriction.
+										this.referencedClasses.addAll(ax.getSuperClass().getClassesInSignature());
 									} else if (ax.getSuperClass() instanceof OWLBooleanClassExpression) {
 										if (ax.getSuperClass() instanceof OWLObjectComplementOf) {
 
-											if (GlobalFlags.getFlag(ConfigPropertyNames.FOLLOW_REFERENCES)) {
-												// Add the object complement reference class.
-												this.referencedClasses.addAll(ax.getSuperClass().getClassesInSignature());
-											}
+											// Add the object complement reference class.
+											this.referencedClasses.addAll(ax.getSuperClass().getClassesInSignature());
 
 											logger.info(
 													"\t"
@@ -1072,10 +1068,8 @@ public class ObjectVisitor implements OWLObjectVisitor {
 					objPropRange -> {
 						propertyRanges.add(this.getPrefixedSchemaName(objPropRange.asOWLClass()));
 
-						if (GlobalFlags.getFlag(ConfigPropertyNames.FOLLOW_REFERENCES)) {
-							// Add the range to the referenced class set.
-							this.referencedClasses.add(objPropRange.asOWLClass());
-						}
+						// Add the range to the referenced class set.
+						this.referencedClasses.add(objPropRange.asOWLClass());
 
 						if (EntitySearcher.getEquivalentClasses(
 												objPropRange.asOWLClass(), this.baseClassOntology)
@@ -1105,10 +1099,8 @@ public class ObjectVisitor implements OWLObjectVisitor {
 									this.enumProperties.add(propertyName);
 								}
 
-								if (GlobalFlags.getFlag(ConfigPropertyNames.FOLLOW_REFERENCES)) {
-									// Add the range to the referenced class set.
-									this.referencedClasses.add(objPropRangeAxiom.getRange().asOWLClass());
-								}
+								// Add the range to the referenced class set.
+								this.referencedClasses.add(objPropRangeAxiom.getRange().asOWLClass());
 							} else if (objPropRangeAxiom.getRange() instanceof OWLObjectUnionOf
 									|| objPropRangeAxiom.getRange() instanceof OWLObjectIntersectionOf
 									|| objPropRangeAxiom.getRange() instanceof OWLObjectOneOf
