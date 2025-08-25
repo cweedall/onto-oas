@@ -63,15 +63,20 @@ class Serializer {
 		final var schemas = mapper.getSchemas();
 		final var components = new Components().schemas(schemas);
 		openAPI.components(components);
-		final var examples = ExamplesGenerator.generateExamples(openAPI);
-		openAPI.getComponents().setExamples(examples);
 
+		// If we are removing references, call the utility to do so.  Then remove all schemas not
+		// explicitly allowed in the config file.
 		if (!GlobalFlags.getFlag(ConfigPropertyNames.FOLLOW_REFERENCES)) {
 			openAPI
 					.getComponents()
 					.setSchemas(
 							SchemaRefUtils.getDereferencedSchemasParallel(openAPI.getComponents().getSchemas()));
+
+			openAPI.getComponents().getSchemas().keySet().retainAll(configData.getAllowedClasses());
 		}
+
+		final var examples = ExamplesGenerator.generateExamples(openAPI);
+		openAPI.getComponents().setExamples(examples);
 
 		// Remove existing Tags so that we make sure everything is in alphabetical order with
 		// the "tags" Set<Tag>.
