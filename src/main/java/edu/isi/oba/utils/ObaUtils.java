@@ -221,6 +221,7 @@ public class ObaUtils {
 			ObjectMapper objectMapper = new ObjectMapper(new YAMLFactory());
 			objectMapper.findAndRegisterModules();
 			yamlConfig = objectMapper.readValue(new File(config_yaml), YamlConfig.class);
+			yamlConfig.processConfig();
 		} catch (FileNotFoundException e) {
 			System.err.println("Configuration file not found: " + config_yaml);
 			System.exit(1);
