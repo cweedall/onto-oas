@@ -6,6 +6,7 @@ import edu.isi.oba.config.ConfigPropertyNames;
 import edu.isi.oba.config.YamlConfig;
 import edu.isi.oba.config.flags.GlobalFlags;
 import edu.isi.oba.generators.PathGenerator;
+import edu.isi.oba.utils.schema.SchemaRefUtils;
 import io.swagger.v3.oas.models.Paths;
 import io.swagger.v3.oas.models.media.Schema;
 import io.swagger.v3.oas.models.media.StringSchema;
@@ -238,6 +239,15 @@ class Mapper {
 	 * @return a {@link Map> of short form name {@link String} keys and their {@link Schema} values
 	 */
 	public Map<String, Schema> getSchemas() {
+		// If we are removing references, call the utility to do so.  Then remove all schemas not
+		// explicitly allowed in the config file.
+		if (!GlobalFlags.getFlag(ConfigPropertyNames.FOLLOW_REFERENCES)) {
+			final var derefSchemas = SchemaRefUtils.getDereferencedSchemasParallel(this.schemas);
+			this.schemas.clear();
+			derefSchemas.keySet().retainAll(configData.getAllowedClasses());
+			this.schemas.putAll(derefSchemas);
+		}
+
 		return new TreeMap<>(this.schemas);
 	}
 

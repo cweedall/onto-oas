@@ -17,7 +17,6 @@ import edu.isi.oba.config.ConfigPropertyNames;
 import edu.isi.oba.config.YamlConfig;
 import edu.isi.oba.config.flags.GlobalFlags;
 import edu.isi.oba.generators.ExamplesGenerator;
-import edu.isi.oba.utils.schema.SchemaRefUtils;
 import io.swagger.v3.jaxrs2.integration.JaxrsOpenApiContext;
 import io.swagger.v3.oas.integration.SwaggerConfiguration;
 import io.swagger.v3.oas.models.Components;
@@ -63,18 +62,6 @@ class Serializer {
 		final var schemas = mapper.getSchemas();
 		final var components = new Components().schemas(schemas);
 		openAPI.components(components);
-
-		// If we are removing references, call the utility to do so.  Then remove all schemas not
-		// explicitly allowed in the config file.
-		if (!GlobalFlags.getFlag(ConfigPropertyNames.FOLLOW_REFERENCES)) {
-			openAPI
-					.getComponents()
-					.setSchemas(
-							SchemaRefUtils.getDereferencedSchemasParallel(openAPI.getComponents().getSchemas()));
-
-			openAPI.getComponents().getSchemas().keySet().retainAll(configData.getAllowedClasses());
-		}
-
 		final var examples = ExamplesGenerator.generateExamples(openAPI);
 		openAPI.getComponents().setExamples(examples);
 
