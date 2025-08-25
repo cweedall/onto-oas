@@ -1,56 +1,44 @@
 package edu.isi.oba.utils.schema;
 
+import edu.isi.oba.BaseTest;
 import io.swagger.v3.oas.models.media.Schema;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.Arrays;
+import java.util.List;
 
-public class SchemaUtilsTestHelper {
-
-	public static Schema<String> createStringEnumSchema() {
-		final Schema<String> schema = new Schema<>();
+public class SchemaUtilsTestHelper extends BaseTest {
+	public static Schema<String> createStringSchema(String title) {
+		Schema<String> schema = new Schema<>();
 		schema.setType("string");
-		schema.setEnum(java.util.List.of("A", "B", "C"));
+		schema.setTitle(title);
 		return schema;
 	}
 
-	public static Schema<Integer> createIntegerEnumSchema() {
-		final Schema<Integer> schema = new Schema<>();
+	public static Schema<Integer> createIntegerSchema(String title) {
+		Schema<Integer> schema = new Schema<>();
 		schema.setType("integer");
-		schema.setEnum(java.util.List.of(1, 2, 3));
+		schema.setTitle(title);
 		return schema;
 	}
 
-	public static Schema<?> createSchemaWithProperties() {
-		final Schema<Object> schema = new Schema<>();
+	public static Schema<Object> createObjectSchema(String title) {
+		Schema<Object> schema = new Schema<>();
 		schema.setType("object");
-		schema.addProperty("name", createStringEnumSchema());
-		schema.addProperty("age", createIntegerEnumSchema());
+		schema.setTitle(title);
 		return schema;
 	}
 
-	/**
-	 * Needs to support raw {@link Schema} because that's how {@code
-	 * io.swagger.v3.oas.models.OpenAPI.getComponents().getSchemas()} is returned.
-	 *
-	 * @return a {@link Map} of schema names and their {@link Schema}s
-	 */
-	@SuppressWarnings("rawtypes")
-	public static Map<String, Schema> createSchemaMapWithRefs() {
-		final Map<String, Schema> schemas = new HashMap<>();
+	public static Schema<Object> createRefSchema(String ref) {
+		Schema<Object> schema = new Schema<>();
+		schema.set$ref(ref);
+		return schema;
+	}
 
-		final Schema<Object> personSchema = new Schema<>();
-		personSchema.setType("object");
-		personSchema.addProperty("name", createStringEnumSchema());
-		personSchema.addProperty("address", new Schema<>().$ref("#/components/schemas/Address"));
-
-		final Schema<Object> addressSchema = new Schema<>();
-		addressSchema.setType("object");
-		addressSchema.addProperty("street", createStringEnumSchema());
-		addressSchema.addProperty("zipcode", createIntegerEnumSchema());
-
-		schemas.put("Person", personSchema);
-		schemas.put("Address", addressSchema);
-
-		return schemas;
+	public static Schema<Object> createEnumSchema(String title, Object... values) {
+		Schema<Object> schema = new Schema<>();
+		schema.setType("string");
+		schema.setTitle(title);
+		List<Object> enumValues = Arrays.asList(values);
+		schema.setEnum(enumValues);
+		return schema;
 	}
 }

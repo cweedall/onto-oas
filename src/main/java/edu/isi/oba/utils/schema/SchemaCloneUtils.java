@@ -24,6 +24,7 @@ public class SchemaCloneUtils {
 
 		final var enumValues = sourceSchema.getEnum();
 		if (enumValues == null || enumValues.isEmpty()) {
+			logger.log(Level.WARNING, "No enum values provided. Skipping enum application.");
 			return;
 		}
 
@@ -32,9 +33,7 @@ public class SchemaCloneUtils {
 			return;
 		}
 
-		final var handler =
-				SchemaEnumUtils.ENUM_TYPE_HANDLERS.getOrDefault(
-						firstValue.getClass(), SchemaEnumUtils.DEFAULT_ENUM_HANDLER);
+		final var handler = SchemaEnumUtils.getHandlerForClass(firstValue.getClass());
 		if (handler != null) {
 			handler.apply(targetSchema, enumValues);
 		} else {
@@ -47,6 +46,58 @@ public class SchemaCloneUtils {
 							+ enumValues);
 			targetSchema.setType("string");
 			SchemaEnumUtils.castAndCopy(targetSchema, enumValues, String.class);
+		}
+	}
+
+	public static void deepCopyListTypeValues(
+			final Schema<?> sourceSchema,
+			final Schema<?> targetSchema,
+			final ComplexSchemaListType listType) {
+		if (sourceSchema == null || targetSchema == null) {
+			return;
+		}
+
+		List<?> values = null;
+		switch (listType) {
+			case ALLOF_LIST:
+				values = sourceSchema.getAllOf();
+				break;
+			case ANYOF_LIST:
+				values = sourceSchema.getAnyOf();
+				break;
+			case ONEOF_LIST:
+				values = sourceSchema.getOneOf();
+				break;
+			default:
+				values = null;
+				return;
+		}
+
+		if (values == null || values.isEmpty()) {
+			logger.log(
+					Level.WARNING,
+					"No allOf/anyOf/oneOf values provided. Skipping complex schema list application.");
+			return;
+		}
+
+		final var firstValue = values.get(0);
+		if (firstValue == null) {
+			return;
+		}
+
+		final var handler = ComplexSchemaListUtils.getHandlerForClass(firstValue.getClass());
+		if (handler != null) {
+			handler.apply(targetSchema, values, listType);
+		} else {
+			// Fallback: treat as string or object, log a warning
+			logger.log(
+					Level.WARNING,
+					"No schema list handler found for type: "
+							+ firstValue.getClass().getName()
+							+ ". List of values: "
+							+ values);
+			targetSchema.setType("string");
+			ComplexSchemaListUtils.castAndCopy(targetSchema, values, String.class, listType);
 		}
 	}
 
@@ -158,25 +209,13 @@ public class SchemaCloneUtils {
 		// ... handle other complex nested objects like allOf, anyOf, oneOf, not, etc.
 
 		// Deep copy 'allOf' list if present
-		if (sourceSchema.getAllOf() != null) {
-			for (Schema<?> entry : sourceSchema.getAllOf()) {
-				targetSchema.addAllOfItem(clone(entry));
-			}
-		}
+		deepCopyListTypeValues(sourceSchema, targetSchema, ComplexSchemaListType.ALLOF_LIST);
 
 		// Deep copy 'anyOf' list if present
-		if (sourceSchema.getAnyOf() != null) {
-			for (Schema<?> entry : sourceSchema.getAnyOf()) {
-				targetSchema.addAnyOfItem(clone(entry));
-			}
-		}
+		deepCopyListTypeValues(sourceSchema, targetSchema, ComplexSchemaListType.ANYOF_LIST);
 
 		// Deep copy 'oneOf' list if present
-		if (sourceSchema.getOneOf() != null) {
-			for (Schema<?> entry : sourceSchema.getOneOf()) {
-				targetSchema.addOneOfItem(clone(entry));
-			}
-		}
+		deepCopyListTypeValues(sourceSchema, targetSchema, ComplexSchemaListType.ONEOF_LIST);
 
 		return targetSchema;
 	}

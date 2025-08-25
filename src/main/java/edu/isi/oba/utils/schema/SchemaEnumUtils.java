@@ -1,6 +1,7 @@
 package edu.isi.oba.utils.schema;
 
 import io.swagger.v3.oas.models.media.Schema;
+import java.lang.invoke.MethodHandles;
 import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.net.InetAddress;
@@ -10,17 +11,41 @@ import java.time.OffsetDateTime;
 import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.apache.jena.iri.IRI;
 
 public class SchemaEnumUtils {
 	/** Handler interface for applying a list of enum values to a {@link Schema} with generic type. */
+	@FunctionalInterface
 	public interface EnumTypeHandler<T> {
 		void apply(Schema<?> schema, List<?> values);
+	}
+
+	public static EnumTypeHandler<?> getHandlerForClass(Class<?> clazz) {
+		EnumTypeHandler<?> handler = ENUM_TYPE_HANDLERS.get(clazz);
+		if (handler == null) {
+			Logger.getLogger(MethodHandles.lookup().lookupClass().getSimpleName())
+					.log(
+							Level.WARNING,
+							"Falling back to DEFAULT_ENUM_HANDLER for unrecognized enum type: "
+									+ clazz.getName());
+		}
+		return handler != null ? handler : DEFAULT_ENUM_HANDLER;
 	}
 
 	private static <T> EnumTypeHandler<T> createHandler(
 			String type, String format, Class<?> castType) {
 		return (schema, values) -> {
+			Logger.getLogger(MethodHandles.lookup().lookupClass().getSimpleName())
+					.log(
+							Level.FINE,
+							"Applying enum values to schema. Type: "
+									+ type
+									+ ", Format: "
+									+ format
+									+ ", Value type: "
+									+ castType.getSimpleName());
 			schema.setType(type);
 			if (format != null) schema.setFormat(format);
 			castAndCopy(schema, values, castType);
@@ -28,14 +53,14 @@ public class SchemaEnumUtils {
 	}
 
 	/** Fallback handler for unknown enum types: treats values as strings */
-	public static final EnumTypeHandler<Object> DEFAULT_ENUM_HANDLER =
+	private static final EnumTypeHandler<Object> DEFAULT_ENUM_HANDLER =
 			(schema, values) -> {
 				schema.setType("string");
 				castAndCopy(schema, values, String.class);
 			};
 
 	/** Enum type handler for known enum types used with {@link Schema}. */
-	public static final Map<Class<?>, EnumTypeHandler<?>> ENUM_TYPE_HANDLERS =
+	private static final Map<Class<?>, EnumTypeHandler<?>> ENUM_TYPE_HANDLERS =
 			Map.ofEntries(
 					Map.entry(String.class, createHandler("string", null, String.class)),
 					Map.entry(Boolean.class, createHandler("boolean", null, Boolean.class)),
@@ -80,8 +105,29 @@ public class SchemaEnumUtils {
 	 */
 	@SuppressWarnings("unchecked")
 	public static <T> void castAndCopy(Schema<?> schema, List<?> values, Class<T> type) {
-		Schema<T> castedSchema = (Schema<T>) schema;
-		List<T> castedValues = (List<T>) values;
-		deepCopyEnumValues(castedSchema, castedValues, type);
+
+		if (values == null || values.isEmpty()) {
+			Logger.getLogger(MethodHandles.lookup().lookupClass().getSimpleName())
+					.log(Level.WARNING, "No enum values provided. Skipping enum application.");
+			return;
+		}
+
+		for (Object value : values) {
+			if (value != null && !type.isInstance(value)) {
+				Logger.getLogger(MethodHandles.lookup().lookupClass().getSimpleName())
+						.log(
+								Level.WARNING,
+								"Enum value '" + value + "' is not of expected type: " + type.getName());
+			}
+		}
+
+		try {
+			Schema<T> castedSchema = (Schema<T>) schema;
+			List<T> castedValues = (List<T>) values;
+			deepCopyEnumValues(castedSchema, castedValues, type);
+		} catch (ClassCastException e) {
+			Logger.getLogger(MethodHandles.lookup().lookupClass().getSimpleName())
+					.log(Level.SEVERE, "Failed to cast schema or values to type: " + type.getName(), e);
+		}
 	}
 }

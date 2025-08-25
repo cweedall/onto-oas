@@ -338,7 +338,8 @@ public class SchemaRefUtils {
 		return false;
 	}
 
-	private static Set<String> collectRefs(List<Schema<?>> schemas) throws NullPointerException {
+	private static Set<String> collectRefs(@SuppressWarnings("rawtypes") List<Schema> schemas)
+			throws NullPointerException {
 		final Set<String> refs = new HashSet<>();
 
 		if (schemas != null) {
@@ -362,13 +363,13 @@ public class SchemaRefUtils {
 			refs.addAll(collectRefs(Collections.singletonList(schema)));
 
 			if (schema.getAllOf() != null) {
-				refs.addAll(collectRefs(new LinkedList<>(schema.getAllOf())));
+				refs.addAll(collectRefs(schema.getAllOf()));
 			}
 			if (schema.getAnyOf() != null) {
-				refs.addAll(collectRefs(new LinkedList<>(schema.getAnyOf())));
+				refs.addAll(collectRefs(schema.getAnyOf()));
 			}
 			if (schema.getOneOf() != null) {
-				refs.addAll(collectRefs(new LinkedList<>(schema.getOneOf())));
+				refs.addAll(collectRefs(schema.getOneOf()));
 			}
 		}
 

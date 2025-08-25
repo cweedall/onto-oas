@@ -5,9 +5,13 @@ import org.junit.platform.suite.api.Suite;
 
 @Suite
 @SelectClasses({
-	SchemaEnumUtilsTest.class,
-	SchemaSortUtilsTest.class,
+	ComplexSchemaListTypeTest.class,
+	ComplexSchemaListUtilsTest.class,
 	SchemaCloneUtilsTest.class,
-	SchemaRefUtilsTest.class
+	SchemaEnumUtilsTest.class,
+	SchemaFormatTypeTest.class,
+	SchemaRefUtilsTest.class,
+	SchemaSortUtilsTest.class,
+	SchemaTypeTest.class
 })
 public class SchemaUtilsTestSuite {}
