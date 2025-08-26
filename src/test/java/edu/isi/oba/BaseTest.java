@@ -25,7 +25,8 @@ public abstract class BaseTest {
 			e.printStackTrace();
 		}
 
-		edu.isi.oba.Oba.logger.setLevel(Level.FINE);
+		// We don't need all the fine-grained logging each time we build and run unit tests.
+		edu.isi.oba.Oba.logger.setLevel(Level.SEVERE);
 		edu.isi.oba.Oba.logger.addHandler(new ConsoleHandler());
 	}
 }
