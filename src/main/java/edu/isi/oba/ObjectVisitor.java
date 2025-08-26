@@ -6,6 +6,7 @@ import edu.isi.oba.config.ConfigPropertyNames;
 import edu.isi.oba.config.YamlConfig;
 import edu.isi.oba.config.flags.GlobalFlags;
 import edu.isi.oba.utils.ObaUtils;
+import edu.isi.oba.utils.exithandler.FatalErrorHandler;
 import io.swagger.v3.oas.models.media.ArraySchema;
 import io.swagger.v3.oas.models.media.ObjectSchema;
 import io.swagger.v3.oas.models.media.Schema;
@@ -133,13 +134,12 @@ public class ObjectVisitor implements OWLObjectVisitor {
 
 			// Basic error checking to verify ontology is valid and class exists within it.
 			if (this.baseClassOntology == null) {
-				logger.severe("Ontology was set to null when creating ObjectVisitor.  Unable to proceed.");
-				System.exit(1);
+				FatalErrorHandler.fatal(
+						"Ontology was set to null when creating ObjectVisitor.  Unable to proceed.");
 			} else if (!this.baseClassOntology.containsClassInSignature(this.baseClass.getIRI())) {
-				logger.severe(
+				FatalErrorHandler.fatal(
 						"Ontology used when creating ObjectVisitor does not contain the class you are"
 								+ " attempting to visit.  Unable to proceed.");
-				System.exit(1);
 			}
 
 			this.reasoner = this.reasonerFactory.createReasoner(this.baseClassOntology);
@@ -180,8 +180,8 @@ public class ObjectVisitor implements OWLObjectVisitor {
 				}
 			}
 		} else {
-			logger.severe("Ontology has an invalid or null prefix document format.  Unable to proceed.");
-			System.exit(1);
+			FatalErrorHandler.fatal(
+					"Ontology has an invalid or null prefix document format.  Unable to proceed.");
 		}
 
 		return prefixedSchemaName;

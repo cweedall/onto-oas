@@ -1,14 +1,25 @@
 package edu.isi.oba;
 
+import edu.isi.oba.utils.exithandler.FatalErrorHandler;
 import java.io.IOException;
 import java.util.logging.ConsoleHandler;
 import java.util.logging.Level;
 import java.util.logging.LogManager;
 import java.util.logging.Logger;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.TestInstance;
 
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public abstract class BaseTest {
 	protected static Logger logger;
+
+	@BeforeAll
+	public void globalSetup() {
+		FatalErrorHandler.setExitHandler(
+				status -> {
+					throw new RuntimeException("Intercepted System.exit(" + status + ")");
+				});
+	}
 
 	/**
 	 * This method allows you to configure the logger variable that is required to print several

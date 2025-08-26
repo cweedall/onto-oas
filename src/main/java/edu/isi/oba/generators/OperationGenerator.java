@@ -6,6 +6,7 @@ import edu.isi.oba.config.flags.GlobalFlags;
 import edu.isi.oba.config.paths.OperationType;
 import edu.isi.oba.config.paths.PathKeyType;
 import edu.isi.oba.utils.StringUtils;
+import edu.isi.oba.utils.exithandler.FatalErrorHandler;
 import io.swagger.models.Method;
 import io.swagger.v3.oas.models.Operation;
 import io.swagger.v3.oas.models.examples.Example;
@@ -646,9 +647,8 @@ public class OperationGenerator {
 		final var searchByPost = configData.getPathConfig().getSearchPaths().searchByPost;
 
 		if (searchByPost.getSearchProperties().size() != searchByPost.getSearchPropertyTypes().size()) {
-			System.out.println(
+			FatalErrorHandler.fatal(
 					"Search by POST properties and property types do not contain the same number of items.");
-			System.exit(1);
 		}
 
 		final var searchPropertiesIterator = searchByPost.getSearchProperties().iterator();

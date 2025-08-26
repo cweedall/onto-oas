@@ -6,6 +6,7 @@ import edu.isi.oba.config.ConfigPropertyNames;
 import edu.isi.oba.config.YamlConfig;
 import edu.isi.oba.config.flags.GlobalFlags;
 import edu.isi.oba.generators.PathGenerator;
+import edu.isi.oba.utils.exithandler.FatalErrorHandler;
 import edu.isi.oba.utils.schema.SchemaRefUtils;
 import io.swagger.v3.oas.models.Paths;
 import io.swagger.v3.oas.models.media.Schema;
@@ -102,8 +103,7 @@ class Mapper {
 		for (OWLOntology ontology : this.configData.getOwlOntologies()) {
 			final var format = ontology.getFormat();
 			if (format == null) {
-				logger.severe("No ontology format found.  Unable to proceed.");
-				System.exit(1);
+				FatalErrorHandler.fatal("No ontology format found.  Unable to proceed.");
 			} else {
 				format
 						.asPrefixOWLDocumentFormat()
@@ -111,17 +111,16 @@ class Mapper {
 						.forEach(
 								(prefixName, prefix) -> {
 									if (prefixName == null) {
-										logger.severe(
+										FatalErrorHandler.fatal(
 												"Unable to proceed.  Prefix name for prefix:  \""
 														+ prefix
 														+ "\" is invalid.");
-										System.exit(1);
+
 									} else if (prefix == null) {
-										logger.severe(
+										FatalErrorHandler.fatal(
 												"Unable to proceed.  Prefix for prefix name:  \""
 														+ prefixName
 														+ "\" is invalid.");
-										System.exit(1);
 									}
 
 									// Make a copy of the original allowed classes.  Use it for comparison, until this

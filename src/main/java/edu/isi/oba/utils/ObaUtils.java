@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import edu.isi.oba.Oba;
 import edu.isi.oba.config.YamlConfig;
+import edu.isi.oba.utils.exithandler.FatalErrorHandler;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -106,9 +107,8 @@ public class ObaUtils {
 
 				// Check whether bad or malicious entry exists in zip file.  Log an exit, if so.
 				if (!newFile.toPath().normalize().startsWith(Path.of(outputFolder, File.separator))) {
-					logger.log(
-							Level.SEVERE, "Bad zip entry.  Possibly malicious.  Exiting to avoid 'Zip Slip'.");
-					System.exit(1);
+					FatalErrorHandler.fatal(
+							"Bad zip entry.  Possibly malicious.  Exiting to avoid 'Zip Slip'.");
 				}
 
 				if (ze.isDirectory()) {
@@ -207,9 +207,7 @@ public class ObaUtils {
 			cmd = parser.parse(options, args);
 			config_yaml = cmd.getOptionValue("config");
 		} catch (ParseException e) {
-			System.out.println(e.getMessage());
-			formatter.printHelp("utiConfiguration filelity-name", options);
-			System.exit(1);
+			FatalErrorHandler.fatal("utiConfiguration filelity-name", e);
 		}
 
 		return config_yaml;
@@ -223,11 +221,10 @@ public class ObaUtils {
 			yamlConfig = objectMapper.readValue(new File(config_yaml), YamlConfig.class);
 			yamlConfig.processConfig();
 		} catch (FileNotFoundException e) {
-			System.err.println("Configuration file not found: " + config_yaml);
-			System.exit(1);
+			FatalErrorHandler.fatal("Configuration file not found: " + config_yaml);
 		} catch (Exception e) {
 			System.err.println(e.getMessage());
-			System.exit(1);
+			FatalErrorHandler.fatal(e.getMessage());
 		}
 
 		return yamlConfig;

@@ -9,6 +9,7 @@ import edu.isi.oba.config.flags.GlobalFlags;
 import edu.isi.oba.config.ontology.annotations.AnnotationConfig;
 import edu.isi.oba.config.paths.PathConfig;
 import edu.isi.oba.utils.ObaUtils;
+import edu.isi.oba.utils.exithandler.FatalErrorHandler;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.PathItem;
 import java.io.File;
@@ -263,16 +264,14 @@ public class YamlConfig {
 						(ontology) -> {
 							final var reasoner = reasonerFactory.createReasoner(ontology);
 							if (!reasoner.isConsistent()) {
-								logger.severe(
+								FatalErrorHandler.fatal(
 										"Please fix errors with inconsistent ontology.  IRI:  "
 												+ ontology.getOntologyID());
-								System.exit(1);
 							}
 
 							final var format = ontology.getFormat();
 							if (format == null) {
-								logger.severe("No ontology format found.  Unable to proceed.");
-								System.exit(1);
+								FatalErrorHandler.fatal("No ontology format found.  Unable to proceed.");
 							}
 						});
 	}
@@ -332,9 +331,8 @@ public class YamlConfig {
 	 */
 	private final void setClassesAllowedByYamlConfig() {
 		if (this.owlOntologies == null || this.owlOntologies.isEmpty()) {
-			logger.severe(
+			FatalErrorHandler.fatal(
 					"No ontologies specified in the YAML configuration file.  Nothing can be processed.");
-			System.exit(1);
 		} else {
 			final var allowedPathClassesByIRI = this.pathConfig.getPathClasses();
 
