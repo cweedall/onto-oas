@@ -6,7 +6,7 @@
     <packaging>jar</packaging>
     <groupId>edu.isi.oba</groupId>
     <artifactId>oba</artifactId>
-    <version>4.0.1</version>
+    <version>4.1.0</version>
     <name>core</name>
     <url>https://github.com/cweedall/OBA2</url>
 
@@ -170,6 +170,14 @@
             <groupId>jakarta.ws.rs</groupId>
             <artifactId>jakarta.ws.rs-api</artifactId>
             <version>4.0.0</version>
+        </dependency>
+
+        <!-- https://mvnrepository.com/artifact/org.junit.platform/junit-platform-suite-api -->
+        <dependency>
+            <groupId>org.junit.platform</groupId>
+            <artifactId>junit-platform-suite-api</artifactId>
+            <version>1.13.4</version>
+            <scope>test</scope>
         </dependency>
 
         <!-- https://mvnrepository.com/artifact/net.sourceforge.owlapi/owlapi-api -->

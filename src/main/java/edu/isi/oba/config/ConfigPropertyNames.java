@@ -17,6 +17,7 @@ public class ConfigPropertyNames {
 	// ---------------------------------------------------------
 	public static final String NAME = "name";
 	public static final String OUTPUT_DIR = "output_dir";
+	public static final String ONTOLOGIES = "ontologies";
 	public static final String GENERATE_JSON_FILE = "generate_json_file";
 	public static final String VALIDATE_GENERATED_OPENAPI_FILE = "validate_generated_openapi_file";
 

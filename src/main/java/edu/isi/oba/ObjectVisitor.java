@@ -6,6 +6,7 @@ import edu.isi.oba.config.ConfigPropertyNames;
 import edu.isi.oba.config.YamlConfig;
 import edu.isi.oba.config.flags.GlobalFlags;
 import edu.isi.oba.utils.ObaUtils;
+import edu.isi.oba.utils.exithandler.FatalErrorHandler;
 import io.swagger.v3.oas.models.media.ArraySchema;
 import io.swagger.v3.oas.models.media.ObjectSchema;
 import io.swagger.v3.oas.models.media.Schema;
@@ -133,13 +134,12 @@ public class ObjectVisitor implements OWLObjectVisitor {
 
 			// Basic error checking to verify ontology is valid and class exists within it.
 			if (this.baseClassOntology == null) {
-				logger.severe("Ontology was set to null when creating ObjectVisitor.  Unable to proceed.");
-				System.exit(1);
+				FatalErrorHandler.fatal(
+						"Ontology was set to null when creating ObjectVisitor.  Unable to proceed.");
 			} else if (!this.baseClassOntology.containsClassInSignature(this.baseClass.getIRI())) {
-				logger.severe(
+				FatalErrorHandler.fatal(
 						"Ontology used when creating ObjectVisitor does not contain the class you are"
 								+ " attempting to visit.  Unable to proceed.");
-				System.exit(1);
 			}
 
 			this.reasoner = this.reasonerFactory.createReasoner(this.baseClassOntology);
@@ -180,8 +180,8 @@ public class ObjectVisitor implements OWLObjectVisitor {
 				}
 			}
 		} else {
-			logger.severe("Ontology has an invalid or null prefix document format.  Unable to proceed.");
-			System.exit(1);
+			FatalErrorHandler.fatal(
+					"Ontology has an invalid or null prefix document format.  Unable to proceed.");
 		}
 
 		return prefixedSchemaName;
@@ -610,6 +610,7 @@ public class ObjectVisitor implements OWLObjectVisitor {
 										this.referencedClasses.addAll(ax.getSuperClass().getClassesInSignature());
 									} else if (ax.getSuperClass() instanceof OWLBooleanClassExpression) {
 										if (ax.getSuperClass() instanceof OWLObjectComplementOf) {
+
 											// Add the object complement reference class.
 											this.referencedClasses.addAll(ax.getSuperClass().getClassesInSignature());
 
@@ -1065,21 +1066,17 @@ public class ObjectVisitor implements OWLObjectVisitor {
 		if (objPropRanges != null) {
 			objPropRanges.forEach(
 					objPropRange -> {
-						if (GlobalFlags.getFlag(ConfigPropertyNames.FOLLOW_REFERENCES)) {
-							propertyRanges.add(this.getPrefixedSchemaName(objPropRange.asOWLClass()));
+						propertyRanges.add(this.getPrefixedSchemaName(objPropRange.asOWLClass()));
 
-							// Add the range to the referenced class set.
-							this.referencedClasses.add(objPropRange.asOWLClass());
+						// Add the range to the referenced class set.
+						this.referencedClasses.add(objPropRange.asOWLClass());
 
-							if (EntitySearcher.getEquivalentClasses(
-													objPropRange.asOWLClass(), this.baseClassOntology)
-											.count()
-									> 0) {
-								// Add the object property name and NOT the class name that it refers to.
-								this.enumProperties.add(propertyName);
-							}
-						} else {
-							propertyRanges.add(null);
+						if (EntitySearcher.getEquivalentClasses(
+												objPropRange.asOWLClass(), this.baseClassOntology)
+										.count()
+								> 0) {
+							// Add the object property name and NOT the class name that it refers to.
+							this.enumProperties.add(propertyName);
 						}
 					});
 		}
@@ -1091,23 +1088,19 @@ public class ObjectVisitor implements OWLObjectVisitor {
 				.forEach(
 						(objPropRangeAxiom) -> {
 							if (objPropRangeAxiom.getRange() instanceof OWLClass) {
-								if (GlobalFlags.getFlag(ConfigPropertyNames.FOLLOW_REFERENCES)) {
-									propertyRanges.add(
-											this.getPrefixedSchemaName(objPropRangeAxiom.getRange().asOWLClass()));
+								propertyRanges.add(
+										this.getPrefixedSchemaName(objPropRangeAxiom.getRange().asOWLClass()));
 
-									if (EntitySearcher.getEquivalentClasses(
-															objPropRangeAxiom.getRange().asOWLClass(), this.baseClassOntology)
-													.count()
-											> 0) {
-										// Add the object property name and NOT the class name that it refers to.
-										this.enumProperties.add(propertyName);
-									}
-
-									// Add the range to the referenced class set.
-									this.referencedClasses.add(objPropRangeAxiom.getRange().asOWLClass());
-								} else {
-									propertyRanges.add(null);
+								if (EntitySearcher.getEquivalentClasses(
+														objPropRangeAxiom.getRange().asOWLClass(), this.baseClassOntology)
+												.count()
+										> 0) {
+									// Add the object property name and NOT the class name that it refers to.
+									this.enumProperties.add(propertyName);
 								}
+
+								// Add the range to the referenced class set.
+								this.referencedClasses.add(objPropRangeAxiom.getRange().asOWLClass());
 							} else if (objPropRangeAxiom.getRange() instanceof OWLObjectUnionOf
 									|| objPropRangeAxiom.getRange() instanceof OWLObjectIntersectionOf
 									|| objPropRangeAxiom.getRange() instanceof OWLObjectOneOf
@@ -1900,9 +1893,7 @@ public class ObjectVisitor implements OWLObjectVisitor {
 		final var currentPropertySchema =
 				this.getPropertySchemaForRestrictionVisit(this.currentlyProcessedPropertyName);
 
-		currentPropertySchema.setItems(
-				MapperObjectProperty.getComplexObjectComposedSchema(
-						ce, GlobalFlags.getFlag(ConfigPropertyNames.FOLLOW_REFERENCES)));
+		currentPropertySchema.setItems(MapperObjectProperty.getComplexObjectComposedSchema(ce));
 		MapperObjectProperty.setSchemaType(currentPropertySchema, "array");
 	}
 
@@ -1938,9 +1929,7 @@ public class ObjectVisitor implements OWLObjectVisitor {
 			ce.accept(this);
 		} else if (ce instanceof OWLObjectUnionOf || ce instanceof OWLObjectIntersectionOf) {
 			final var complexObjectRange =
-					MapperObjectProperty.getComplexObjectComposedSchema(
-							(OWLNaryBooleanClassExpression) ce,
-							GlobalFlags.getFlag(ConfigPropertyNames.FOLLOW_REFERENCES));
+					MapperObjectProperty.getComplexObjectComposedSchema((OWLNaryBooleanClassExpression) ce);
 
 			if (or instanceof OWLObjectSomeValuesFrom) {
 				MapperObjectProperty.addSomeValuesFromToObjectPropertySchema(
@@ -1954,10 +1943,7 @@ public class ObjectVisitor implements OWLObjectVisitor {
 					(or instanceof OWLObjectCardinalityRestriction)
 							? ((OWLObjectCardinalityRestriction) or).getCardinality()
 							: null;
-			final var objRestrictionRange =
-					GlobalFlags.getFlag(ConfigPropertyNames.FOLLOW_REFERENCES)
-							? this.getPrefixedSchemaName(ce.asOWLClass())
-							: null;
+			final var objRestrictionRange = this.getPrefixedSchemaName(ce.asOWLClass());
 
 			// Update current property schema with the appropriate restriction range/value.
 			if (or instanceof OWLObjectSomeValuesFrom) {

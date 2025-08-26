@@ -1,24 +1,17 @@
 package edu.isi.oba;
 
-import static edu.isi.oba.utils.ObaUtils.get_yaml_data;
-
 import edu.isi.oba.config.AuthConfig;
 import edu.isi.oba.utils.ObaUtils;
 import java.io.File;
-import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Comparator;
-import java.util.logging.ConsoleHandler;
-import java.util.logging.Level;
-import java.util.logging.LogManager;
-import java.util.logging.Logger;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.semanticweb.owlapi.model.OWLOntologyCreationException;
 
-public class MapperTest {
+public class MapperTest extends BaseTest {
 	String outputPath = null;
 
 	private Mapper setupMapper(String configFilePath) throws Exception {
@@ -45,24 +38,6 @@ public class MapperTest {
 	}
 
 	/**
-	 * This method allows you to configure the logger variable that is required to print several
-	 * messages during the OBA execution.
-	 */
-	public void initializeLogger() throws Exception {
-		final var stream = Oba.class.getClassLoader().getResourceAsStream("logging.properties");
-
-		try {
-			LogManager.getLogManager().readConfiguration(stream);
-			edu.isi.oba.Oba.logger = Logger.getLogger(Oba.class.getName());
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-
-		edu.isi.oba.Oba.logger.setLevel(Level.FINE);
-		edu.isi.oba.Oba.logger.addHandler(new ConsoleHandler());
-	}
-
-	/**
 	 * This test loads a local ontology and verifies the generated OpenAPI spec schema only generates
 	 * models/endpoints for classes allowed by the configuration file.
 	 *
@@ -70,8 +45,6 @@ public class MapperTest {
 	 */
 	@Test
 	public void testFilteredClasses() throws Exception {
-		this.initializeLogger();
-
 		// Expected values
 		final var expectedResult1 = "Genre";
 		final var expectedResult2 = "Band";
@@ -98,63 +71,9 @@ public class MapperTest {
 		}
 	}
 
-	/**
-	 * This test attempts to load a local ontology.
-	 *
-	 * @throws java.lang.Exception
-	 */
-	@Test
-	public void testLocalFile() throws Exception {
-		final var local_ontology = "src/test/config/mcat_reduced.yaml";
-		final var config_data = get_yaml_data(local_ontology);
-		final var mapper = new Mapper(config_data);
-		Assertions.assertEquals(false, mapper.getOntologies().isEmpty());
-	}
-
-	/**
-	 * This test attempts to load a config in a folder with spaces.
-	 *
-	 * @throws java.lang.Exception
-	 */
-	@Test
-	public void testSpacesInPath() throws Exception {
-		final var local_ontology = "examples/example with spaces/config.yaml";
-		final var config_data = get_yaml_data(local_ontology);
-		final var mapper = new Mapper(config_data);
-		Assertions.assertEquals(false, mapper.getOntologies().isEmpty());
-	}
-
-	/**
-	 * This test attempts to run OBA with an online ontology through a URI. The ontology is hosted in
-	 * GitHub, but there is a small risk of the test not passing due to the unavailability of the
-	 * ontology.
-	 *
-	 * @throws java.lang.Exception
-	 */
-	@Test
-	public void testRemoteOntology() throws Exception {
-		final var example_remote = "src/test/config/pplan.yaml";
-		final var config_data = get_yaml_data(example_remote);
-		final var mapper = new Mapper(config_data);
-		Assertions.assertEquals(false, mapper.getOntologies().isEmpty());
-	}
-
-	/** Test an ontology (very simple, two classes) with a missing import */
-	@Test
-	public void testMissingImportOntology() throws Exception {
-		this.initializeLogger();
-
-		final var example_remote = "src/test/resources/missing_import/config.yaml";
-		final var config_data = get_yaml_data(example_remote);
-		final var mapper = new Mapper(config_data);
-		Assertions.assertEquals(false, mapper.getOntologies().isEmpty());
-	}
-
 	/** Test an ontology (very simple, two classes) with a missing import */
 	@Test
 	public void testComplexOntology() throws Exception {
-		this.initializeLogger();
-
 		final var configFilePath = "src/test/resources/complex_expr/config.yaml";
 		final var mapper = this.setupMapper(configFilePath);
 

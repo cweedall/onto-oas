@@ -82,6 +82,10 @@ public class MapperObjectProperty extends MapperProperty {
 
 		objectSchema.addEnumItemObject(enumItem);
 
+		if (objectSchema.getExample() == null && enumItem != null && !enumItem.isBlank()) {
+			objectSchema.setExample(enumItem);
+		}
+
 		// This has no effect currently.  The intention is to support YAML anchors in the future.
 		// However, the Jackson XML library which is being used for serialization does not currently
 		// support YAML anchors properly.
@@ -477,12 +481,9 @@ public class MapperObjectProperty extends MapperProperty {
 	 *
 	 * @param ce a {@link OWLNaryBooleanClassExpression} class expression (i.e. {@link
 	 *     OWLObjectUnionOf} or {@link OWLObjectIntersectionOf})
-	 * @param allowReferences a boolean flag indicating whether to use references (true) or not
-	 *     (false).
 	 * @return a {@link ComposedSchema} comprising an anyOf/allOf list of items.
 	 */
-	public static ComposedSchema getComplexObjectComposedSchema(
-			OWLNaryBooleanClassExpression ce, boolean allowReferences) {
+	public static ComposedSchema getComplexObjectComposedSchema(OWLNaryBooleanClassExpression ce) {
 		final var schema = new ComposedSchema();
 
 		final var isObjectUnion = ce instanceof OWLObjectUnionOf;
@@ -492,9 +493,7 @@ public class MapperObjectProperty extends MapperProperty {
 			if (e.isOWLClass()) {
 				final var objSchema = new ObjectSchema();
 
-				if (allowReferences) {
-					objSchema.set$ref(e.asOWLClass().getIRI().getShortForm());
-				}
+				objSchema.set$ref(e.asOWLClass().getIRI().getShortForm());
 
 				if (isObjectUnion) {
 					schema.addAnyOfItem(objSchema);
@@ -505,11 +504,11 @@ public class MapperObjectProperty extends MapperProperty {
 				if (isObjectUnion) {
 					schema.addAnyOfItem(
 							MapperObjectProperty.getComplexObjectComposedSchema(
-									(OWLNaryBooleanClassExpression) e, allowReferences));
+									(OWLNaryBooleanClassExpression) e));
 				} else {
 					schema.addAllOfItem(
 							MapperObjectProperty.getComplexObjectComposedSchema(
-									(OWLNaryBooleanClassExpression) e, allowReferences));
+									(OWLNaryBooleanClassExpression) e));
 				}
 			} else {
 				logger.severe("Need to investigate how to handle this OWLClassExpression:  " + e);

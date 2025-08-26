@@ -1,13 +1,12 @@
 package edu.isi.oba.config.paths;
 
-import static edu.isi.oba.Oba.logger;
-
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.annotation.JsonRootName;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.annotation.Nulls;
 import edu.isi.oba.config.ConfigPropertyNames;
+import edu.isi.oba.utils.exithandler.FatalErrorHandler;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
@@ -50,12 +49,11 @@ public class PathsForClassConfig {
 							.map(operation -> OperationType.valueOfLabel(operation))
 							.collect(Collectors.toSet());
 		} else {
-			logger.severe(
+			FatalErrorHandler.fatal(
 					"YAML config error:: Classes in `paths_for_classes` cannot contain the same"
 							+ " entry in `allow_operations` and `deny_operations`.  See class IRI: '"
 							+ this.classIRI
 							+ "'");
-			System.exit(1);
 		}
 	}
 
@@ -76,12 +74,11 @@ public class PathsForClassConfig {
 							.map(operation -> OperationType.valueOfLabel(operation))
 							.collect(Collectors.toSet());
 		} else {
-			logger.severe(
+			FatalErrorHandler.fatal(
 					"YAML config error:: Classes in `paths_for_classes` cannot contain the same"
 							+ " entry in `allow_operations` and `deny_operations`.  See class IRI: '"
 							+ this.classIRI
 							+ "'");
-			System.exit(1);
 		}
 	}
 

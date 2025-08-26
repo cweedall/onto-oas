@@ -5,6 +5,7 @@ import edu.isi.oba.config.FirebaseConfig;
 import edu.isi.oba.config.Provider;
 import edu.isi.oba.config.YamlConfig;
 import edu.isi.oba.utils.ObaUtils;
+import edu.isi.oba.utils.exithandler.FatalErrorHandler;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.PathItem;
 import java.io.File;
@@ -47,8 +48,8 @@ public class Oba {
 		try {
 			config_data = ObaUtils.get_yaml_data(config_yaml);
 		} catch (Exception e) {
-			logger.severe("Error parsing the configuration file. Please make sure it is valid \n " + e);
-			System.exit(1);
+			FatalErrorHandler.fatal(
+					"Error parsing the configuration file. Please make sure it is valid \n " + e);
 		}
 
 		String destination_dir = config_data.getOutputDir() + File.separator + config_data.getName();
@@ -58,8 +59,7 @@ public class Oba {
 
 			Provider provider = authConfig.getProvider_obj();
 			if (provider.equals(Provider.FIREBASE) && firebase_data.getKey() == null) {
-				logger.severe("You must set up the firebase key");
-				System.exit(1);
+				FatalErrorHandler.fatal("You must set up the firebase key");
 			}
 		} else {
 			config_data.setAuth(new AuthConfig());
@@ -83,9 +83,8 @@ public class Oba {
 			Oba.generate_openapi_spec(openapi_base, mapper, destination_dir, custom_paths, config_data);
 			logger.info("OBA finished successfully. Output can be found at: " + destination_dir);
 		} catch (Exception e) {
-			logger.severe("Error while creating the API specification: " + e.getLocalizedMessage());
-			e.printStackTrace();
-			System.exit(1);
+			FatalErrorHandler.fatal(
+					"Error while creating the API specification: " + e.getLocalizedMessage());
 		}
 	}
 
