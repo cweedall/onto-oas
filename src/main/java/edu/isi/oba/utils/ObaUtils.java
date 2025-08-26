@@ -105,8 +105,10 @@ public class ObaUtils {
 				String fileName = ze.getName();
 				File newFile = new File(outputFolder + File.separator + fileName);
 
-				// Check whether bad or malicious entry exists in zip file.  Log an exit, if so.
-				if (!newFile.toPath().normalize().startsWith(Path.of(outputFolder, File.separator))) {
+				// Check whether bad or malicious entry exists in zip file. Log an exit, if so.
+				File canonicalOutputDir = new File(outputFolder).getCanonicalFile();
+				File canonicalDestFile = newFile.getCanonicalFile();
+				if (!canonicalDestFile.getPath().startsWith(canonicalOutputDir.getPath() + File.separator)) {
 					FatalErrorHandler.fatal(
 							"Bad zip entry.  Possibly malicious.  Exiting to avoid 'Zip Slip'.");
 				}
