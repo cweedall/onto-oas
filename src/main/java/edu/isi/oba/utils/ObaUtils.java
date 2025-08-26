@@ -18,7 +18,6 @@ import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
@@ -105,10 +104,12 @@ public class ObaUtils {
 				String fileName = ze.getName();
 				File newFile = new File(outputFolder + File.separator + fileName);
 
-				// Check whether bad or malicious entry exists in zip file. Log an exit, if so.
+				// Check whether bad or malicious entry exists in zip file. Log and exit, if so.
 				File canonicalOutputDir = new File(outputFolder).getCanonicalFile();
 				File canonicalDestFile = newFile.getCanonicalFile();
-				if (!canonicalDestFile.getPath().startsWith(canonicalOutputDir.getPath() + File.separator)) {
+				if (!canonicalDestFile
+						.getPath()
+						.startsWith(canonicalOutputDir.getPath() + File.separator)) {
 					FatalErrorHandler.fatal(
 							"Bad zip entry.  Possibly malicious.  Exiting to avoid 'Zip Slip'.");
 				}
