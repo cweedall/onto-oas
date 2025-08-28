@@ -67,4 +67,9 @@ path_config:
 classes:
   - http://dbpedia.org/ontology/Genre
   - http://dbpedia.org/ontology/Band
+
+annotation_config:
+  include_labels: true
+  include_comments: false
+
 follow_references: false
