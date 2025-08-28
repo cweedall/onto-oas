@@ -22,6 +22,44 @@ public class ConfigPropertyNames {
 	public static final String VALIDATE_GENERATED_OPENAPI_FILE = "validate_generated_openapi_file";
 
 	// ---------------------------------------------------------
+	//  OpenAPI constants
+	// ---------------------------------------------------------
+	public static final String OPENAPI_OVERVIEW =
+			"openapi"; // TODO: This should be updated project-wide to be "openapi_overview"
+	public static final String EXTRA_CLASS_SCHEMAS =
+			"classes"; // TODO: This should be updated project-wide to be "extra_class_schemas"
+
+	// ---------------------------------------------------------
+	//  Relation configuration constants
+	// ---------------------------------------------------------
+	public static final String RELATIONS_CONFIG =
+			"relations"; // TODO: This should be updated project-wide to be "relations_config" (?)
+
+	// ---------------------------------------------------------
+	//  Custom Paths configuration constants
+	// ---------------------------------------------------------
+	public static final String CUSTOM_PATHS_CONFIG =
+			"custom_path"; // TODO: This should be updated project-wide to be "custom_path_config" (?)
+
+	// ---------------------------------------------------------
+	//  Firebase configuration constants
+	// ---------------------------------------------------------
+	public static final String FIREBASE_CONFIG =
+			"firebase"; // TODO: This should be updated project-wide to be "firebase_config"
+
+	// ---------------------------------------------------------
+	//  Authorization configuration constants
+	// ---------------------------------------------------------
+	public static final String AUTH_CONFIG =
+			"auth"; // TODO: This should be updated project-wide to be "auth_config"
+
+	// ---------------------------------------------------------
+	//  SPARQL endpoint constants
+	// ---------------------------------------------------------
+	public static final String ENDPOINT_CONFIG =
+			"endpoint"; // TODO: This should be updated project-wide to be "endpoint_config"
+
+	// ---------------------------------------------------------
 	//  Path/endpoint constants
 	// ---------------------------------------------------------
 	public static final String PATH_CONFIG = "path_config";

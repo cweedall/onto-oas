@@ -387,7 +387,7 @@ public class OperationGenerator {
 			CardinalityType cardinality, YamlConfig configData) {
 		final var parameters = new HashSet<Parameter>();
 		// Set parameters
-		if (configData.getAuth().getEnable()) {
+		if (configData.getAuth() != null && configData.getAuth().getEnable()) {
 			parameters.add(
 					new QueryParameter()
 							.name("username")

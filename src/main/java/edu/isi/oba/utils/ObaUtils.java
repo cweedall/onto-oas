@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import edu.isi.oba.Oba;
 import edu.isi.oba.config.YamlConfig;
+import edu.isi.oba.config.YamlConfigMixin;
 import edu.isi.oba.utils.exithandler.FatalErrorHandler;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -220,9 +221,15 @@ public class ObaUtils {
 		YamlConfig yamlConfig = null;
 		try {
 			ObjectMapper objectMapper = new ObjectMapper(new YAMLFactory());
+
+			// Register the mix-in to apply the custom deserialize
+			objectMapper.addMixIn(YamlConfig.class, YamlConfigMixin.class);
+
+			// Register other modules (e.g., JavaTimeModule, etc.)
 			objectMapper.findAndRegisterModules();
+
+			// Deserialize the YAML file
 			yamlConfig = objectMapper.readValue(new File(config_yaml), YamlConfig.class);
-			yamlConfig.processConfig();
 		} catch (FileNotFoundException e) {
 			FatalErrorHandler.fatal("Configuration file not found: " + config_yaml);
 		} catch (Exception e) {

@@ -174,7 +174,7 @@ class Mapper {
 			}
 		}
 
-		if (this.configData.getAuth().getEnable()) {
+		if (this.configData.getAuth() != null && this.configData.getAuth().getEnable()) {
 			this.addUserPath();
 		}
 	}

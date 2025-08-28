@@ -1,8 +1,5 @@
 package edu.isi.oba;
 
-import edu.isi.oba.config.AuthConfig;
-import edu.isi.oba.config.FirebaseConfig;
-import edu.isi.oba.config.Provider;
 import edu.isi.oba.config.YamlConfig;
 import edu.isi.oba.utils.ObaUtils;
 import edu.isi.oba.utils.exithandler.FatalErrorHandler;
@@ -13,7 +10,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.logging.ConsoleHandler;
 import java.util.logging.Level;
 import java.util.logging.LogManager;
@@ -53,18 +50,6 @@ public class Oba {
 		}
 
 		String destination_dir = config_data.getOutputDir() + File.separator + config_data.getName();
-		FirebaseConfig firebase_data = config_data.getFirebase();
-		AuthConfig authConfig = config_data.getAuth();
-		if (authConfig != null) {
-
-			Provider provider = authConfig.getProvider_obj();
-			if (provider.equals(Provider.FIREBASE) && firebase_data.getKey() == null) {
-				FatalErrorHandler.fatal("You must set up the firebase key");
-			}
-		} else {
-			config_data.setAuth(new AuthConfig());
-		}
-
 		try {
 			Mapper mapper = new Mapper(config_data);
 			mapper.createSchemas();
@@ -76,7 +61,7 @@ public class Oba {
 				e.printStackTrace();
 			}
 
-			LinkedHashMap<String, PathItem> custom_paths = config_data.getCustomPaths();
+			final var custom_paths = config_data.getCustomPaths();
 			OpenAPI openapi_base = config_data.getOpenapi();
 
 			// get schema and paths
@@ -92,7 +77,7 @@ public class Oba {
 			OpenAPI openapi_base,
 			Mapper mapper,
 			String dir,
-			LinkedHashMap<String, PathItem> custom_paths,
+			Map<String, PathItem> custom_paths,
 			YamlConfig configData)
 			throws Exception {
 		String destinationProjectDirectory = dir + File.separator;

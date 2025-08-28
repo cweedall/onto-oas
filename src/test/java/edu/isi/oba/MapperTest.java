@@ -1,6 +1,5 @@
 package edu.isi.oba;
 
-import edu.isi.oba.config.AuthConfig;
 import edu.isi.oba.utils.ObaUtils;
 import java.io.File;
 import java.nio.file.Files;
@@ -19,8 +18,7 @@ public class MapperTest extends BaseTest {
 
 		try {
 			final var configData = ObaUtils.get_yaml_data(configFilePath);
-			configData.setAuth(new AuthConfig());
-			outputPath = configData.getOutputDir();
+			this.outputPath = configData.getOutputDir();
 
 			mapper = new Mapper(configData);
 			// Use temporary directory for unit testing
