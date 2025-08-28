@@ -6,6 +6,7 @@ import com.fasterxml.jackson.annotation.JsonRootName;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import edu.isi.oba.config.ConfigPropertyNames;
 import edu.isi.oba.config.flags.GlobalFlags;
+import edu.isi.oba.exceptions.ConfigValidationException;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -36,6 +37,14 @@ public class PathConfig {
 		GlobalFlags.setFlag(ConfigPropertyNames.DISABLE_ALL_PATHS, false);
 		GlobalFlags.setFlag(ConfigPropertyNames.USE_COMMON_DEFAULT_PATH_RESPONSES, true);
 		GlobalFlags.setFlag(ConfigPropertyNames.USE_KEBAB_CASE_PATHS, false);
+	}
+
+	/**
+	 * Validates the configuration before processing. Throws ConfigValidationException if required
+	 * fields are missing or malformed.
+	 */
+	public void validate() throws ConfigValidationException {
+		// TODO: Implement validation for this config
 	}
 
 	@JsonSetter(ConfigPropertyNames.DISABLE_ALL_PATHS)

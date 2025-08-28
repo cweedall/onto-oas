@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonRootName;
 import edu.isi.oba.config.ConfigPropertyNames;
+import edu.isi.oba.exceptions.ConfigValidationException;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -19,6 +20,14 @@ public class AnnotationConfig {
 	@JsonProperty(ConfigPropertyNames.MARKDOWN_GENERATION_ANNOTATIONS)
 	private Set<MarkdownAnnotationConfig> markdownGenerationAnnotations =
 			new HashSet<MarkdownAnnotationConfig>();
+
+	/**
+	 * Validates the configuration before processing. Throws ConfigValidationException if required
+	 * fields are missing or malformed.
+	 */
+	public void validate() throws ConfigValidationException {
+		// TODO: Implement validation for this config
+	}
 
 	/**
 	 * Get the {@link PropertyAnnotationConfig} which may be null (because it doesn't exist in the
