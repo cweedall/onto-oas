@@ -34,7 +34,6 @@ import java.nio.file.Files;
 import java.nio.file.StandardOpenOption;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -48,7 +47,7 @@ class Serializer {
 			Mapper mapper,
 			java.nio.file.Path dir,
 			OpenAPI openAPI,
-			LinkedHashMap<String, PathItem> custom_paths,
+			Map<String, PathItem> custom_paths,
 			YamlConfig configData)
 			throws Exception {
 		final var extensions = new HashMap<String, Object>();
@@ -84,35 +83,40 @@ class Serializer {
 							v.readOperationsMap()
 									.forEach(
 											(httpMethod, operation) -> {
-												operation.getTags().stream()
-														.forEach(
-																(operationTagName) -> {
-																	final var tagObj = new Tag();
-																	tagObj.setName(operationTagName);
+												if (operation.getTags() != null) {
+													operation.getTags().stream()
+															.forEach(
+																	(operationTagName) -> {
+																		final var tagObj = new Tag();
+																		tagObj.setName(operationTagName);
 
-																	// There should always be one path/endpoint tag which is the
-																	// schema's name.
-																	// Getting the tags from the operation only returns a List<String>
-																	// (where String is the name of the Tag).
-																	// This appears to be a quirk between the operation tags and the
-																	// global tags which have a description and externalUrl.
-																	// This grabs the schema's description by searching for the
-																	// schema's name.
-																	var tagDescription = "";
-																	if (schemas != null && schemas.get(operationTagName) != null) {
-																		tagDescription = schemas.get(operationTagName).getDescription();
-																	}
+																		// There should always be one path/endpoint tag which is the
+																		// schema's name.
+																		// Getting the tags from the operation only returns a
+																		// List<String>
+																		// (where String is the name of the Tag).
+																		// This appears to be a quirk between the operation tags and the
+																		// global tags which have a description and externalUrl.
+																		// This grabs the schema's description by searching for the
+																		// schema's name.
+																		var tagDescription = "";
+																		if (schemas != null && schemas.get(operationTagName) != null) {
+																			tagDescription =
+																					schemas.get(operationTagName).getDescription();
+																		}
 
-																	// Use a generic description if one was not found.
-																	if (tagDescription == null || tagDescription.isBlank()) {
-																		tagObj.setDescription(
-																				operationTagName + " description not set in the ontology.");
-																	} else {
-																		tagObj.setDescription(tagDescription);
-																	}
+																		// Use a generic description if one was not found.
+																		if (tagDescription == null || tagDescription.isBlank()) {
+																			tagObj.setDescription(
+																					operationTagName
+																							+ " description not set in the ontology.");
+																		} else {
+																			tagObj.setDescription(tagDescription);
+																		}
 
-																	tags.add(tagObj);
-																});
+																		tags.add(tagObj);
+																	});
+												}
 											});
 						});
 
@@ -132,13 +136,14 @@ class Serializer {
 		final var custom_extensions = new HashMap<String, Object>();
 		custom_extensions.put("x-oba-custom", true);
 
-		if (custom_paths != null)
+		if (custom_paths != null) {
 			custom_paths.forEach(
 					(k, v) -> {
 						System.out.println("inserting custom query " + k);
 						v.setExtensions(custom_extensions);
 						openAPI.getPaths().addPathItem(k, v);
 					});
+		}
 
 		openAPI.setPaths(
 				ExamplesGenerator.generatePathExamples(openAPI.getPaths(), examples, configData));
