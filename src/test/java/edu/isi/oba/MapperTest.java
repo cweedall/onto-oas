@@ -18,6 +18,8 @@ public class MapperTest extends BaseTest {
 
 		try {
 			final var configData = ObaUtils.get_yaml_data(configFilePath);
+			this.outputPath = configData.getOutputDir();
+
 			mapper = new Mapper(configData);
 			// Use temporary directory for unit testing
 			mapper.createSchemas();
