@@ -15,7 +15,7 @@ public abstract class BaseTest {
 
 	@BeforeAll
 	public void globalSetup() {
-		FatalErrorHandler.setExitHandler(
+		FatalErrorHandler.setExitHandlerForTesting(
 				status -> {
 					throw new RuntimeException("Intercepted System.exit(" + status + ")");
 				});

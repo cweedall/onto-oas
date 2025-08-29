@@ -3,7 +3,12 @@ package edu.isi.oba.utils.exithandler;
 public class FatalErrorHandler {
 	private static ExitHandler exitHandler = new DefaultExitHandler();
 
-	public static void setExitHandler(ExitHandler handler) {
+	private FatalErrorHandler() {
+		throw new UnsupportedOperationException("Static utility class");
+	}
+
+	// Only used in tests
+	public static void setExitHandlerForTesting(ExitHandler handler) {
 		if (handler != null) {
 			exitHandler = handler;
 		}
