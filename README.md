@@ -47,6 +47,8 @@ For instructions on using OBA to create your API server, go to the [documentatio
 
 Please cite our work as follows:
 
+{% raw %}
+
 ```
 @inproceedings{garijo2020OBA,
 	title        = {{OBA}: An Ontology-Based Framework for Creating REST APIs for Knowledge Graphs},
@@ -59,3 +61,5 @@ Please cite our work as follows:
     isbn={978-3-030-62466-8}
 }
 ```
+
+{% endraw %}
