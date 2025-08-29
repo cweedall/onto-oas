@@ -1,3 +1,6 @@
+# JaCoCo code coverage reports
+coverage/
+
 oba.iml
 nbactions.xml
 compile.sh
