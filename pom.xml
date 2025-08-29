@@ -368,6 +368,10 @@
                             <append>false</append> <!-- Ensures the file is overwritten -->
                             <outputDirectory>${project.basedir}/coverage</outputDirectory>
                             <destFile>${project.build.directory}/jacoco.exec</destFile>
+                            <!-- Exclude DefaultExitHandler because it wraps System.exit(), which cannot be tested or covered -->
+                            <excludes>
+                                <exclude>edu/isi/oba/utils/exithandler/DefaultExitHandler.class</exclude>
+                            </excludes>
                         </configuration>
                     </execution>
                 </executions>
