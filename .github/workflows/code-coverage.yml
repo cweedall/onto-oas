@@ -1,0 +1,57 @@
+name: Code Coverage and GitHub Pages
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  coverage:
+    name: Run tests and collect coverage
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: "17"
+          distribution: "temurin"
+
+      - name: Build and run tests with coverage
+        run: mvn clean verify
+
+      - name: Upload coverage report
+        if: github.repository_visibility == 'public'
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco-report
+          path: coverage
+
+      - name: Upload coverage reports to Codecov
+        if: github.repository_visibility == 'public'
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: coverage/jacoco.xml
+          flags: unittests
+          name: codecov-coverage
+
+  deploy-pages:
+    name: Publish coverage reports to GitHub Page
+    if: github.ref == 'refs/heads/main' && github.repository_visibility == 'public'
+    needs: coverage
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Deploy JaCoCo report to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
