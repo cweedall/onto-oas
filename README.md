@@ -1,5 +1,7 @@
 # Ontology-Based APIs (OBA) [![Test](https://github.com/cweedall/OBA2/actions/workflows/build.yaml/badge.svg)](https://github.com/cweedall/OBA2/actions/workflows/build.yaml) [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.6639554.svg)](https://doi.org/10.5281/zenodo.6639554)
 
+[![codecov](https://codecov.io/github/cweedall/onto-oas/graph/badge.svg?token=QMK5Y6ZGZ1)](https://codecov.io/github/cweedall/onto-oas)
+
 OBA reads ontologies (OWL) and generates an OpenAPI Specification (OAS). Using this definition, OBA creates a REST API server automatically.
 
 ![Diagram](docs/figures/oba.svg)
