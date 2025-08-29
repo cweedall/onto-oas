@@ -2,12 +2,21 @@ package edu.isi.oba.config.flags;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.util.HashMap;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 class GlobalFlagsTest {
+
+	@Test
+	void testPrivateConstructor() throws Exception {
+		Constructor<GlobalFlags> constructor = GlobalFlags.class.getDeclaredConstructor();
+		constructor.setAccessible(true);
+		assertThrows(InvocationTargetException.class, () -> constructor.newInstance());
+	}
 
 	@BeforeEach
 	void setUp() {
@@ -74,5 +83,25 @@ class GlobalFlagsTest {
 		GlobalFlags.clearFlags();
 		Map<String, Boolean> snapshot = GlobalFlags.getFlagsSnapshot();
 		assertTrue(snapshot.isEmpty());
+	}
+
+	@Test
+	void testNullAndEmptyKeys() {
+		// Null key handling (may throw NullPointerException depending on usage)
+		assertThrows(NullPointerException.class, () -> GlobalFlags.setFlag(null, true));
+		assertThrows(NullPointerException.class, () -> GlobalFlags.getFlag(null));
+		assertThrows(NullPointerException.class, () -> GlobalFlags.containsKey(null));
+
+		// Empty string key
+		GlobalFlags.setFlag("", true);
+		assertTrue(GlobalFlags.getFlag(""));
+		assertTrue(GlobalFlags.containsKey(""));
+	}
+
+	@Test
+	void testMissingKeys() {
+		GlobalFlags.clearFlags();
+		assertFalse(GlobalFlags.containsKey("missing"));
+		assertFalse(GlobalFlags.getFlag("missing")); // triggers the false branch
 	}
 }
