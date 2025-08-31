@@ -16,6 +16,10 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class GlobalFlags {
 
+	private GlobalFlags() {
+		throw new UnsupportedOperationException("Static utility class");
+	}
+
 	/**
 	 * A static {@link Map} to store {@link Boolean} flags globally. Keys are {@link String}s, and
 	 * values are {@link Boolean}s.

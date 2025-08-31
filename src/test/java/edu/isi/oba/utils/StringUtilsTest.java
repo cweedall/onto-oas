@@ -2,11 +2,21 @@ package edu.isi.oba.utils;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
 public class StringUtilsTest {
+
+	@Test
+	void testPrivateConstructor() throws Exception {
+		Constructor<StringUtils> constructor = StringUtils.class.getDeclaredConstructor();
+		constructor.setAccessible(true);
+		assertThrows(InvocationTargetException.class, () -> constructor.newInstance());
+	}
 
 	@ParameterizedTest
 	@CsvSource({
