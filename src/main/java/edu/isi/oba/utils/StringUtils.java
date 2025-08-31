@@ -23,6 +23,10 @@ public class StringUtils {
 				}
 			};
 
+	private StringUtils() {
+		throw new UnsupportedOperationException("Static utility class");
+	}
+
 	/**
 	 * Convert a PascalCase (or camelCase) string to kebab-case.
 	 *
