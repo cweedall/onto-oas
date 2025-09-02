@@ -1,6 +1,7 @@
 package edu.isi.oba;
 
 import edu.isi.oba.utils.exithandler.FatalErrorHandler;
+import edu.isi.oba.utils.exithandler.TestExitHandler;
 import java.io.IOException;
 import java.util.logging.ConsoleHandler;
 import java.util.logging.Level;
@@ -14,11 +15,8 @@ public abstract class BaseTest {
 	protected static Logger logger;
 
 	@BeforeAll
-	public void globalSetup() {
-		FatalErrorHandler.setExitHandlerForTesting(
-				status -> {
-					throw new RuntimeException("Intercepted System.exit(" + status + ")");
-				});
+	public static void globalSetup() {
+		FatalErrorHandler.setExitHandlerForTesting(new TestExitHandler());
 	}
 
 	/**
