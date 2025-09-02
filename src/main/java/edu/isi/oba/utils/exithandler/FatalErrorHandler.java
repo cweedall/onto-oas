@@ -1,5 +1,9 @@
 package edu.isi.oba.utils.exithandler;
 
+import static edu.isi.oba.Oba.logger;
+
+import java.util.logging.Level;
+
 public class FatalErrorHandler {
 	private static ExitHandler exitHandler = new DefaultExitHandler();
 
@@ -15,12 +19,12 @@ public class FatalErrorHandler {
 	}
 
 	public static void fatal(String message) {
-		System.err.println("FATAL ERROR: " + message);
+		logger.log(Level.SEVERE, "FATAL ERROR: " + message);
 		exitHandler.exit(1);
 	}
 
 	public static void fatal(String message, Throwable cause) {
-		System.err.println("FATAL ERROR: " + message);
+		logger.log(Level.SEVERE, "FATAL ERROR: " + message);
 		cause.printStackTrace(System.err);
 		exitHandler.exit(1);
 	}
