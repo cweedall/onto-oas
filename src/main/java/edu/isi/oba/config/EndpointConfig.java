@@ -1,7 +1,7 @@
 package edu.isi.oba.config;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import edu.isi.oba.utils.ObaUtils;
+import edu.isi.oba.utils.file.FileUtils;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class EndpointConfig {
@@ -22,7 +22,7 @@ public class EndpointConfig {
 	}
 
 	public void setPrefix(String prefix) {
-		this.prefix = ObaUtils.check_trailing_slash(prefix);
+		this.prefix = FileUtils.checkTrailingSlash(prefix);
 	}
 
 	public String getGraph_base() {
@@ -30,6 +30,6 @@ public class EndpointConfig {
 	}
 
 	public void setGraph_base(String graph_base) {
-		this.graph_base = ObaUtils.check_trailing_slash(graph_base);
+		this.graph_base = FileUtils.checkTrailingSlash(graph_base);
 	}
 }

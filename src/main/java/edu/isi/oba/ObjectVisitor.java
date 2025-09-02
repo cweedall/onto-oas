@@ -5,8 +5,9 @@ import static edu.isi.oba.Oba.logger;
 import edu.isi.oba.config.ConfigPropertyNames;
 import edu.isi.oba.config.YamlConfig;
 import edu.isi.oba.config.flags.GlobalFlags;
-import edu.isi.oba.utils.ObaUtils;
+import edu.isi.oba.utils.constants.ObaConstants;
 import edu.isi.oba.utils.exithandler.FatalErrorHandler;
+import edu.isi.oba.utils.ontology.OntologyUtils;
 import io.swagger.v3.oas.models.media.ArraySchema;
 import io.swagger.v3.oas.models.media.ObjectSchema;
 import io.swagger.v3.oas.models.media.Schema;
@@ -198,7 +199,7 @@ public class ObjectVisitor implements OWLObjectVisitor {
 		MapperProperty.setSchemaName(basicClassSchema, this.getPrefixedSchemaName(this.baseClass));
 		MapperProperty.setSchemaDescription(
 				basicClassSchema,
-				ObaUtils.getDescription(
+				OntologyUtils.getDescription(
 						this.baseClass,
 						this.baseClassOntology,
 						GlobalFlags.getFlag(ConfigPropertyNames.DEFAULT_DESCRIPTIONS)));
@@ -709,7 +710,7 @@ public class ObjectVisitor implements OWLObjectVisitor {
 									if (propertySchema.getDescription() == null
 											|| propertySchema.getDescription().isBlank()) {
 										final var propertyDescription =
-												ObaUtils.getDescription(
+												OntologyUtils.getDescription(
 														entity,
 														this.baseClassOntology,
 														GlobalFlags.getFlag(ConfigPropertyNames.DEFAULT_DESCRIPTIONS));
@@ -1130,7 +1131,7 @@ public class ObjectVisitor implements OWLObjectVisitor {
 
 		try {
 			final var propertyDescription =
-					ObaUtils.getDescription(
+					OntologyUtils.getDescription(
 							op,
 							this.baseClassOntology,
 							GlobalFlags.getFlag(ConfigPropertyNames.DEFAULT_DESCRIPTIONS));
@@ -1490,7 +1491,7 @@ public class ObjectVisitor implements OWLObjectVisitor {
 
 									try {
 										final var propertyDescription =
-												ObaUtils.getDescription(
+												OntologyUtils.getDescription(
 														dp,
 														this.baseClassOntology,
 														GlobalFlags.getFlag(ConfigPropertyNames.DEFAULT_DESCRIPTIONS));
@@ -1730,7 +1731,7 @@ public class ObjectVisitor implements OWLObjectVisitor {
 
 			final var propertyDescription =
 					GlobalFlags.getFlag(ConfigPropertyNames.DEFAULT_DESCRIPTIONS)
-							? ObaUtils.DEFAULT_DESCRIPTION
+							? ObaConstants.DEFAULT_DESCRIPTION
 							: null;
 			MapperProperty.setSchemaDescription(currentPropertySchema, propertyDescription);
 
