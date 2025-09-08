@@ -1,5 +1,7 @@
 package edu.isi.oba.utils.yaml;
 
+import com.fasterxml.jackson.core.exc.StreamReadException;
+import com.fasterxml.jackson.databind.DatabindException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import edu.isi.oba.config.YamlConfig;
@@ -12,6 +14,10 @@ import java.util.logging.Logger;
 public class YamlUtils {
 
 	private static final Logger logger = Logger.getLogger(YamlUtils.class.getName());
+
+	private YamlUtils() {
+		throw new UnsupportedOperationException("Static utility class");
+	}
 
 	public static YamlConfig getYamlData(String config_yaml) {
 		YamlConfig yamlConfig = null;
@@ -29,10 +35,11 @@ public class YamlUtils {
 			// Deserialize the YAML file
 			yamlConfig = objectMapper.readValue(configYamlFile, YamlConfig.class);
 		} catch (FileNotFoundException e) {
-			FatalErrorHandler.fatal("Configuration file not found: " + config_yaml);
+			FatalErrorHandler.fatal("Configuration file not found: " + config_yaml, e);
+		} catch (StreamReadException | DatabindException e) {
+			FatalErrorHandler.fatal("YAML parsing error: " + e.getMessage(), e);
 		} catch (Exception e) {
-			System.err.println(e.getMessage());
-			FatalErrorHandler.fatal(e.getMessage());
+			FatalErrorHandler.fatal("Unexpected error: " + e.getMessage(), e);
 		}
 
 		return yamlConfig;

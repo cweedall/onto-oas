@@ -18,6 +18,11 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class SchemaSortUtils {
+
+	private SchemaSortUtils() {
+		throw new UnsupportedOperationException("Static utility class");
+	}
+
 	/**
 	 * Topological sorting of the names of {@link Schema}s in a {@link Map} of dependencies (name of
 	 * {@link Schema} to a {@link Set} of all the {@link Schema}s that it references).

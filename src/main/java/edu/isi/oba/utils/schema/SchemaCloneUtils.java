@@ -10,6 +10,11 @@ import java.util.logging.Level;
 import javax.annotation.Nonnull;
 
 public class SchemaCloneUtils {
+
+	private SchemaCloneUtils() {
+		throw new UnsupportedOperationException("Static utility class");
+	}
+
 	/**
 	 * Deep-copies all values from one {@link Schema} to another. Somewhat similar to cloning.
 	 *

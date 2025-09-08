@@ -10,6 +10,11 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 
 public class CliUtils {
+
+	private CliUtils() {
+		throw new UnsupportedOperationException("Static utility class");
+	}
+
 	public static String getYamlConfigFileArgument(String[] args) {
 		// obtain the options to pass configuration
 		Options options = new Options();

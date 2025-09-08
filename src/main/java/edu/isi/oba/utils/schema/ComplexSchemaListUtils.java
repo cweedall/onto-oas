@@ -18,6 +18,10 @@ import org.apache.jena.iri.IRI;
 
 public class ComplexSchemaListUtils {
 
+	private ComplexSchemaListUtils() {
+		throw new UnsupportedOperationException("Static utility class");
+	}
+
 	public interface ComplexListTypeHandler<T> {
 		void apply(Schema<?> schema, List<?> values, ComplexSchemaListType listType);
 	}

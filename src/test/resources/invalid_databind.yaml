@@ -1,0 +1,4 @@
+unexpected_field:
+  - key1: value1
+  - key2: value2
+another_unexpected_field: "This should not map to YamlConfig"

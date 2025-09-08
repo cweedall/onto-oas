@@ -13,6 +13,11 @@ import java.util.TreeMap;
 import javax.annotation.Nonnull;
 
 public class SchemaRefUtils {
+
+	private SchemaRefUtils() {
+		throw new UnsupportedOperationException("Static utility class");
+	}
+
 	/**
 	 * Get a map of schemas which references removed and replaced by the full schema spec.
 	 *

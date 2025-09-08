@@ -19,8 +19,8 @@ public class FatalErrorHandler {
 	}
 
 	public static void fatal(String message) {
-		logger.log(Level.SEVERE, "FATAL ERROR: " + message);
-		exitHandler.exit(1);
+		RuntimeException ex = new RuntimeException(message);
+		fatal(message, ex);
 	}
 
 	public static void fatal(String message, Throwable cause) {

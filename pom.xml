@@ -17,6 +17,28 @@
         <jdk.version>11</jdk.version>
     </properties>
 
+    <dependencyManagement>
+        <dependencies>
+            <!-- JUnit BOM -->
+            <dependency>
+                <groupId>org.junit</groupId>
+                <artifactId>junit-bom</artifactId>
+                <version>5.13.4</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <!-- Mockito BOM -->
+            <dependency>
+                <groupId>org.mockito</groupId>
+                <artifactId>mockito-bom</artifactId>
+                <version>5.19.0</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
     <dependencies>
         <!-- https://mvnrepository.com/artifact/com.fasterxml.jackson.core/jackson-databind -->
         <dependency>
@@ -94,21 +116,6 @@
             <version>20250107</version>
         </dependency>
 
-        <!-- https://mvnrepository.com/artifact/org.junit.jupiter/junit-jupiter-api -->
-        <dependency>
-            <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter-api</artifactId>
-            <version>5.13.4</version>
-            <scope>test</scope>
-        </dependency>
-        <!-- https://mvnrepository.com/artifact/org.junit.jupiter/junit-jupiter-params -->
-        <dependency>
-            <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter-params</artifactId>
-            <version>5.13.4</version>
-            <scope>test</scope>
-        </dependency>
-
         <!-- https://mvnrepository.com/artifact/io.swagger/swagger-inflector -->
         <dependency>
             <groupId>io.swagger</groupId>
@@ -179,11 +186,37 @@
             <version>4.0.0</version>
         </dependency>
 
+        <!-- https://mvnrepository.com/artifact/org.junit.jupiter/junit-jupiter-api -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-api</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- https://mvnrepository.com/artifact/org.junit.jupiter/junit-jupiter-params -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-params</artifactId>
+            <scope>test</scope>
+        </dependency>
         <!-- https://mvnrepository.com/artifact/org.junit.platform/junit-platform-suite-api -->
         <dependency>
             <groupId>org.junit.platform</groupId>
             <artifactId>junit-platform-suite-api</artifactId>
             <version>1.13.4</version>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- https://mvnrepository.com/artifact/org.mockito/mockito-core -->
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- https://mvnrepository.com/artifact/org.mockito/mockito-junit-jupiter -->
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-junit-jupiter</artifactId>
             <scope>test</scope>
         </dependency>
 
@@ -309,6 +342,22 @@
                     
                 </configuration>
             </plugin>
+
+            <!-- DON'T USE THIS UNTIL READY TO FIX UP THE ISSUES -->
+            <!-- https://mvnrepository.com/artifact/com.github.spotbugs/spotbugs-maven-plugin -->  
+            <!--<plugin>
+                <groupId>com.github.spotbugs</groupId>
+                <artifactId>spotbugs-maven-plugin</artifactId>
+                <version>4.9.4.1</version>
+                <executions>
+                    <execution>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>-->
             
             <!-- https://mvnrepository.com/artifact/org.apache.maven.plugins/maven-eclipse-plugin -->
             <plugin>
@@ -413,6 +462,17 @@
         </pluginManagement>
 
     </build>
+
+    <!-- DON'T USE THIS UNTIL READY TO FIX UP THE ISSUES -->
+    <!--<reporting>
+        <plugins>
+            <plugin>
+                <groupId>com.github.spotbugs</groupId>
+                <artifactId>spotbugs-maven-plugin</artifactId>
+                <version>4.9.4.1</version>
+            </plugin>
+        </plugins>
+    </reporting>-->
 
     <profiles>
         <!-- ===================== -->

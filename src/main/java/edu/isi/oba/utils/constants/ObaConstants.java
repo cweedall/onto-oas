@@ -1,14 +1,15 @@
 package edu.isi.oba.utils.constants;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
-public class ObaConstants {
+public final class ObaConstants {
+	public static final String DEFAULT_LANGUAGE = "en";
+	public static final String YAML_LINE_SEPARATOR = "\n";
+
 	public static final String DEFAULT_DESCRIPTION = "Description not available";
-	public static final String[] POSSIBLE_VOCAB_SERIALIZATIONS = {
-		"application/rdf+xml", "text/turtle", "text/n3", "application/ld+json"
-	};
+	public static final List<String> POSSIBLE_VOCAB_SERIALIZATIONS =
+			List.of("application/rdf+xml", "text/turtle", "text/n3", "application/ld+json");
 
 	private static final String DCELEMENTS_NS = "http://purl.org/dc/elements/1.1/";
 	private static final String DCTERMS_NS = "http://purl.org/dc/terms/";
@@ -24,10 +25,14 @@ public class ObaConstants {
 
 	public static final List<String> DESCRIPTION_PROPERTIES =
 			new ArrayList<>(
-					Arrays.asList(
+					List.of(
 							DCELEMENTS_DEFINITION,
 							DCTERMS_DEFINITION,
 							RDFS_COMMENT,
 							SKOS_DEFINITION,
 							PROV_DEFINITION));
+
+	private ObaConstants() {
+		throw new UnsupportedOperationException("Static constants class");
+	}
 }

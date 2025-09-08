@@ -1,0 +1,151 @@
+package edu.isi.oba.utils.file;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.contains;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.times;
+
+import edu.isi.oba.utils.exithandler.FatalErrorHandler;
+import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Comparator;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+import org.mockito.MockedStatic;
+
+/**
+ * Unit tests for {@link ZipUtils}.
+ *
+ * <p>Verifies ZIP extraction using Apache Commons Compress. Covers:
+ *
+ * <ul>
+ *   <li>Valid ZIP extraction
+ *   <li>Zip Slip protection
+ *   <li>Directory creation
+ *   <li>Parent directory creation
+ * </ul>
+ */
+public class ZipUtilsTest {
+
+	@TempDir Path tempDir;
+
+	@Test
+	void testPrivateConstructor() throws Exception {
+		var constructor = ZipUtils.class.getDeclaredConstructor();
+		constructor.setAccessible(true);
+		assertThrows(
+				java.lang.reflect.InvocationTargetException.class, () -> constructor.newInstance());
+	}
+
+	@Test
+	public void shouldExtractZipContents_whenValidZipProvided() throws Exception {
+		ByteArrayOutputStream baos = new ByteArrayOutputStream();
+		try (ZipOutputStream zos = new ZipOutputStream(baos)) {
+			zos.putNextEntry(new ZipEntry("folder/")); // directory
+			zos.closeEntry();
+			zos.putNextEntry(new ZipEntry("folder/file.txt")); // file
+			zos.write("Hello Zip".getBytes());
+			zos.closeEntry();
+		}
+
+		byte[] zipBytes = baos.toByteArray();
+		InputStream zipStream = new ByteArrayInputStream(zipBytes);
+		Path outputDir = Files.createTempDirectory("ziptest");
+
+		ZipUtils.unZipIt(zipStream, outputDir.toString());
+
+		Path extractedFile = outputDir.resolve("folder/file.txt");
+		assertTrue(Files.exists(extractedFile));
+		assertEquals("Hello Zip", Files.readString(extractedFile));
+
+		Files.walk(outputDir).sorted((a, b) -> b.compareTo(a)).forEach(p -> p.toFile().delete());
+	}
+
+	@Test
+	public void shouldThrowFatal_whenZipSlipDetected() throws Exception {
+		File outputDir = tempDir.resolve("output").toFile();
+		outputDir.mkdir();
+
+		try (InputStream zipStream = getClass().getResourceAsStream("/test-malicious.zip");
+				MockedStatic<FatalErrorHandler> mockedFatal = mockStatic(FatalErrorHandler.class)) {
+
+			assertNotNull(zipStream, "test-malicious.zip not found in resources");
+
+			mockedFatal.when(() -> FatalErrorHandler.fatal(anyString())).thenAnswer(invocation -> null);
+
+			ZipUtils.unZipIt(zipStream, outputDir.getAbsolutePath());
+
+			mockedFatal.verify(
+					() -> FatalErrorHandler.fatal(contains("Bad zip entry. Possibly malicious")), times(1));
+		}
+	}
+
+	@Test
+	public void shouldCreateParentDirectory_whenMissing() throws Exception {
+		ByteArrayOutputStream baos = new ByteArrayOutputStream();
+		try (ZipOutputStream zos = new ZipOutputStream(baos)) {
+			zos.putNextEntry(new ZipEntry("nested/dir/file.txt"));
+			zos.write("Nested content".getBytes());
+			zos.closeEntry();
+		}
+
+		byte[] zipBytes = baos.toByteArray();
+		InputStream zipStream = new ByteArrayInputStream(zipBytes);
+		Path outputDir = Files.createTempDirectory("ziptest");
+
+		ZipUtils.unZipIt(zipStream, outputDir.toString());
+
+		Path nestedFile = outputDir.resolve("nested/dir/file.txt");
+		assertTrue(Files.exists(nestedFile));
+		assertEquals("Nested content", Files.readString(nestedFile));
+
+		Files.walk(outputDir).sorted((a, b) -> b.compareTo(a)).forEach(p -> p.toFile().delete());
+	}
+
+	@Test
+	public void shouldHandleZipEntryWithNoParentDirectory() throws Exception {
+		ByteArrayOutputStream baos = new ByteArrayOutputStream();
+		try (ZipOutputStream zos = new ZipOutputStream(baos)) {
+			zos.putNextEntry(new ZipEntry("file.txt")); // No parent directory
+			zos.write("content".getBytes());
+			zos.closeEntry();
+		}
+
+		InputStream zipStream = new ByteArrayInputStream(baos.toByteArray());
+		Path outputDir = Files.createTempDirectory("ziptest");
+
+		// Ensure parent doesn't exist
+		Path parentDir = outputDir.resolve("nested/dir");
+		assertFalse(Files.exists(parentDir));
+
+		ZipUtils.unZipIt(zipStream, outputDir.toString());
+
+		assertTrue(Files.exists(outputDir.resolve("file.txt")));
+
+		Files.walk(outputDir).sorted(Comparator.reverseOrder()).forEach(p -> p.toFile().delete());
+	}
+
+	// @Test
+	// public void shouldNotCreateParentDirectoryIfItAlreadyExists() throws Exception {
+	// 	ByteArrayOutputStream baos = new ByteArrayOutputStream();
+	// 	try (ZipOutputStream zos = new ZipOutputStream(baos)) {
+	// 		zos.putNextEntry(new ZipEntry("existingDir/file.txt"));
+	// 		zos.write("content".getBytes());
+	// 		zos.closeEntry();
+	// 	}
+
+	// 	InputStream zipStream = new ByteArrayInputStream(baos.toByteArray());
+	// 	Path outputDir = Files.createTempDirectory("ziptest");
+	// 	Files.createDirectory(outputDir.resolve("existingDir")); // Pre-create parent
+
+	// 	ZipUtils.unZipIt(zipStream, outputDir.toString());
+
+	// 	assertTrue(Files.exists(outputDir.resolve("existingDir/file.txt")));
+
+	// 	Files.walk(outputDir).sorted(Comparator.reverseOrder()).forEach(p -> p.toFile().delete());
+	// }
+}

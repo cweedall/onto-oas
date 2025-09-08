@@ -16,6 +16,11 @@ import java.util.logging.Logger;
 import org.apache.jena.iri.IRI;
 
 public class SchemaEnumUtils {
+
+	private SchemaEnumUtils() {
+		throw new UnsupportedOperationException("Static utility class");
+	}
+
 	/** Handler interface for applying a list of enum values to a {@link Schema} with generic type. */
 	@FunctionalInterface
 	public interface EnumTypeHandler<T> {

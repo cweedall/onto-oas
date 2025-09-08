@@ -45,4 +45,15 @@ class FatalErrorHandlerTest extends BaseTest {
 		assertThrows(RuntimeException.class, () -> FatalErrorHandler.fatal("Still exits"));
 		assertEquals(1, testHandler.status);
 	}
+
+	@Test
+	void testFatalWithMessage_directCall() {
+		FatalErrorHandler.setExitHandlerForTesting(testHandler);
+		try {
+			FatalErrorHandler.fatal("Something went wrong");
+			fail("Expected RuntimeException");
+		} catch (RuntimeException e) {
+			assertEquals(1, testHandler.status);
+		}
+	}
 }

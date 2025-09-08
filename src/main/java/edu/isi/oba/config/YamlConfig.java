@@ -9,7 +9,7 @@ import edu.isi.oba.config.paths.PathConfig;
 import edu.isi.oba.exceptions.ConfigValidationException;
 import edu.isi.oba.exceptions.OntologyLoadingException;
 import edu.isi.oba.utils.exithandler.FatalErrorHandler;
-import edu.isi.oba.utils.ontology.OntologyUtils;
+import edu.isi.oba.utils.ontology.OntologyDownloader;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.PathItem;
 import java.io.File;
@@ -510,7 +510,7 @@ public class YamlConfig {
 	 * @throws IOException
 	 */
 	private void downloadOntologyFromUri(String uri, String destinationPath) throws IOException {
-		OntologyUtils.downloadOntology(uri, destinationPath);
+		OntologyDownloader.downloadOntology(uri, destinationPath);
 	}
 
 	/**
