@@ -2,6 +2,7 @@ package edu.isi.oba.config.flags;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import edu.isi.oba.BaseTest;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.HashMap;
@@ -9,7 +10,7 @@ import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-class GlobalFlagsTest {
+class GlobalFlagsTest extends BaseTest {
 
 	@Test
 	void testPrivateConstructor() throws Exception {

@@ -2,13 +2,14 @@ package edu.isi.oba.utils.file;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import edu.isi.oba.BaseTest;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.file.*;
 import org.junit.jupiter.api.Test;
 
 /** Unit tests for {@link FolderUtils}. Verifies recursive folder copying. */
-public class FolderUtilsTest {
+public class FolderUtilsTest extends BaseTest {
 
 	@Test
 	void shouldThrowException_whenInstantiatingUtilityClass() throws Exception {

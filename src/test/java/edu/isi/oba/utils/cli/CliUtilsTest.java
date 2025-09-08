@@ -2,12 +2,13 @@ package edu.isi.oba.utils.cli;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import edu.isi.oba.BaseTest;
 import edu.isi.oba.utils.exithandler.FatalErrorHandler;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import org.junit.jupiter.api.Test;
 
-public class CliUtilsTest {
+public class CliUtilsTest extends BaseTest {
 
 	@Test
 	void testPrivateConstructor() throws Exception {

@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
+import edu.isi.oba.BaseTest;
 import edu.isi.oba.utils.constants.ObaConstants;
 import java.util.List;
 import java.util.Optional;
@@ -20,7 +21,7 @@ import org.semanticweb.owlapi.search.EntitySearcher;
  * Unit tests for {@link OntologyDescriptionUtils}. Covers all branches of getDescription and
  * extractDescriptions methods.
  */
-public class OntologyDescriptionUtilsTest {
+public class OntologyDescriptionUtilsTest extends BaseTest {
 
 	@Test
 	void testPrivateConstructor() throws Exception {

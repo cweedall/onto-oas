@@ -2,11 +2,12 @@ package edu.isi.oba.utils.yaml;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import edu.isi.oba.BaseTest;
 import edu.isi.oba.config.YamlConfig;
 import edu.isi.oba.utils.exithandler.FatalErrorHandler;
 import org.junit.jupiter.api.Test;
 
-public class YamlUtilsTest {
+public class YamlUtilsTest extends BaseTest {
 
 	@Test
 	void testPrivateConstructor() throws Exception {

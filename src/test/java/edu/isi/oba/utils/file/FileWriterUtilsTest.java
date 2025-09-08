@@ -2,6 +2,7 @@ package edu.isi.oba.utils.file;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import edu.isi.oba.BaseTest;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.file.Files;
@@ -9,7 +10,7 @@ import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
 
 /** Unit tests for {@link FileWriterUtils}. Verifies file writing functionality. */
-public class FileWriterUtilsTest {
+public class FileWriterUtilsTest extends BaseTest {
 
 	@Test
 	void shouldThrowException_whenInstantiatingUtilityClass() throws Exception {

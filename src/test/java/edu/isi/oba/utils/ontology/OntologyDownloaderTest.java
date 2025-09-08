@@ -3,6 +3,7 @@ package edu.isi.oba.utils.ontology;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+import edu.isi.oba.BaseTest;
 import edu.isi.oba.exceptions.OntologyDownloadException;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -17,7 +18,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
-public class OntologyDownloaderTest {
+public class OntologyDownloaderTest extends BaseTest {
 
 	@Test
 	void shouldThrowException_whenConstructorIsInvoked() throws Exception {

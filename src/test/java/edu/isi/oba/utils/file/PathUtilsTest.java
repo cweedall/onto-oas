@@ -2,12 +2,13 @@ package edu.isi.oba.utils.file;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import edu.isi.oba.BaseTest;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import org.junit.jupiter.api.Test;
 
 /** Unit tests for {@link PathUtils}. Verifies trailing slash logic. */
-public class PathUtilsTest {
+public class PathUtilsTest extends BaseTest {
 
 	@Test
 	void shouldThrowException_whenInstantiatingUtilityClass() throws Exception {

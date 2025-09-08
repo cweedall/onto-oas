@@ -2,6 +2,7 @@ package edu.isi.oba.utils.file;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import edu.isi.oba.BaseTest;
 import java.io.ByteArrayInputStream;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
@@ -10,7 +11,7 @@ import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
 
 /** Unit tests for {@link StreamUtils}. Verifies stream copying functionality. */
-public class StreamUtilsTest {
+public class StreamUtilsTest extends BaseTest {
 
 	@Test
 	void shouldThrowException_whenInstantiatingUtilityClass() throws Exception {

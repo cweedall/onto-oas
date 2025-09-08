@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.times;
 
+import edu.isi.oba.BaseTest;
 import edu.isi.oba.utils.exithandler.FatalErrorHandler;
 import java.io.*;
 import java.nio.file.Files;
@@ -29,7 +30,7 @@ import org.mockito.MockedStatic;
  *   <li>Parent directory creation
  * </ul>
  */
-public class ZipUtilsTest {
+public class ZipUtilsTest extends BaseTest {
 
 	@TempDir Path tempDir;
 
@@ -128,24 +129,4 @@ public class ZipUtilsTest {
 
 		Files.walk(outputDir).sorted(Comparator.reverseOrder()).forEach(p -> p.toFile().delete());
 	}
-
-	// @Test
-	// public void shouldNotCreateParentDirectoryIfItAlreadyExists() throws Exception {
-	// 	ByteArrayOutputStream baos = new ByteArrayOutputStream();
-	// 	try (ZipOutputStream zos = new ZipOutputStream(baos)) {
-	// 		zos.putNextEntry(new ZipEntry("existingDir/file.txt"));
-	// 		zos.write("content".getBytes());
-	// 		zos.closeEntry();
-	// 	}
-
-	// 	InputStream zipStream = new ByteArrayInputStream(baos.toByteArray());
-	// 	Path outputDir = Files.createTempDirectory("ziptest");
-	// 	Files.createDirectory(outputDir.resolve("existingDir")); // Pre-create parent
-
-	// 	ZipUtils.unZipIt(zipStream, outputDir.toString());
-
-	// 	assertTrue(Files.exists(outputDir.resolve("existingDir/file.txt")));
-
-	// 	Files.walk(outputDir).sorted(Comparator.reverseOrder()).forEach(p -> p.toFile().delete());
-	// }
 }

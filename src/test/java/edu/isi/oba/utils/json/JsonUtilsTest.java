@@ -2,6 +2,7 @@ package edu.isi.oba.utils.json;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import edu.isi.oba.BaseTest;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -14,7 +15,7 @@ import org.json.JSONObject;
 import org.junit.jupiter.api.Test;
 
 /** Unit tests for JsonUtils class to ensure full coverage. */
-public class JsonUtilsTest {
+public class JsonUtilsTest extends BaseTest {
 
 	@Test
 	void shouldThrowException_whenInstantiatingUtilityClass() throws Exception {
