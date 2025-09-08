@@ -1,6 +1,5 @@
 package edu.isi.oba.utils.file;
 
-import edu.isi.oba.utils.exithandler.FatalErrorHandler;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
@@ -35,8 +34,9 @@ public final class ZipUtils {
 				Path outputPath = Path.of(outputFolder).toAbsolutePath().normalize();
 
 				if (!normalizedPath.startsWith(outputPath)) {
-					FatalErrorHandler.fatal(
-							"Bad zip entry. Possibly malicious. Exiting to avoid 'Zip Slip'.");
+					throw new Exception("Bad zip entry. Possibly malicious. Exiting to avoid 'Zip Slip'.");
+					// FatalErrorHandler.fatal(
+					// 		"Bad zip entry. Possibly malicious. Exiting to avoid 'Zip Slip'.");
 				}
 
 				if (entry.isDirectory()) {
