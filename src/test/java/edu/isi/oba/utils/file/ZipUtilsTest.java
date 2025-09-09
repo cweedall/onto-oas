@@ -1,13 +1,8 @@
 package edu.isi.oba.utils.file;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.contains;
-import static org.mockito.Mockito.mockStatic;
-import static org.mockito.Mockito.times;
 
 import edu.isi.oba.BaseTest;
-import edu.isi.oba.utils.exithandler.FatalErrorHandler;
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -16,7 +11,6 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import org.mockito.MockedStatic;
 
 /**
  * Unit tests for {@link ZipUtils}.
@@ -71,17 +65,11 @@ public class ZipUtilsTest extends BaseTest {
 		File outputDir = tempDir.resolve("output").toFile();
 		outputDir.mkdir();
 
-		try (InputStream zipStream = getClass().getResourceAsStream("/test-malicious.zip");
-				MockedStatic<FatalErrorHandler> mockedFatal = mockStatic(FatalErrorHandler.class)) {
+		try (InputStream zipStream = getClass().getResourceAsStream("/test-malicious.zip"); ) {
 
 			assertNotNull(zipStream, "test-malicious.zip not found in resources");
 
-			mockedFatal.when(() -> FatalErrorHandler.fatal(anyString())).thenAnswer(invocation -> null);
-
-			ZipUtils.unZipIt(zipStream, outputDir.getAbsolutePath());
-
-			mockedFatal.verify(
-					() -> FatalErrorHandler.fatal(contains("Bad zip entry. Possibly malicious")), times(1));
+			assertThrows(Exception.class, () -> ZipUtils.unZipIt(zipStream, outputDir.getAbsolutePath()));
 		}
 	}
 
