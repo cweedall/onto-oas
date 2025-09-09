@@ -1,0 +1,8 @@
+
+manager: !!str 12345
+- unexpected_list_item
+key_without_value
+another_key: [unclosed_list
+nested:
+  - valid: true
+    invalid: {unclosed_map

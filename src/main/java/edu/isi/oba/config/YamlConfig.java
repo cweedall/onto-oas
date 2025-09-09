@@ -8,8 +8,8 @@ import edu.isi.oba.config.ontology.annotations.AnnotationConfig;
 import edu.isi.oba.config.paths.PathConfig;
 import edu.isi.oba.exceptions.ConfigValidationException;
 import edu.isi.oba.exceptions.OntologyLoadingException;
-import edu.isi.oba.utils.ObaUtils;
 import edu.isi.oba.utils.exithandler.FatalErrorHandler;
+import edu.isi.oba.utils.ontology.OntologyDownloader;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.PathItem;
 import java.io.File;
@@ -394,7 +394,7 @@ public class YamlConfig {
 	// --------------------
 
 	private String sanitizeProjectName(String name) {
-		return name.replaceAll("[.\\+\\*\\?\\^\\$\\(\\)\\[\\]\\{\\}\\\\\\s]", "_");
+		return name.replaceAll("[.\\+\\*\\?\\^\\$\\(\\)\\[\\]\\{\\}\\|\\\\\\s]", "_");
 	}
 
 	/**
@@ -510,7 +510,7 @@ public class YamlConfig {
 	 * @throws IOException
 	 */
 	private void downloadOntologyFromUri(String uri, String destinationPath) throws IOException {
-		ObaUtils.downloadOntology(uri, destinationPath);
+		OntologyDownloader.downloadOntology(uri, destinationPath);
 	}
 
 	/**

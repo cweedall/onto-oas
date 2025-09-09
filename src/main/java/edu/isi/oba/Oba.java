@@ -1,8 +1,9 @@
 package edu.isi.oba;
 
 import edu.isi.oba.config.YamlConfig;
-import edu.isi.oba.utils.ObaUtils;
+import edu.isi.oba.utils.cli.CliUtils;
 import edu.isi.oba.utils.exithandler.FatalErrorHandler;
+import edu.isi.oba.utils.yaml.YamlUtils;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.PathItem;
 import java.io.File;
@@ -38,12 +39,12 @@ public class Oba {
 		logger.addHandler(new ConsoleHandler());
 
 		// parse command line
-		String config_yaml = ObaUtils.get_config_yaml(args);
+		String config_yaml = CliUtils.getYamlConfigFileArgument(args);
 		// read the config yaml from command line
 		YamlConfig config_data = new YamlConfig();
 
 		try {
-			config_data = ObaUtils.get_yaml_data(config_yaml);
+			config_data = YamlUtils.getYamlData(config_yaml);
 		} catch (Exception e) {
 			FatalErrorHandler.fatal(
 					"Error parsing the configuration file. Please make sure it is valid \n " + e);

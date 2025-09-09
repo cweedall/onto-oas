@@ -17,15 +17,6 @@ class FatalErrorHandlerTest extends BaseTest {
 		assertThrows(InvocationTargetException.class, () -> constructor.newInstance());
 	}
 
-	static class TestExitHandler implements ExitHandler {
-		int status = -1;
-
-		@Override
-		public void exit(int status) {
-			this.status = status;
-		}
-	}
-
 	private TestExitHandler testHandler;
 
 	@BeforeEach
@@ -36,20 +27,33 @@ class FatalErrorHandlerTest extends BaseTest {
 
 	@Test
 	void testFatalWithMessage() {
-		FatalErrorHandler.fatal("Something went wrong");
+		assertThrows(RuntimeException.class, () -> FatalErrorHandler.fatal("Something went wrong"));
 		assertEquals(1, testHandler.status);
 	}
 
 	@Test
 	void testFatalWithMessageAndCause() {
-		FatalErrorHandler.fatal("Something went wrong", new RuntimeException("Cause"));
+		assertThrows(
+				RuntimeException.class,
+				() -> FatalErrorHandler.fatal("Something went wrong", new RuntimeException("Cause")));
 		assertEquals(1, testHandler.status);
 	}
 
 	@Test
 	void testSetExitHandlerIgnoresNull() {
 		FatalErrorHandler.setExitHandlerForTesting(null); // should not overwrite
-		FatalErrorHandler.fatal("Still exits");
+		assertThrows(RuntimeException.class, () -> FatalErrorHandler.fatal("Still exits"));
 		assertEquals(1, testHandler.status);
+	}
+
+	@Test
+	void testFatalWithMessage_directCall() {
+		FatalErrorHandler.setExitHandlerForTesting(testHandler);
+		try {
+			FatalErrorHandler.fatal("Something went wrong");
+			fail("Expected RuntimeException");
+		} catch (RuntimeException e) {
+			assertEquals(1, testHandler.status);
+		}
 	}
 }

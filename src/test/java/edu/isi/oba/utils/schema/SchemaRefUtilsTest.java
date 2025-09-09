@@ -4,11 +4,20 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import edu.isi.oba.BaseTest;
 import io.swagger.v3.oas.models.media.Schema;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.util.HashMap;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 public class SchemaRefUtilsTest extends BaseTest {
+
+	@Test
+	void shouldThrowException_whenConstructorIsInvoked() throws Exception {
+		Constructor<SchemaRefUtils> constructor = SchemaRefUtils.class.getDeclaredConstructor();
+		constructor.setAccessible(true);
+		assertThrows(InvocationTargetException.class, constructor::newInstance);
+	}
 
 	@Test
 	public void testGetDereferencedSchemasParallel() {

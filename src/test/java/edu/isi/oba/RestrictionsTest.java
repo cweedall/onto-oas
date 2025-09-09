@@ -1,7 +1,7 @@
 package edu.isi.oba;
 
 import edu.isi.oba.config.YamlConfig;
-import edu.isi.oba.utils.ObaUtils;
+import edu.isi.oba.utils.yaml.YamlUtils;
 import io.swagger.v3.oas.models.media.ComposedSchema;
 import io.swagger.v3.oas.models.media.Schema;
 import java.io.File;
@@ -19,11 +19,13 @@ import org.junit.jupiter.api.Test;
 import org.semanticweb.owlapi.model.OWLOntologyCreationException;
 
 public class RestrictionsTest extends BaseTest {
-	private YamlConfig configData = ObaUtils.get_yaml_data("examples/restrictions/config.yaml");
+	private YamlConfig configData;
 	private Mapper mapper;
 
 	@BeforeEach
 	public void setupDefaultConfigData() throws Exception {
+		configData = YamlUtils.getYamlData("examples/restrictions/config.yaml");
+
 		this.configData.setAlwaysGenerateArrays(true);
 		this.configData.setDefaultDescriptions(true);
 		this.configData.setDefaultProperties(true);

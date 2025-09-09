@@ -1,0 +1,6 @@
+manager: John Doe
+projects:
+  - name: Project Alpha
+    description: "Alpha project details
+  - name: Project Beta
+    description: "Beta project details"

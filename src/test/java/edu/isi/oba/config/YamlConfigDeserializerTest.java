@@ -4,12 +4,13 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import edu.isi.oba.BaseTest;
 import java.io.File;
 import java.io.IOException;
 import org.junit.jupiter.api.Test;
 
 /** Unit tests for {@link YamlConfigDeserializer}. */
-public class YamlConfigDeserializerTest {
+public class YamlConfigDeserializerTest extends BaseTest {
 
 	/** Mix-in class to associate {@link YamlConfigDeserializer} with {@link YamlConfig}. */
 	public abstract static class YamlConfigMixin {

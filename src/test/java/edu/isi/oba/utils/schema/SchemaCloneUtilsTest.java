@@ -4,12 +4,21 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import edu.isi.oba.BaseTest;
 import io.swagger.v3.oas.models.media.Schema;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
 public class SchemaCloneUtilsTest extends BaseTest {
+
+	@Test
+	void shouldThrowException_whenConstructorIsInvoked() throws Exception {
+		Constructor<SchemaCloneUtils> constructor = SchemaCloneUtils.class.getDeclaredConstructor();
+		constructor.setAccessible(true);
+		assertThrows(InvocationTargetException.class, constructor::newInstance);
+	}
 
 	@Test
 	public void testCloneSimpleSchema() {

@@ -1,6 +1,6 @@
 package edu.isi.oba;
 
-import edu.isi.oba.utils.ObaUtils;
+import edu.isi.oba.utils.yaml.YamlUtils;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -17,7 +17,7 @@ public class MapperTest extends BaseTest {
 		Mapper mapper = null;
 
 		try {
-			final var configData = ObaUtils.get_yaml_data(configFilePath);
+			final var configData = YamlUtils.getYamlData(configFilePath);
 			this.outputPath = configData.getOutputDir();
 
 			mapper = new Mapper(configData);
