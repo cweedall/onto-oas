@@ -6,6 +6,7 @@ import edu.isi.oba.config.ConfigPropertyNames;
 import edu.isi.oba.config.YamlConfig;
 import edu.isi.oba.config.flags.GlobalFlags;
 import edu.isi.oba.generators.PathGenerator;
+import edu.isi.oba.ontology.visitor.ObjectVisitor;
 import edu.isi.oba.utils.exithandler.FatalErrorHandler;
 import edu.isi.oba.utils.schema.SchemaRefUtils;
 import io.swagger.v3.oas.models.Paths;

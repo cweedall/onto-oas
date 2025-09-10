@@ -1,10 +1,15 @@
-package edu.isi.oba;
+package edu.isi.oba.ontology.visitor;
 
 import static edu.isi.oba.Oba.logger;
 
+import edu.isi.oba.MapperDataProperty;
+import edu.isi.oba.MapperObjectProperty;
+import edu.isi.oba.MapperProperty;
 import edu.isi.oba.config.ConfigPropertyNames;
 import edu.isi.oba.config.YamlConfig;
 import edu.isi.oba.config.flags.GlobalFlags;
+import edu.isi.oba.exceptions.InvalidOntologyFormatException;
+import edu.isi.oba.ontology.schema.SchemaBuilder;
 import edu.isi.oba.utils.constants.ObaConstants;
 import edu.isi.oba.utils.exithandler.FatalErrorHandler;
 import edu.isi.oba.utils.ontology.OntologyDescriptionUtils;
@@ -114,7 +119,7 @@ public class ObjectVisitor implements OWLObjectVisitor {
 	 * @param configData a {@link YamlConfig} containing all details loaded from the configuration
 	 *     file.
 	 */
-	ObjectVisitor(YamlConfig configData) {
+	public ObjectVisitor(YamlConfig configData) {
 		this.configData = configData;
 	}
 
@@ -127,26 +132,26 @@ public class ObjectVisitor implements OWLObjectVisitor {
 	 *     visitor class.
 	 */
 	private void initializeBaseClass(OWLClass baseClass) {
-		// If the base class is already set, ignore.
 		if (this.baseClass == null) {
 			this.baseClass = baseClass;
-
 			this.reasonerFactory = new StructuralReasonerFactory();
 
-			// Basic error checking to verify ontology is valid and class exists within it.
 			if (this.baseClassOntology == null) {
 				FatalErrorHandler.fatal(
-						"Ontology was set to null when creating ObjectVisitor.  Unable to proceed.");
+						"Ontology was set to null when creating ObjectVisitor. Unable to proceed.");
 			} else if (!this.baseClassOntology.containsClassInSignature(this.baseClass.getIRI())) {
 				FatalErrorHandler.fatal(
 						"Ontology used when creating ObjectVisitor does not contain the class you are"
-								+ " attempting to visit.  Unable to proceed.");
+								+ " attempting to visit. Unable to proceed.");
 			}
 
 			this.reasoner = this.reasonerFactory.createReasoner(this.baseClassOntology);
 			this.owlThing = this.reasoner.getTopClassNode().getRepresentativeElement();
 
-			this.classSchema = this.getBaseClassBasicSchema();
+			// ✅ Replaced with SchemaBuilder
+			this.classSchema =
+					SchemaBuilder.getBaseClassBasicSchema(
+							this.baseClass, this.baseClassOntology, this.configData);
 		}
 	}
 
@@ -156,36 +161,10 @@ public class ObjectVisitor implements OWLObjectVisitor {
 	 *
 	 * @param owlClass an OWL class to get the fully prefixed name for.
 	 * @return a {@link String} in the format of "PREFIX-CLASSNAME"
+	 * @throws InvalidOntologyFormatException
 	 */
-	private String getPrefixedSchemaName(OWLClass owlClass) {
-		final var classIRI = owlClass.getIRI();
-		final var classIRIAsString = classIRI.toString();
-		final var classPrefix = classIRIAsString.replaceAll(classIRI.getShortForm() + "$", "");
-
-		// Assume the class is part of the default prefixes.
-		var prefixedSchemaName = owlClass.getIRI().getShortForm();
-
-		// Check if the prefix for the OWL class is the default ontology prefix ":".  If not, use the
-		// name of the prefix plus "-" as a prefix for the class's name.  Cannot use ":" because it is
-		// not allowed for schema names in OpenAPI.
-		final var format =
-				this.baseClassOntology.getOWLOntologyManager().getOntologyFormat(this.baseClassOntology);
-		if (format != null && format.isPrefixOWLDocumentFormat()) {
-			final var map = format.asPrefixOWLDocumentFormat().getPrefixName2PrefixMap();
-			for (final var entry : map.entrySet()) {
-				if (entry.getValue().equals(classPrefix)) {
-					final var prefixName = entry.getKey().replaceAll(":", "");
-					if (!"".equals(prefixName)) {
-						prefixedSchemaName = prefixName + "-" + prefixedSchemaName;
-					}
-				}
-			}
-		} else {
-			FatalErrorHandler.fatal(
-					"Ontology has an invalid or null prefix document format.  Unable to proceed.");
-		}
-
-		return prefixedSchemaName;
+	private String getPrefixedSchemaName(OWLClass owlClass) throws InvalidOntologyFormatException {
+		return SchemaBuilder.getPrefixedSchemaName(owlClass, this.baseClassOntology);
 	}
 
 	/**
@@ -193,8 +172,9 @@ public class ObjectVisitor implements OWLObjectVisitor {
 	 * properties.
 	 *
 	 * @return a basic {@link Schema} for this visitor's base class.
+	 * @throws InvalidOntologyFormatException
 	 */
-	private Schema getBaseClassBasicSchema() {
+	private Schema getBaseClassBasicSchema() throws InvalidOntologyFormatException {
 		final var basicClassSchema = new Schema();
 		MapperProperty.setSchemaName(basicClassSchema, this.getPrefixedSchemaName(this.baseClass));
 		MapperProperty.setSchemaDescription(
@@ -211,7 +191,7 @@ public class ObjectVisitor implements OWLObjectVisitor {
 			 * Not using {@link Schema#setProperties()}, because it creates immutability which breaks unit
 			 * tests.
 			 */
-			this.getDefaultProperties()
+			SchemaBuilder.getDefaultProperties(this.configData)
 					.forEach(
 							(schemaName, schema) -> {
 								basicClassSchema.addProperty(schemaName, schema);
@@ -267,7 +247,8 @@ public class ObjectVisitor implements OWLObjectVisitor {
 
 		// Generate the required properties for the class, if applicable.
 		if (GlobalFlags.getFlag(ConfigPropertyNames.REQUIRED_PROPERTIES_FROM_CARDINALITY)) {
-			this.generateRequiredPropertiesForClassSchemas();
+			SchemaBuilder.generateRequiredPropertiesForClassSchemas(
+					this.classSchema, this.functionalProperties);
 		}
 
 		// Convert non-array property items, if applicable.
@@ -1000,36 +981,6 @@ public class ObjectVisitor implements OWLObjectVisitor {
 												});
 							});
 		}
-	}
-
-	/**
-	 * Check each of the base class's properties and add it to the list of required properties, if it
-	 * meets the criteria.
-	 */
-	private void generateRequiredPropertiesForClassSchemas() {
-		final Map<String, Schema> propertySchemas =
-				this.classSchema.getProperties() == null
-						? new HashMap<>()
-						: this.classSchema.getProperties();
-
-		propertySchemas.forEach(
-				(propertyName, propertySchema) -> {
-					// If min value is 1, it is required and not nullable.
-					// Otherwise, it is nullable.  Functional properties can be nullable while also being
-					// required.
-					if (propertySchema.getMinItems() != null && propertySchema.getMinItems() > 0) {
-						MapperProperty.setNullableValueForPropertySchema(propertySchema, false);
-						this.requiredProperties.add(propertyName);
-					} else {
-						MapperProperty.setNullableValueForPropertySchema(propertySchema, true);
-
-						if (this.functionalProperties.contains(propertyName)) {
-							this.requiredProperties.add(propertyName);
-						}
-					}
-				});
-
-		this.classSchema.setRequired(this.requiredProperties.stream().collect(Collectors.toList()));
 	}
 
 	/**
@@ -1919,7 +1870,8 @@ public class ObjectVisitor implements OWLObjectVisitor {
 	 *
 	 * @param ce the {@link OWLQuantifiedObjectRestriction} object
 	 */
-	private void visitOWLQuantifiedObjectRestriction(@Nonnull OWLQuantifiedObjectRestriction or) {
+	private void visitOWLQuantifiedObjectRestriction(@Nonnull OWLQuantifiedObjectRestriction or)
+			throws InvalidOntologyFormatException {
 		logger.info("\t-- analyzing OWLQuantifiedObjectRestriction restrictions --");
 		logger.info("\t   class:  " + this.baseClass);
 		logger.info("\t   axiom:  " + or);
