@@ -262,4 +262,68 @@ public class SchemaBuilderTest extends BaseTest {
 
 		assertNull(schema.getRequired()); // no required properties added
 	}
+
+	@Test
+	void shouldIncludeDefaultProperties_whenFlagIsTrue() {
+		try (MockedStatic<MapperProperty> mapperProperty = mockStatic(MapperProperty.class);
+				MockedStatic<OntologyDescriptionUtils> descriptionUtils =
+						mockStatic(OntologyDescriptionUtils.class);
+				MockedStatic<GlobalFlags> globalFlags = mockStatic(GlobalFlags.class)) {
+
+			IRI iri = mock(IRI.class);
+			when(iri.toString()).thenReturn("http://example.org#TestClass");
+			when(iri.getShortForm()).thenReturn("TestClass");
+			when(owlClass.getIRI()).thenReturn(iri);
+
+			OWLOntologyManager manager = mock(OWLOntologyManager.class);
+			PrefixDocumentFormat format = mock(PrefixDocumentFormat.class);
+			when(format.isPrefixOWLDocumentFormat()).thenReturn(true);
+			when(format.asPrefixOWLDocumentFormat()).thenReturn(format);
+			when(format.getPrefixName2PrefixMap()).thenReturn(Map.of("ex:", "http://example.org#"));
+			when(manager.getOntologyFormat(ontology)).thenReturn(format);
+			when(ontology.getOWLOntologyManager()).thenReturn(manager);
+
+			mapperProperty.when(() -> MapperProperty.setSchemaName(any(), any())).thenCallRealMethod();
+			mapperProperty
+					.when(() -> MapperProperty.setSchemaDescription(any(), any()))
+					.thenCallRealMethod();
+			mapperProperty.when(() -> MapperProperty.setSchemaType(any(), any())).thenCallRealMethod();
+
+			descriptionUtils
+					.when(() -> OntologyDescriptionUtils.getDescription(any(), any(), anyBoolean()))
+					.thenReturn(Optional.of("description"));
+
+			globalFlags
+					.when(() -> GlobalFlags.getFlag(ConfigPropertyNames.DEFAULT_PROPERTIES))
+					.thenReturn(true);
+			globalFlags
+					.when(() -> GlobalFlags.getFlag(ConfigPropertyNames.DEFAULT_DESCRIPTIONS))
+					.thenReturn(true);
+
+			Schema schema = SchemaBuilder.getBaseClassBasicSchema(owlClass, ontology, config);
+			assertNotNull(schema);
+			assertTrue(schema.getProperties().containsKey("id")); // from default properties
+		}
+	}
+
+	@Test
+	void shouldReturnUnprefixedSchemaName_whenPrefixNameIsEmpty()
+			throws InvalidOntologyFormatException {
+		IRI iri = mock(IRI.class);
+		when(iri.toString()).thenReturn("http://example.org#TestClass");
+		when(iri.getShortForm()).thenReturn("TestClass");
+		when(owlClass.getIRI()).thenReturn(iri);
+
+		OWLOntologyManager manager = mock(OWLOntologyManager.class);
+		PrefixDocumentFormat format = mock(PrefixDocumentFormat.class);
+		when(format.isPrefixOWLDocumentFormat()).thenReturn(true);
+		when(format.asPrefixOWLDocumentFormat()).thenReturn(format);
+		when(format.getPrefixName2PrefixMap())
+				.thenReturn(Map.of(":", "http://example.org#")); // empty prefix name
+		when(manager.getOntologyFormat(ontology)).thenReturn(format);
+		when(ontology.getOWLOntologyManager()).thenReturn(manager);
+
+		String name = SchemaBuilder.getPrefixedSchemaName(owlClass, ontology);
+		assertEquals("TestClass", name); // no prefix added
+	}
 }
