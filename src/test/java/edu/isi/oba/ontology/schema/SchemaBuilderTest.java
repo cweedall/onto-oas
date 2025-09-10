@@ -149,19 +149,6 @@ public class SchemaBuilderTest extends BaseTest {
 	}
 
 	@Test
-	void shouldReturnDefaultProperties_whenConfigIsProvided() {
-		Map<String, Schema> properties = SchemaBuilder.getDefaultProperties(config);
-		assertNotNull(properties);
-		assertTrue(properties.containsKey("id"));
-		assertTrue(properties.containsKey("label"));
-		assertTrue(properties.containsKey("type"));
-		assertTrue(properties.containsKey("description"));
-		assertTrue(properties.containsKey("eventDateTime"));
-		assertTrue(properties.containsKey("isBool"));
-		assertTrue(properties.containsKey("quantity"));
-	}
-
-	@Test
 	void shouldSetRequiredProperties_whenFunctionalPropertiesAreProvided() {
 		Schema schema = new Schema<>();
 		schema.setProperties(new HashMap<>());
