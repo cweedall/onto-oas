@@ -220,22 +220,10 @@
             <scope>test</scope>
         </dependency>
 
-        <!-- https://mvnrepository.com/artifact/net.sourceforge.owlapi/owlapi-api -->
+        <!-- https://mvnrepository.com/artifact/net.sourceforge.owlapi/owlapi-distribution -->
         <dependency>
             <groupId>net.sourceforge.owlapi</groupId>
-            <artifactId>owlapi-api</artifactId>
-            <version>5.5.1</version>
-        </dependency>
-        <!-- https://mvnrepository.com/artifact/net.sourceforge.owlapi/owlapi-apibinding -->
-        <dependency>
-            <groupId>net.sourceforge.owlapi</groupId>
-            <artifactId>owlapi-apibinding</artifactId>
-            <version>5.5.1</version>
-        </dependency>
-        <!-- https://mvnrepository.com/artifact/net.sourceforge.owlapi/owlapi-impl -->
-        <dependency>
-            <groupId>net.sourceforge.owlapi</groupId>
-            <artifactId>owlapi-impl</artifactId>
+            <artifactId>owlapi-distribution</artifactId>
             <version>5.5.1</version>
         </dependency>
 
