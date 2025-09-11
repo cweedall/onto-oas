@@ -1,7 +1,10 @@
-package edu.isi.oba;
+package edu.isi.oba.ontology.visitor;
 
 import static edu.isi.oba.Oba.logger;
 
+import edu.isi.oba.MapperDataProperty;
+import edu.isi.oba.MapperObjectProperty;
+import edu.isi.oba.MapperProperty;
 import edu.isi.oba.config.ConfigPropertyNames;
 import edu.isi.oba.config.YamlConfig;
 import edu.isi.oba.config.flags.GlobalFlags;
@@ -114,7 +117,7 @@ public class ObjectVisitor implements OWLObjectVisitor {
 	 * @param configData a {@link YamlConfig} containing all details loaded from the configuration
 	 *     file.
 	 */
-	ObjectVisitor(YamlConfig configData) {
+	public ObjectVisitor(YamlConfig configData) {
 		this.configData = configData;
 	}
 
