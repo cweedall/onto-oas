@@ -8,6 +8,7 @@ import edu.isi.oba.MapperProperty;
 import edu.isi.oba.config.ConfigPropertyNames;
 import edu.isi.oba.config.YamlConfig;
 import edu.isi.oba.config.flags.GlobalFlags;
+import edu.isi.oba.ontology.schema.SchemaBuilder;
 import edu.isi.oba.utils.constants.ObaConstants;
 import edu.isi.oba.utils.exithandler.FatalErrorHandler;
 import edu.isi.oba.utils.ontology.OntologyDescriptionUtils;
@@ -149,7 +150,8 @@ public class ObjectVisitor implements OWLObjectVisitor {
 			this.reasoner = this.reasonerFactory.createReasoner(this.baseClassOntology);
 			this.owlThing = this.reasoner.getTopClassNode().getRepresentativeElement();
 
-			this.classSchema = this.getBaseClassBasicSchema();
+			this.classSchema =
+					SchemaBuilder.getBaseClassBasicSchema(this.baseClass, this.baseClassOntology);
 		}
 	}
 
@@ -161,67 +163,7 @@ public class ObjectVisitor implements OWLObjectVisitor {
 	 * @return a {@link String} in the format of "PREFIX-CLASSNAME"
 	 */
 	private String getPrefixedSchemaName(OWLClass owlClass) {
-		final var classIRI = owlClass.getIRI();
-		final var classIRIAsString = classIRI.toString();
-		final var classPrefix = classIRIAsString.replaceAll(classIRI.getShortForm() + "$", "");
-
-		// Assume the class is part of the default prefixes.
-		var prefixedSchemaName = owlClass.getIRI().getShortForm();
-
-		// Check if the prefix for the OWL class is the default ontology prefix ":".  If not, use the
-		// name of the prefix plus "-" as a prefix for the class's name.  Cannot use ":" because it is
-		// not allowed for schema names in OpenAPI.
-		final var format =
-				this.baseClassOntology.getOWLOntologyManager().getOntologyFormat(this.baseClassOntology);
-		if (format != null && format.isPrefixOWLDocumentFormat()) {
-			final var map = format.asPrefixOWLDocumentFormat().getPrefixName2PrefixMap();
-			for (final var entry : map.entrySet()) {
-				if (entry.getValue().equals(classPrefix)) {
-					final var prefixName = entry.getKey().replaceAll(":", "");
-					if (!"".equals(prefixName)) {
-						prefixedSchemaName = prefixName + "-" + prefixedSchemaName;
-					}
-				}
-			}
-		} else {
-			FatalErrorHandler.fatal(
-					"Ontology has an invalid or null prefix document format.  Unable to proceed.");
-		}
-
-		return prefixedSchemaName;
-	}
-
-	/**
-	 * Create and return a basic {@link Schema} to be used when adding other details, such as
-	 * properties.
-	 *
-	 * @return a basic {@link Schema} for this visitor's base class.
-	 */
-	private Schema getBaseClassBasicSchema() {
-		final var basicClassSchema = new Schema();
-		MapperProperty.setSchemaName(basicClassSchema, this.getPrefixedSchemaName(this.baseClass));
-		MapperProperty.setSchemaDescription(
-				basicClassSchema,
-				OntologyDescriptionUtils.getDescription(
-								this.baseClass,
-								this.baseClassOntology,
-								GlobalFlags.getFlag(ConfigPropertyNames.DEFAULT_DESCRIPTIONS))
-						.orElse(null));
-		MapperProperty.setSchemaType(basicClassSchema, "object");
-
-		if (GlobalFlags.getFlag(ConfigPropertyNames.DEFAULT_PROPERTIES)) {
-			/**
-			 * Not using {@link Schema#setProperties()}, because it creates immutability which breaks unit
-			 * tests.
-			 */
-			this.getDefaultProperties()
-					.forEach(
-							(schemaName, schema) -> {
-								basicClassSchema.addProperty(schemaName, schema);
-							});
-		}
-
-		return basicClassSchema;
+		return SchemaBuilder.getPrefixedSchemaName(owlClass, this.baseClassOntology);
 	}
 
 	/**
@@ -270,7 +212,8 @@ public class ObjectVisitor implements OWLObjectVisitor {
 
 		// Generate the required properties for the class, if applicable.
 		if (GlobalFlags.getFlag(ConfigPropertyNames.REQUIRED_PROPERTIES_FROM_CARDINALITY)) {
-			this.generateRequiredPropertiesForClassSchemas();
+			SchemaBuilder.generateRequiredPropertiesForClassSchemas(
+					this.classSchema, this.functionalProperties);
 		}
 
 		// Convert non-array property items, if applicable.
@@ -1006,36 +949,6 @@ public class ObjectVisitor implements OWLObjectVisitor {
 	}
 
 	/**
-	 * Check each of the base class's properties and add it to the list of required properties, if it
-	 * meets the criteria.
-	 */
-	private void generateRequiredPropertiesForClassSchemas() {
-		final Map<String, Schema> propertySchemas =
-				this.classSchema.getProperties() == null
-						? new HashMap<>()
-						: this.classSchema.getProperties();
-
-		propertySchemas.forEach(
-				(propertyName, propertySchema) -> {
-					// If min value is 1, it is required and not nullable.
-					// Otherwise, it is nullable.  Functional properties can be nullable while also being
-					// required.
-					if (propertySchema.getMinItems() != null && propertySchema.getMinItems() > 0) {
-						MapperProperty.setNullableValueForPropertySchema(propertySchema, false);
-						this.requiredProperties.add(propertyName);
-					} else {
-						MapperProperty.setNullableValueForPropertySchema(propertySchema, true);
-
-						if (this.functionalProperties.contains(propertyName)) {
-							this.requiredProperties.add(propertyName);
-						}
-					}
-				});
-
-		this.classSchema.setRequired(this.requiredProperties.stream().collect(Collectors.toList()));
-	}
-
-	/**
 	 * Convenience method for getting the base class's short form name (i.e. only its name, not its
 	 * full IRI).
 	 *
@@ -1621,99 +1534,6 @@ public class ObjectVisitor implements OWLObjectVisitor {
 						});
 
 		return dataPropertiesMap;
-	}
-
-	/**
-	 * Get default schema properties.
-	 *
-	 * <p>These can be disabled by setting `default_properties` to `false` in the `config.yaml` file.
-	 *
-	 * @return A Map where key is property name and value is the property's Swagger/OpenAPI Schema
-	 */
-	private Map<String, Schema> getDefaultProperties() {
-		// Add some typical default properties (e.g. id, lable, type, and description)
-		final var idPropertySchema =
-				MapperDataProperty.createDataPropertySchema(
-						"id",
-						"identifier",
-						new HashSet<String>() {
-							{
-								add("integer");
-							}
-						});
-		MapperDataProperty.setNullableValueForPropertySchema(idPropertySchema, false);
-		final var labelPropertySchema =
-				MapperDataProperty.createDataPropertySchema(
-						"label",
-						"short description of the resource",
-						new HashSet<String>() {
-							{
-								add("string");
-							}
-						});
-		MapperDataProperty.setNullableValueForPropertySchema(labelPropertySchema, true);
-		final var typePropertySchema =
-				MapperDataProperty.createDataPropertySchema(
-						"type",
-						"type(s) of the resource",
-						new HashSet<String>() {
-							{
-								add("string");
-							}
-						});
-		MapperDataProperty.setNullableValueForPropertySchema(typePropertySchema, true);
-		final var descriptionPropertySchema =
-				MapperDataProperty.createDataPropertySchema(
-						"description",
-						"small description",
-						new HashSet<String>() {
-							{
-								add("string");
-							}
-						});
-		MapperDataProperty.setNullableValueForPropertySchema(descriptionPropertySchema, true);
-
-		// Also add some default property examples of different types (e.g. a date/time, a boolean, and
-		// a float)
-		final var eventDateTimePropertySchema =
-				MapperDataProperty.createDataPropertySchema(
-						"eventDateTime",
-						"a date/time of the resource",
-						new HashSet<String>() {
-							{
-								add("dateTime");
-							}
-						});
-		MapperDataProperty.setNullableValueForPropertySchema(eventDateTimePropertySchema, true);
-		final var isBoolPropertySchema =
-				MapperDataProperty.createDataPropertySchema(
-						"isBool",
-						"a boolean indicator of the resource",
-						new HashSet<String>() {
-							{
-								add("boolean");
-							}
-						});
-		MapperDataProperty.setNullableValueForPropertySchema(isBoolPropertySchema, true);
-		final var quantityPropertySchema =
-				MapperDataProperty.createDataPropertySchema(
-						"quantity",
-						"a number quantity of the resource",
-						new HashSet<String>() {
-							{
-								add("float");
-							}
-						});
-		MapperDataProperty.setNullableValueForPropertySchema(quantityPropertySchema, true);
-
-		return Map.ofEntries(
-				Map.entry(idPropertySchema.getName(), idPropertySchema),
-				Map.entry(labelPropertySchema.getName(), labelPropertySchema),
-				Map.entry(typePropertySchema.getName(), typePropertySchema),
-				Map.entry(descriptionPropertySchema.getName(), descriptionPropertySchema),
-				Map.entry(eventDateTimePropertySchema.getName(), eventDateTimePropertySchema),
-				Map.entry(isBoolPropertySchema.getName(), isBoolPropertySchema),
-				Map.entry(quantityPropertySchema.getName(), quantityPropertySchema));
 	}
 
 	/**
