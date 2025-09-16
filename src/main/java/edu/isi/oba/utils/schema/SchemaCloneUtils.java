@@ -224,4 +224,100 @@ public class SchemaCloneUtils {
 
 		return targetSchema;
 	}
+
+	/**
+	 * Utility method to deeply clone one {@link Schema} and into another one.
+	 *
+	 * @param sourceSchema a {@link Schema} to be copied
+	 * @param targetSchema a {@link Schema} to be the clone
+	 * @throws NullPointerException
+	 */
+	public static void clone(@Nonnull Schema<?> sourceSchema, @Nonnull Schema<?> targetSchema)
+			throws NullPointerException {
+		Objects.requireNonNull(sourceSchema, "clone() argument 'sourceSchema' must not be null");
+		Objects.requireNonNull(sourceSchema, "clone() argument 'targetSchema' must not be null");
+
+		// Copy primitive and immutable fields directly
+		targetSchema.setName(sourceSchema.getName());
+		targetSchema.setType(sourceSchema.getType());
+		targetSchema.setFormat(sourceSchema.getFormat());
+		targetSchema.setDescription(sourceSchema.getDescription());
+		targetSchema.setDefault(sourceSchema.getDefault());
+		targetSchema.setNullable(sourceSchema.getNullable());
+		targetSchema.setReadOnly(sourceSchema.getReadOnly());
+		targetSchema.setWriteOnly(sourceSchema.getWriteOnly());
+
+		targetSchema.set$ref(sourceSchema.get$ref());
+
+		// ... copy other relevant fields like example, enum, readOnly, writeOnly, etc.
+
+		targetSchema.setTitle(sourceSchema.getTitle());
+		targetSchema.setMultipleOf(sourceSchema.getMultipleOf());
+		targetSchema.setMaximum(sourceSchema.getMaximum());
+		targetSchema.setExclusiveMaximum(sourceSchema.getExclusiveMaximum());
+		targetSchema.setMinimum(sourceSchema.getMinimum());
+		targetSchema.setExclusiveMinimum(sourceSchema.getExclusiveMinimum());
+		targetSchema.setMaxLength(sourceSchema.getMaxLength());
+		targetSchema.setMinLength(sourceSchema.getMinLength());
+		targetSchema.setPattern(sourceSchema.getPattern());
+		targetSchema.setMaxItems(sourceSchema.getMaxItems());
+		targetSchema.setMinItems(sourceSchema.getMinItems());
+		targetSchema.setUniqueItems(sourceSchema.getUniqueItems());
+		targetSchema.setMaxProperties(sourceSchema.getMaxProperties());
+		targetSchema.setMinProperties(sourceSchema.getMinProperties());
+		targetSchema.setNot(sourceSchema.getNot());
+		if (sourceSchema.getExample() != null) {
+			targetSchema.setExample(sourceSchema.getExample());
+		}
+		targetSchema.setExternalDocs(sourceSchema.getExternalDocs());
+		targetSchema.setDeprecated(sourceSchema.getDeprecated());
+		targetSchema.setDiscriminator(sourceSchema.getDiscriminator());
+		targetSchema.setXml(sourceSchema.getXml());
+
+		// Deep copy 'enum' list if present
+		getClonedSchemaWithDeepCopiedEnumValues(sourceSchema, targetSchema);
+
+		// Deep copy 'required' list if present
+		if (sourceSchema.getRequired() != null) {
+			final List<String> copiedRequiredItems = new LinkedList<>();
+			for (final var entry : sourceSchema.getRequired()) {
+				copiedRequiredItems.add(entry);
+			}
+			targetSchema.setRequired(copiedRequiredItems);
+		}
+
+		// Deep copy 'properties' map if present
+		if (sourceSchema.getProperties() != null) {
+			for (final var entry : sourceSchema.getProperties().entrySet()) {
+				targetSchema.addProperty(entry.getKey(), clone(entry.getValue()));
+			}
+		}
+
+		// Deep copy 'items' schema if present (for array schemas)
+		if (sourceSchema.getItems() != null) {
+			targetSchema.setItems(clone(sourceSchema.getItems()));
+		}
+
+		// Deep copy 'additionalProperties' if it's a Schema object
+		if (sourceSchema.getAdditionalProperties() instanceof Schema) {
+			targetSchema.setAdditionalProperties(
+					clone((Schema<?>) sourceSchema.getAdditionalProperties()));
+		} else if (sourceSchema.getAdditionalProperties() != null) {
+			// Handle cases where additionalProperties is a Boolean
+			targetSchema.setAdditionalProperties(sourceSchema.getAdditionalProperties());
+		}
+
+		// ... handle other complex nested objects like allOf, anyOf, oneOf, not, etc.
+
+		// Deep copy 'allOf' list if present
+		deepCopyListTypeValues(sourceSchema, targetSchema, ComplexSchemaListType.ALLOF_LIST);
+
+		// Deep copy 'anyOf' list if present
+		deepCopyListTypeValues(sourceSchema, targetSchema, ComplexSchemaListType.ANYOF_LIST);
+
+		// Deep copy 'oneOf' list if present
+		deepCopyListTypeValues(sourceSchema, targetSchema, ComplexSchemaListType.ONEOF_LIST);
+
+		return;
+	}
 }

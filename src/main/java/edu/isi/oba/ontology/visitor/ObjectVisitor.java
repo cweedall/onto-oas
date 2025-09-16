@@ -12,6 +12,7 @@ import edu.isi.oba.ontology.schema.SchemaBuilder;
 import edu.isi.oba.utils.constants.ObaConstants;
 import edu.isi.oba.utils.exithandler.FatalErrorHandler;
 import edu.isi.oba.utils.ontology.OntologyDescriptionUtils;
+import edu.isi.oba.utils.schema.SchemaCloneUtils;
 import io.swagger.v3.oas.models.media.ArraySchema;
 import io.swagger.v3.oas.models.media.ObjectSchema;
 import io.swagger.v3.oas.models.media.Schema;
@@ -22,6 +23,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.logging.Level;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -76,50 +78,24 @@ import org.semanticweb.owlapi.model.OWLQuantifiedDataRestriction;
 import org.semanticweb.owlapi.model.OWLQuantifiedObjectRestriction;
 import org.semanticweb.owlapi.model.OWLRestriction;
 import org.semanticweb.owlapi.reasoner.InferenceDepth;
-import org.semanticweb.owlapi.reasoner.OWLReasoner;
-import org.semanticweb.owlapi.reasoner.OWLReasonerFactory;
 import org.semanticweb.owlapi.reasoner.structural.StructuralReasonerFactory;
 import org.semanticweb.owlapi.search.EntitySearcher;
 
 /** Visits existential restrictions and collects the properties which are restricted. */
 public class ObjectVisitor implements OWLObjectVisitor {
-	private final YamlConfig configData;
 
-	// Base class for this Object Visitor.  This _should_ be the class that .accept()s a visit from
-	// this Object Visitor.
-	private OWLClass baseClass;
-	private OWLOntology baseClassOntology;
-	private Schema classSchema;
-
-	private OWLReasoner reasoner;
-	private OWLReasonerFactory reasonerFactory;
-	private OWLClass owlThing; // TODO: is this needed anymore??
-
-	private final Map<String, Schema> basePropertiesMap = new HashMap<>();
-
-	private final Set<String> propertyNames = new HashSet<>();
-	private final Set<String> enumProperties = new HashSet<>();
-	private final Set<String> requiredProperties = new HashSet<>();
-	private final Set<String> functionalProperties = new HashSet<>();
-	private final Set<OWLClass> referencedClasses = new HashSet<>();
-	private final Set<OWLClass> processedClasses = new HashSet<>();
-	private final Set<OWLClass> processedRestrictionClasses = new HashSet<>();
-
-	// Map markdown annotation keys to a Map of class/property name keys with their annotation values.
-	private final Map<String, Map<String, String>> markdownGenerationMap = new TreeMap<>();
-
-	// Used to keep track of a property being visited.  Necessary for complex visits which can involve
-	// recursion, because the property name is not passable.
-	private String currentlyProcessedPropertyName = null;
+	private final VisitorContext context;
 
 	/**
-	 * Constructor for object visitor.
+	 * Constructor for ObjectVisitor.
+	 *
+	 * <p>Initializes the visitor context using the provided configuration.
 	 *
 	 * @param configData a {@link YamlConfig} containing all details loaded from the configuration
 	 *     file.
 	 */
 	public ObjectVisitor(YamlConfig configData) {
-		this.configData = configData;
+		this.context = new VisitorContext(configData);
 	}
 
 	/**
@@ -132,26 +108,26 @@ public class ObjectVisitor implements OWLObjectVisitor {
 	 */
 	private void initializeBaseClass(OWLClass baseClass) {
 		// If the base class is already set, ignore.
-		if (this.baseClass == null) {
-			this.baseClass = baseClass;
+		if (context.baseClass == null) {
+			context.baseClass = baseClass;
 
-			this.reasonerFactory = new StructuralReasonerFactory();
+			context.reasonerFactory = new StructuralReasonerFactory();
 
 			// Basic error checking to verify ontology is valid and class exists within it.
-			if (this.baseClassOntology == null) {
+			if (context.baseClassOntology == null) {
 				FatalErrorHandler.fatal(
 						"Ontology was set to null when creating ObjectVisitor.  Unable to proceed.");
-			} else if (!this.baseClassOntology.containsClassInSignature(this.baseClass.getIRI())) {
+			} else if (!context.baseClassOntology.containsClassInSignature(context.baseClass.getIRI())) {
 				FatalErrorHandler.fatal(
 						"Ontology used when creating ObjectVisitor does not contain the class you are"
 								+ " attempting to visit.  Unable to proceed.");
 			}
 
-			this.reasoner = this.reasonerFactory.createReasoner(this.baseClassOntology);
-			this.owlThing = this.reasoner.getTopClassNode().getRepresentativeElement();
+			context.reasoner = context.reasonerFactory.createReasoner(context.baseClassOntology);
+			context.owlThing = context.reasoner.getTopClassNode().getRepresentativeElement();
 
-			this.classSchema =
-					SchemaBuilder.getBaseClassBasicSchema(this.baseClass, this.baseClassOntology);
+			context.classSchema =
+					SchemaBuilder.getBaseClassBasicSchema(context.baseClass, context.baseClassOntology);
 		}
 	}
 
@@ -163,25 +139,50 @@ public class ObjectVisitor implements OWLObjectVisitor {
 	 * @return a {@link String} in the format of "PREFIX-CLASSNAME"
 	 */
 	private String getPrefixedSchemaName(OWLClass owlClass) {
-		return SchemaBuilder.getPrefixedSchemaName(owlClass, this.baseClassOntology);
+		return SchemaBuilder.getPrefixedSchemaName(owlClass, context.baseClassOntology);
 	}
 
 	/**
-	 * Get the OpenAPI schema for the base class specified in the constructor. Although somewhat
-	 * convoluted, this schema will not be generated fully until the {@link #visit(OWLClass)} method
-	 * has been called by the base OWLClass to accept this visitor class.
+	 * Generates the OpenAPI schema for the current OWL class. This method orchestrates the schema
+	 * construction process by:
 	 *
-	 * @see {@link #visit(OWLClass)}
-	 * @return a {@link Schema} for the entire class
+	 * <ul>
+	 *   <li>Cleaning up enum properties and handling OWL complement logic
+	 *   <li>Determining required properties based on cardinality
+	 *   <li>Adjusting array schemas based on configuration
+	 *   <li>Adding inheritance references using OWL superclass relationships
+	 *   <li>Pruning unused referenced classes from the schema
+	 *   <li>Embedding Markdown content from axiom annotations
+	 * </ul>
+	 *
+	 * @return the constructed {@link Schema} object for the OWL class
 	 */
 	public Schema getClassSchema() {
-		// There are cases where a property has ComplementOf set (i.e. "not: ...") but no items.
-		// Because the schema is an array, it will have problems.
-		// Need to either change it to "type: object" OR add empty items list (i.e. "items: {}").
-		// Using the former approach because 1) it renders in Swagger UI correctly and 2) unclear if
-		// empty items plus complement is a valid use case.
+		logger.log(Level.FINE, "Starting schema cleanup for enum and complement properties...");
+		this.cleanUpEnumProperties();
+
+		logger.log(Level.FINE, "Generating required properties based on cardinality...");
+		this.generateRequiredProperties();
+
+		logger.log(Level.FINE, "Converting array properties based on configuration...");
+		this.convertArrayProperties();
+
+		logger.log(Level.FINE, "Handling inheritance references from OWL superclasses...");
+		this.handleInheritanceReferences();
+
+		logger.log(Level.FINE, "Pruning unused referenced classes from schema...");
+		this.pruneUnusedReferencedClasses();
+
+		logger.log(Level.FINE, "Setting Markdown content from axiom annotations...");
+		this.setMarkdownContentFromAxiomAnnotations();
+
+		logger.log(Level.FINE, "Schema generation complete.");
+		return context.classSchema;
+	}
+
+	private void cleanUpEnumProperties() {
 		final Map<String, Schema> classProperties =
-				this.classSchema == null ? null : this.classSchema.getProperties();
+				context.classSchema == null ? null : context.classSchema.getProperties();
 		if (classProperties != null) {
 			classProperties
 					.values()
@@ -203,60 +204,67 @@ public class ObjectVisitor implements OWLObjectVisitor {
 								}
 							});
 		}
+	}
 
+	private void generateRequiredProperties() {
 		// Enums are already set up.  They should also never have required properties (even if
 		// inherited somehow).
-		if (this.classSchema.getEnum() != null) {
-			this.requiredProperties.clear();
+		if (context.classSchema.getEnum() != null) {
+			context.requiredProperties.clear();
 		}
 
 		// Generate the required properties for the class, if applicable.
 		if (GlobalFlags.getFlag(ConfigPropertyNames.REQUIRED_PROPERTIES_FROM_CARDINALITY)) {
 			SchemaBuilder.generateRequiredPropertiesForClassSchemas(
-					this.classSchema, this.functionalProperties);
+					context.classSchema, context.functionalProperties);
 		}
+	}
 
+	private void convertArrayProperties() {
 		// Convert non-array property items, if applicable.
 		if (!GlobalFlags.getFlag(ConfigPropertyNames.ALWAYS_GENERATE_ARRAYS)) {
 			MapperProperty.convertArrayToNonArrayPropertySchemas(
-					this.classSchema,
-					this.enumProperties,
-					this.functionalProperties,
+					context.classSchema,
+					context.enumProperties,
+					context.functionalProperties,
 					GlobalFlags.getFlag(ConfigPropertyNames.FIX_SINGULAR_PLURAL_PROPERTY_NAMES));
 
 			// If there are required properties, they may have changes (i.e. pluralized or singularized).
 			// Make sure to clear and re-populate the Set/List.  (Primiarily done to keep everything in
 			// alphabetical order)
-			if (!this.requiredProperties.isEmpty()) {
-				this.requiredProperties.clear();
+			if (!context.requiredProperties.isEmpty()) {
+				context.requiredProperties.clear();
 
-				if (this.classSchema.getRequired() != null && !this.classSchema.getRequired().isEmpty()) {
-					this.requiredProperties.addAll(
-							(Set<String>) this.classSchema.getRequired().stream().collect(Collectors.toSet()));
-					this.classSchema.setRequired(
-							this.requiredProperties.stream().collect(Collectors.toList()));
+				if (context.classSchema.getRequired() != null
+						&& !context.classSchema.getRequired().isEmpty()) {
+					context.requiredProperties.addAll(
+							(Set<String>) context.classSchema.getRequired().stream().collect(Collectors.toSet()));
+					context.classSchema.setRequired(
+							context.requiredProperties.stream().collect(Collectors.toList()));
 				}
 			}
 		}
+	}
 
+	private void handleInheritanceReferences() {
 		// If following references AND use inheritance references (for the class), we do not want to
 		// inherit/reference the same class multiple times accidentally. (e.g. if we have Person >
 		// Student > ExchangeStudent, Student already inherits everything from Person.  For
 		// ExchangeStudent, we do not want to inherit from Person AND Student. We only need to inherit
 		// from Student [which automatically inherits everything from Person also].)
-		if (this.classSchema.getEnum() == null
+		if (context.classSchema.getEnum() == null
 				&& GlobalFlags.getFlag(ConfigPropertyNames.FOLLOW_REFERENCES)
 				&& GlobalFlags.getFlag(ConfigPropertyNames.USE_INHERITANCE_REFERENCES)) {
 
 			// If adding for the first time, need to include a "type: object" entry.
-			if (this.classSchema.getAllOf() == null || this.classSchema.getAllOf().isEmpty()) {
+			if (context.classSchema.getAllOf() == null || context.classSchema.getAllOf().isEmpty()) {
 				final var objSchema = new ObjectSchema();
-				this.classSchema.addAllOfItem(objSchema);
+				context.classSchema.addAllOfItem(objSchema);
 			}
 
 			// All processed classes, minus the base class, are the super classes.
-			final var superClasses = new HashSet<OWLClass>(this.processedClasses);
-			superClasses.remove(this.baseClass);
+			final var superClasses = new HashSet<OWLClass>(context.processedClasses);
+			superClasses.remove(context.baseClass);
 
 			// Make a copy of the super classes.  Loop through all super classes and remove any
 			// super-super-classes that are being inherited by a nearer/more direct super class to the
@@ -265,7 +273,7 @@ public class ObjectVisitor implements OWLObjectVisitor {
 			for (OWLClass superClassA : superClasses) {
 				for (OWLClass superClassB : superClasses) {
 					if (!superClassA.equals(superClassB)
-							&& this.reasoner.getSuperClasses(superClassA, false).containsEntity(superClassB)) {
+							&& context.reasoner.getSuperClasses(superClassA, false).containsEntity(superClassB)) {
 						directSuperClasses.remove(superClassB);
 					}
 				}
@@ -278,23 +286,24 @@ public class ObjectVisitor implements OWLObjectVisitor {
 								final var refSchema = new ObjectSchema();
 								refSchema.set$ref("#/components/schemas/" + this.getPrefixedSchemaName(superClass));
 
-								this.classSchema.addAllOfItem(refSchema);
+								context.classSchema.addAllOfItem(refSchema);
 							});
 		}
 
 		// After checking/processing, if the base class schema has properties but no AllOf list and no
 		// type, set its type to "object".
-		if (this.classSchema.getProperties() != null
-				&& this.classSchema.getAllOf() == null
-				&& this.classSchema.getType() == null) {
-			MapperProperty.setSchemaType(this.classSchema, "object");
+		if (context.classSchema.getProperties() != null
+				&& context.classSchema.getAllOf() == null
+				&& context.classSchema.getType() == null) {
+			MapperProperty.setSchemaType(context.classSchema, "object");
 		}
+	}
 
-		// Loop through all the referenced classes and determine whether they are actually needed.
-		for (final var refClass : new HashSet<OWLClass>(this.referencedClasses)) {
+	private void pruneUnusedReferencedClasses() {
+		for (final var refClass : new HashSet<OWLClass>(context.referencedClasses)) {
 			// Indicator that referenced class has one or more equivalent classes.
 			final boolean hasEquivalentClasses =
-					EntitySearcher.getEquivalentClasses(refClass, baseClassOntology).count() > 0;
+					EntitySearcher.getEquivalentClasses(refClass, context.baseClassOntology).count() > 0;
 
 			// Indicator that referenced class has (subclass) properties.
 			boolean hasSubClassProperties = false;
@@ -308,7 +317,7 @@ public class ObjectVisitor implements OWLObjectVisitor {
 			// Look for all subclass axioms where the expression type is not an OWL CLass (i.e. it is a
 			// restriction).  This means there is an axiom indicating a "subclass of" property
 			// restriction is declared for the class.
-			for (final var ax : this.baseClassOntology.getSubClassAxiomsForSubClass(refClass)) {
+			for (final var ax : context.baseClassOntology.getSubClassAxiomsForSubClass(refClass)) {
 				for (final var nce : ax.getNestedClassExpressions()) {
 
 					if (!nce.getClassExpressionType().equals(ClassExpressionType.OWL_CLASS)) {
@@ -319,20 +328,24 @@ public class ObjectVisitor implements OWLObjectVisitor {
 
 			// Look at all data properties.  If any of them contain a domain which is the current
 			// referenced class, then set flag to keep the reference class to true.
-			for (final var op : this.baseClassOntology.getDataPropertiesInSignature()) {
-				for (final var dataPropDomainAx : this.baseClassOntology.getDataPropertyDomainAxioms(op)) {
+			for (final var op : context.baseClassOntology.getDataPropertiesInSignature()) {
+				for (final var dataPropDomainAx :
+						context.baseClassOntology.getDataPropertyDomainAxioms(op)) {
 					if (dataPropDomainAx.getClassesInSignature().contains(refClass)) {
 						isDomainForDataProperty = true;
 					}
 				}
 			}
 
+			final Map<String, Schema> classProperties =
+					context.classSchema == null ? null : context.classSchema.getProperties();
+
 			// Look at all object properties for the base class.  If any of them contain a range which is
 			// the current referenced class, then set flag to keep the reference class to true.
-			for (final var op : this.baseClassOntology.getObjectPropertiesInSignature()) {
+			for (final var op : context.baseClassOntology.getObjectPropertiesInSignature()) {
 				if (classProperties != null && classProperties.containsKey(op.getIRI().getShortForm())) {
 					for (final var objPropRangeAx :
-							this.baseClassOntology.getObjectPropertyRangeAxioms(
+							context.baseClassOntology.getObjectPropertyRangeAxioms(
 									op.asObjectPropertyExpression())) {
 						if (objPropRangeAx.getClassesInSignature().contains(refClass)) {
 							isRangeForObjectProperty = true;
@@ -348,46 +361,23 @@ public class ObjectVisitor implements OWLObjectVisitor {
 					&& !isDomainForDataProperty
 					&& !isRangeForObjectProperty) {
 				// Remove from the set of referenced classes.
-				this.referencedClasses.remove(refClass);
+				context.referencedClasses.remove(refClass);
 
 				// Also remove from the AllOf list of schemas, if applicable.
-				if (this.classSchema.getEnum() == null) {
-					if (this.classSchema.getAllOf() != null) {
-						for (final var allOfSchema : new ArrayList<Schema>(this.classSchema.getAllOf())) {
+				if (context.classSchema.getEnum() == null) {
+					if (context.classSchema.getAllOf() != null) {
+						for (final var allOfSchema : new ArrayList<Schema>(context.classSchema.getAllOf())) {
 							if (allOfSchema.get$ref() != null
 									&& allOfSchema
 											.get$ref()
 											.contains("#/components/schemas/" + this.getPrefixedSchemaName(refClass))) {
-								this.classSchema.getAllOf().remove(allOfSchema);
+								context.classSchema.getAllOf().remove(allOfSchema);
 							}
 						}
 					}
 				}
 			}
 		}
-
-		if (this.classSchema.getEnum() == null) {
-			if (this.classSchema.getAllOf() != null && this.classSchema.getAllOf().size() == 1) {
-				this.classSchema.setAllOf(null);
-				MapperProperty.setSchemaType(this.classSchema, "object");
-			} else {
-				// This is probably wrong.  Removing by commenting out temporarily.
-				// MapperProperty.setSchemaType(this.classSchema, null);
-			}
-		}
-
-		// Unsure if needed.  Keeping commented for now.
-		// if (this.classSchema.getProperties() == null
-		// 		&& this.classSchema.getAllOf() == null
-		// 		&& this.classSchema.getEnum() == null) {
-		// 	this.referencedClasses.clear();
-		// 	this.classSchema = null;
-		// }
-
-		// Create map of markdown content once the schema and referenced items are fully determined.
-		this.setMarkdownContentFromAxiomAnnotations();
-
-		return this.classSchema;
 	}
 
 	/**
@@ -397,7 +387,7 @@ public class ObjectVisitor implements OWLObjectVisitor {
 	 * @return a {@link Set} of {@link OWLClass}
 	 */
 	public Set<OWLClass> getAllReferencedClasses() {
-		return this.referencedClasses;
+		return context.referencedClasses;
 	}
 
 	/**
@@ -408,7 +398,7 @@ public class ObjectVisitor implements OWLObjectVisitor {
 	 *     annotation value.
 	 */
 	public Map<String, Map<String, String>> getMarkdownMappings() {
-		return this.markdownGenerationMap;
+		return context.markdownGenerationMap;
 	}
 
 	/**
@@ -419,7 +409,7 @@ public class ObjectVisitor implements OWLObjectVisitor {
 	 * @param ce an {@link OWLClass} to be visited by this {@link ObjectVisitor} class.
 	 */
 	public void visit(@Nonnull OWLOntology visitedClassOntology, @Nonnull OWLClass ce) {
-		this.baseClassOntology = visitedClassOntology;
+		context.baseClassOntology = visitedClassOntology;
 		ce.accept(this);
 	}
 
@@ -430,35 +420,36 @@ public class ObjectVisitor implements OWLObjectVisitor {
 	public void visit(@Nonnull OWLClass ce) {
 		// If the base class is null when this OWLClass is visited, then treat it as the base class and
 		// set up this Visitor class with its basic details.
-		if (this.baseClass == null) {
+		if (context.baseClass == null) {
 			this.initializeBaseClass(ce);
 
 			// There is a possibility that the owl:thing for the ontology contains a universal property.
 			// While generally rare, this might be some type of identifier, such as a GUID.
-			if (this.owlThing != null) {
-				this.owlThing.accept(this);
+			if (context.owlThing != null) {
+				context.owlThing.accept(this);
 			}
 		}
 
 		// Avoid cycles and accept visits from super classes for the purpose of getting all properties.
-		if (!ce.equals(this.owlThing) && !this.processedClasses.contains(ce)) {
+		if (!ce.equals(context.owlThing) && !context.processedClasses.contains(ce)) {
 			// If we are processing inherited restrictions then we recursively visit named supers.
-			this.processedClasses.add(ce);
+			context.processedClasses.add(ce);
 
 			// If using inheritance references, make sure to add super classes.
 			if (GlobalFlags.getFlag(ConfigPropertyNames.FOLLOW_REFERENCES)
 					&& GlobalFlags.getFlag(ConfigPropertyNames.USE_INHERITANCE_REFERENCES)) {
 				// Add the base and super classes to the referenced class set.
-				this.referencedClasses.add(ce);
+				context.referencedClasses.add(ce);
 			}
 
 			// Loop through the ontologies to use the one relevant for the current OWLClass.
 			// for (OWLOntology ontology : this.ontologies) {
 			// Only traverse this OWLClass's super classes, if it is contained in the ontology.
-			if (this.baseClassOntology.containsClassInSignature(ce.getIRI())) {
+			if (context.baseClassOntology.containsClassInSignature(ce.getIRI())) {
 				// If it has subclass axioms, then loop through each to accept visits for all super
 				// classes.
-				this.baseClassOntology
+				context
+						.baseClassOntology
 						.subClassAxiomsForSubClass(ce)
 						.forEach(
 								ax -> {
@@ -474,16 +465,13 @@ public class ObjectVisitor implements OWLObjectVisitor {
 		// Only include properties from the base class OR we are not following references (because all
 		// properties need to be copied to the base class in this case).
 		// Inherited details should be determined via references.
-		if (this.baseClass.equals(ce)) {
+		if (context.baseClass.equals(ce)) {
 			// Get all non-inherited object and data properties.
-			this.basePropertiesMap.putAll(this.getObjectPropertySchemasForClass(ce));
-			this.basePropertiesMap.putAll(this.getDataPropertySchemasForClass(ce));
+			context.basePropertiesMap.putAll(this.getObjectPropertySchemasForClass(ce));
+			context.basePropertiesMap.putAll(this.getDataPropertySchemasForClass(ce));
 
 			// Not using setProperties(), because it creates immutability which breaks unit tests.
-			this.basePropertiesMap.forEach(
-					(schemaName, schema) -> {
-						this.classSchema.addProperty(schemaName, schema);
-					});
+			context.basePropertiesMap.forEach(context::addPropertyToSchema);
 
 			// Generate restrictions for all properties of this class, regardless of following references
 			// or not.
@@ -492,14 +480,11 @@ public class ObjectVisitor implements OWLObjectVisitor {
 			// If this is a superclass AND we are using inheritance/superclass references, still add the
 			// properties to the properties map.
 			if (!GlobalFlags.getFlag(ConfigPropertyNames.USE_INHERITANCE_REFERENCES)) {
-				this.basePropertiesMap.putAll(this.getObjectPropertySchemasForClass(ce));
-				this.basePropertiesMap.putAll(this.getDataPropertySchemasForClass(ce));
+				context.basePropertiesMap.putAll(this.getObjectPropertySchemasForClass(ce));
+				context.basePropertiesMap.putAll(this.getDataPropertySchemasForClass(ce));
 
 				// Not using setProperties(), because it creates immutability which breaks unit tests.
-				this.basePropertiesMap.forEach(
-						(schemaName, schema) -> {
-							this.classSchema.addProperty(schemaName, schema);
-						});
+				context.basePropertiesMap.forEach(context::addPropertyToSchema);
 
 				this.generatePropertySchemasWithRestrictions(ce);
 			}
@@ -513,28 +498,29 @@ public class ObjectVisitor implements OWLObjectVisitor {
 	 *     classes.
 	 */
 	private void generatePropertySchemasWithRestrictions(OWLClass owlClass) {
-		if (owlClass != null && owlClass.equals(this.baseClass)) {
+		if (owlClass != null && owlClass.equals(context.baseClass)) {
 			logger.info("--------------------------------------------------");
 			logger.info("\tGenerating restrictions for:");
-			logger.info("\t\t" + this.baseClass);
+			logger.info("\t\t" + context.baseClass);
 			logger.info("--------------------------------------------------");
 		} else {
 			logger.info("--------------------------------------------------");
 			logger.info("\tGenerating restrictions for:");
-			logger.info("\t\t" + this.baseClass);
+			logger.info("\t\t" + context.baseClass);
 			logger.info("\twhich were inherited from:");
 			logger.info("\t\t" + owlClass);
 			logger.info("--------------------------------------------------");
 		}
 
 		// Avoid cycles and accept visits from super classes for the purpose of getting all properties.
-		if (!this.processedRestrictionClasses.contains(owlClass)) {
+		if (!context.processedRestrictionClasses.contains(owlClass)) {
 			// If we are processing inherited restrictions then we recursively visit named supers.
-			this.processedRestrictionClasses.add(owlClass);
+			context.processedRestrictionClasses.add(owlClass);
 
 			// Search the ontology for this OWLClass.
 			// If it has subclass axioms, then loop through each to generate schema restrictions.
-			this.baseClassOntology
+			context
+					.baseClassOntology
 					.subClassAxiomsForSubClass(owlClass)
 					.forEach(
 							ax -> {
@@ -552,15 +538,15 @@ public class ObjectVisitor implements OWLObjectVisitor {
 														: ((OWLDataRestriction) ax.getSuperClass())
 																.getProperty()
 																.asOWLDataProperty();
-										this.currentlyProcessedPropertyName = property.getIRI().getShortForm();
+										context.currentlyProcessedPropertyName = property.getIRI().getShortForm();
 
 										// Add any classes referenced by the restriction.
-										this.referencedClasses.addAll(ax.getSuperClass().getClassesInSignature());
+										context.referencedClasses.addAll(ax.getSuperClass().getClassesInSignature());
 									} else if (ax.getSuperClass() instanceof OWLBooleanClassExpression) {
 										if (ax.getSuperClass() instanceof OWLObjectComplementOf) {
 
 											// Add the object complement reference class.
-											this.referencedClasses.addAll(ax.getSuperClass().getClassesInSignature());
+											context.referencedClasses.addAll(ax.getSuperClass().getClassesInSignature());
 
 											logger.info(
 													"\t"
@@ -600,23 +586,17 @@ public class ObjectVisitor implements OWLObjectVisitor {
 										// Check each entity here to be safe.
 										ax.getSuperClass()
 												.objectPropertiesInSignature()
-												.forEach(
-														(entity) -> {
-															this.setDescriptionReadOnlyWriteOnlyFromAnnotations(entity);
-														});
+												.forEach(this::setDescriptionReadOnlyWriteOnlyFromAnnotations);
 										ax.getSuperClass()
 												.dataPropertiesInSignature()
-												.forEach(
-														(entity) -> {
-															this.setDescriptionReadOnlyWriteOnlyFromAnnotations(entity);
-														});
+												.forEach(this::setDescriptionReadOnlyWriteOnlyFromAnnotations);
 
 										// Also check the subClass axioms for annotations specifying read/write only.
 										this.setReadOnlyWriteOnlyFromAxiomAnnotations(ax);
 									}
 
 									// Clear out the property name.
-									this.currentlyProcessedPropertyName = null;
+									context.currentlyProcessedPropertyName = null;
 								} else {
 									logger.severe("\t" + this.getBaseClassName() + " has unknown restriction.");
 									logger.severe("\t\taxiom:  " + ax);
@@ -625,7 +605,8 @@ public class ObjectVisitor implements OWLObjectVisitor {
 
 			// For equivalent (to) classes (e.g. Defined classes) we need to accept the visit to
 			// navigate it.
-			this.baseClassOntology
+			context
+					.baseClassOntology
 					.equivalentClassesAxioms(owlClass)
 					.forEach(
 							(eqClsAx) -> {
@@ -644,14 +625,14 @@ public class ObjectVisitor implements OWLObjectVisitor {
 	 */
 	private void setDescriptionReadOnlyWriteOnlyFromAnnotations(OWLEntity entity) {
 		if (entity.isOWLDataProperty() || entity.isOWLObjectProperty()) {
-			EntitySearcher.getAnnotations(entity, this.baseClassOntology)
+			EntitySearcher.getAnnotations(entity, context.baseClassOntology)
 					.forEach(
 							annotation -> {
 								var propertySchema =
-										this.classSchema.getProperties() == null
+										context.classSchema.getProperties() == null
 												? null
 												: (Schema)
-														this.classSchema.getProperties().get(entity.getIRI().getShortForm());
+														context.classSchema.getProperties().get(entity.getIRI().getShortForm());
 
 								if (propertySchema != null) {
 									if (propertySchema.getDescription() == null
@@ -659,13 +640,13 @@ public class ObjectVisitor implements OWLObjectVisitor {
 										final var propertyDescription =
 												OntologyDescriptionUtils.getDescription(
 																entity,
-																this.baseClassOntology,
+																context.baseClassOntology,
 																GlobalFlags.getFlag(ConfigPropertyNames.DEFAULT_DESCRIPTIONS))
 														.orElse(null);
 										MapperProperty.setSchemaDescription(propertySchema, propertyDescription);
 									}
 
-									final var annotationConfig = this.configData.getAnnotationConfig();
+									final var annotationConfig = context.configData.getAnnotationConfig();
 									if (annotationConfig != null) {
 										final var annotationPropertyName =
 												annotation.getProperty().getIRI().getShortForm();
@@ -724,13 +705,16 @@ public class ObjectVisitor implements OWLObjectVisitor {
 				.forEach(
 						annotation -> {
 							var propertySchema =
-									this.classSchema.getProperties() == null
+									context.classSchema.getProperties() == null
 											? null
 											: (Schema)
-													this.classSchema.getProperties().get(this.currentlyProcessedPropertyName);
+													context
+															.classSchema
+															.getProperties()
+															.get(context.currentlyProcessedPropertyName);
 
 							if (propertySchema != null) {
-								final var annotationConfig = this.configData.getAnnotationConfig();
+								final var annotationConfig = context.configData.getAnnotationConfig();
 								if (annotationConfig != null) {
 									final var annotationPropertyName =
 											annotation.getProperty().getIRI().getShortForm();
@@ -783,7 +767,7 @@ public class ObjectVisitor implements OWLObjectVisitor {
 	 * @param entity an {@link OWLEntity} with the class/property associated with the annotation.
 	 */
 	private void addMarkdownAnnotationsToMap(OWLAnnotation annotation, String annotationMappedTo) {
-		final var annotationConfig = this.configData.getAnnotationConfig();
+		final var annotationConfig = context.configData.getAnnotationConfig();
 		if (annotationConfig != null) {
 			final var annotationPropertyName = annotation.getProperty().getIRI().getShortForm();
 
@@ -801,10 +785,10 @@ public class ObjectVisitor implements OWLObjectVisitor {
 											? markdownAnnotationLiteralValue.get().getLiteral()
 											: "";
 
-							var propMarkdownValueMap = this.markdownGenerationMap.get(markdownAnnotationName);
+							var propMarkdownValueMap = context.markdownGenerationMap.get(markdownAnnotationName);
 							if (propMarkdownValueMap == null) {
 								propMarkdownValueMap = new TreeMap<>();
-								this.markdownGenerationMap.put(markdownAnnotationName, propMarkdownValueMap);
+								context.markdownGenerationMap.put(markdownAnnotationName, propMarkdownValueMap);
 							}
 
 							propMarkdownValueMap.put(annotationMappedTo, markdownAnnotationValue);
@@ -822,18 +806,19 @@ public class ObjectVisitor implements OWLObjectVisitor {
 	 * @param axiom an {@link OWLAxiom}
 	 */
 	private void setMarkdownContentFromAxiomAnnotations() {
-		for (final var refClass : this.referencedClasses) {
+		for (final var refClass : context.referencedClasses) {
 			final var refClassName = refClass.getIRI().getShortForm();
 
 			// Get markdown annotations from classes.
-			EntitySearcher.getAnnotationObjects(refClass, this.baseClassOntology)
+			EntitySearcher.getAnnotationObjects(refClass, context.baseClassOntology)
 					.forEach(
 							(annotation) -> {
 								this.addMarkdownAnnotationsToMap(annotation, refClassName);
 							});
 
 			// Get markdown annotations from data properties.
-			this.baseClassOntology
+			context
+					.baseClassOntology
 					.axioms(AxiomType.DATA_PROPERTY_DOMAIN)
 					.filter(
 							dataPropDomainAx ->
@@ -844,7 +829,7 @@ public class ObjectVisitor implements OWLObjectVisitor {
 										.dataPropertiesInSignature()
 										.forEach(
 												(dataProp) -> {
-													EntitySearcher.getAnnotationObjects(dataProp, this.baseClassOntology)
+													EntitySearcher.getAnnotationObjects(dataProp, context.baseClassOntology)
 															.forEach(
 																	(annotation) -> {
 																		this.addMarkdownAnnotationsToMap(
@@ -855,7 +840,8 @@ public class ObjectVisitor implements OWLObjectVisitor {
 							});
 
 			// Get markdown annotations from object properties.
-			this.baseClassOntology
+			context
+					.baseClassOntology
 					.axioms(AxiomType.OBJECT_PROPERTY_DOMAIN)
 					.filter(
 							objPropDomainAx ->
@@ -866,7 +852,7 @@ public class ObjectVisitor implements OWLObjectVisitor {
 										.objectPropertiesInSignature()
 										.forEach(
 												(objProp) -> {
-													EntitySearcher.getAnnotationObjects(objProp, this.baseClassOntology)
+													EntitySearcher.getAnnotationObjects(objProp, context.baseClassOntology)
 															.forEach(
 																	(annotation) -> {
 																		this.addMarkdownAnnotationsToMap(
@@ -877,7 +863,8 @@ public class ObjectVisitor implements OWLObjectVisitor {
 							});
 
 			// Get annotations from subclass axioms/restrictions.
-			this.baseClassOntology
+			context
+					.baseClassOntology
 					.subClassAxiomsForSubClass(refClass)
 					.forEach(
 							(axiom) -> {
@@ -923,7 +910,7 @@ public class ObjectVisitor implements OWLObjectVisitor {
 										.dataPropertiesInSignature()
 										.forEach(
 												(dataProp) -> {
-													EntitySearcher.getAnnotationObjects(dataProp, this.baseClassOntology)
+													EntitySearcher.getAnnotationObjects(dataProp, context.baseClassOntology)
 															.forEach(
 																	(annotation) -> {
 																		this.addMarkdownAnnotationsToMap(
@@ -936,7 +923,7 @@ public class ObjectVisitor implements OWLObjectVisitor {
 										.objectPropertiesInSignature()
 										.forEach(
 												(objProp) -> {
-													EntitySearcher.getAnnotationObjects(objProp, this.baseClassOntology)
+													EntitySearcher.getAnnotationObjects(objProp, context.baseClassOntology)
 															.forEach(
 																	(annotation) -> {
 																		this.addMarkdownAnnotationsToMap(
@@ -955,7 +942,7 @@ public class ObjectVisitor implements OWLObjectVisitor {
 	 * @return a {@link String} which is the (short form) name of the base class.
 	 */
 	private String getBaseClassName() {
-		return this.baseClass.getIRI().getShortForm();
+		return context.baseClass.getIRI().getShortForm();
 	}
 
 	/**
@@ -973,161 +960,178 @@ public class ObjectVisitor implements OWLObjectVisitor {
 			OWLObjectPropertyExpression objPropExpr, @Nullable Set<OWLClass> objPropRanges) {
 		final var op = objPropExpr.asOWLObjectProperty();
 		final var propertyName = op.getIRI().getShortForm();
-		this.propertyNames.add(propertyName);
-		this.currentlyProcessedPropertyName = propertyName;
+		context.propertyNames.add(propertyName);
 
-		logger.info("\thas property:\t\"" + propertyName + "\"");
+		final var returnObjPropertySchema = new Schema();
 
-		final var propertyRanges = new HashSet<String>();
-		final var complexObjectRanges = new HashSet<OWLClassExpression>();
+		context.withProcessedProperty(
+				propertyName,
+				() -> {
+					logger.info("\thas property:\t\"" + propertyName + "\"");
 
-		// Add object property OWLClass ranges to set of property ranges.
-		if (objPropRanges != null) {
-			objPropRanges.forEach(
-					objPropRange -> {
-						propertyRanges.add(this.getPrefixedSchemaName(objPropRange.asOWLClass()));
+					final var propertyRanges = new HashSet<String>();
+					final var complexObjectRanges = new HashSet<OWLClassExpression>();
 
-						// Add the range to the referenced class set.
-						this.referencedClasses.add(objPropRange.asOWLClass());
+					// Add object property OWLClass ranges to set of property ranges.
+					if (objPropRanges != null) {
+						objPropRanges.forEach(
+								objPropRange -> {
+									propertyRanges.add(this.getPrefixedSchemaName(objPropRange.asOWLClass()));
 
-						if (EntitySearcher.getEquivalentClasses(
-												objPropRange.asOWLClass(), this.baseClassOntology)
-										.count()
-								> 0) {
-							// Add the object property name and NOT the class name that it refers to.
-							this.enumProperties.add(propertyName);
+									// Add the range to the referenced class set.
+									context.referencedClasses.add(objPropRange.asOWLClass());
+
+									if (EntitySearcher.getEquivalentClasses(
+															objPropRange.asOWLClass(), context.baseClassOntology)
+													.count()
+											> 0) {
+										// Add the object property name and NOT the class name that it refers to.
+										context.enumProperties.add(propertyName);
+									}
+								});
+					}
+
+					// Also loop through range axioms for object property expression and add ranges to map,
+					// complex
+					// map, or visit the range, if unionOf/intersectionOf/oneOf.
+					context
+							.baseClassOntology
+							.objectPropertyRangeAxioms(objPropExpr)
+							.forEach(
+									(objPropRangeAxiom) -> {
+										if (objPropRangeAxiom.getRange() instanceof OWLClass) {
+											propertyRanges.add(
+													this.getPrefixedSchemaName(objPropRangeAxiom.getRange().asOWLClass()));
+
+											if (EntitySearcher.getEquivalentClasses(
+																	objPropRangeAxiom.getRange().asOWLClass(),
+																	context.baseClassOntology)
+															.count()
+													> 0) {
+												// Add the object property name and NOT the class name that it refers to.
+												context.enumProperties.add(propertyName);
+											}
+
+											// Add the range to the referenced class set.
+											context.referencedClasses.add(objPropRangeAxiom.getRange().asOWLClass());
+										} else if (objPropRangeAxiom.getRange() instanceof OWLObjectUnionOf
+												|| objPropRangeAxiom.getRange() instanceof OWLObjectIntersectionOf
+												|| objPropRangeAxiom.getRange() instanceof OWLObjectOneOf
+												|| objPropRangeAxiom.getRange() instanceof OWLObjectComplementOf) {
+											logger.info(
+													"\t\t...has complex range -> proceeding to its restrictions"
+															+ " immediately...");
+											objPropRangeAxiom.getRange().accept(this);
+										} else {
+											complexObjectRanges.add(objPropRangeAxiom.getRange());
+										}
+									});
+
+					// Check the ranges.  Output relevant info.  May not be necessary.
+					if (propertyRanges.isEmpty()) {
+						logger.warning("\t\tProperty \"" + op.getIRI() + "\" has range equals zero.");
+					} else {
+						logger.info("\t\tProperty range(s): " + propertyRanges);
+					}
+					logger.info("");
+
+					// In cases, such as unionOf/intersectionOf/oneOf , the property schema may already be
+					// set.  Get
+					// it, if so.
+					var objPropertySchema =
+							context.classSchema.getProperties() == null
+									? null
+									: (Schema) context.classSchema.getProperties().get(propertyName);
+
+					try {
+						final var propertyDescription =
+								OntologyDescriptionUtils.getDescription(
+												op,
+												context.baseClassOntology,
+												GlobalFlags.getFlag(ConfigPropertyNames.DEFAULT_DESCRIPTIONS))
+										.orElse(null);
+
+						// Workaround for handling unionOf/intersectionOf/oneOf cases which may be set already
+						// above.
+						if (objPropertySchema == null) {
+							// Get object property schema from mapper.
+							objPropertySchema =
+									MapperObjectProperty.createObjectPropertySchema(
+											propertyName, propertyDescription, propertyRanges);
+						} else {
+							// These do not get set properly because the unionOf/intersectionOf/oneOf property
+							// schema
+							// was not created via MapperDataProperty.createDataPropertySchema().
+							MapperObjectProperty.setSchemaName(objPropertySchema, propertyName);
+							MapperObjectProperty.setSchemaDescription(objPropertySchema, propertyDescription);
 						}
-					});
-		}
 
-		// Also loop through range axioms for object property expression and add ranges to map, complex
-		// map, or visit the range, if unionOf/intersectionOf/oneOf.
-		this.baseClassOntology
-				.objectPropertyRangeAxioms(objPropExpr)
-				.forEach(
-						(objPropRangeAxiom) -> {
-							if (objPropRangeAxiom.getRange() instanceof OWLClass) {
-								propertyRanges.add(
-										this.getPrefixedSchemaName(objPropRangeAxiom.getRange().asOWLClass()));
+						// If property is functional, set the schema accordingly.
+						if (EntitySearcher.isFunctional(
+								op, Collections.singleton(context.baseClassOntology).stream())) {
+							logger.info("\t\tProperty is functional.  Therefore, required with a max of 1 item.");
+							context.functionalProperties.add(propertyName);
+							context.requiredProperties.add(propertyName);
+							MapperObjectProperty.setFunctionalForPropertySchema(objPropertySchema);
+						}
 
-								if (EntitySearcher.getEquivalentClasses(
-														objPropRangeAxiom.getRange().asOWLClass(), this.baseClassOntology)
-												.count()
-										> 0) {
-									// Add the object property name and NOT the class name that it refers to.
-									this.enumProperties.add(propertyName);
+						final var annotationConfig = context.configData.getAnnotationConfig();
+						if (annotationConfig != null) {
+							final var propertyAnnotations = annotationConfig.getPropertyAnnotations();
+
+							if (propertyAnnotations != null) {
+								// If property contains the annotation property (name is specified in configuration
+								// file)
+								// indicating it is read-only, then set value on the schema.
+								final var readOnlyAnnotation = propertyAnnotations.getReadOnlyFlagName();
+								if (readOnlyAnnotation != null && !readOnlyAnnotation.isBlank()) {
+									if (EntitySearcher.getAnnotations(op, context.baseClassOntology)
+													.filter(
+															annotation ->
+																	readOnlyAnnotation.equals(
+																			annotation.getProperty().getIRI().getShortForm()))
+													.count()
+											> 0) {
+										MapperObjectProperty.setReadOnlyValueForPropertySchema(objPropertySchema, true);
+									}
 								}
 
-								// Add the range to the referenced class set.
-								this.referencedClasses.add(objPropRangeAxiom.getRange().asOWLClass());
-							} else if (objPropRangeAxiom.getRange() instanceof OWLObjectUnionOf
-									|| objPropRangeAxiom.getRange() instanceof OWLObjectIntersectionOf
-									|| objPropRangeAxiom.getRange() instanceof OWLObjectOneOf
-									|| objPropRangeAxiom.getRange() instanceof OWLObjectComplementOf) {
-								logger.info(
-										"\t\t...has complex range -> proceeding to its restrictions immediately...");
-								objPropRangeAxiom.getRange().accept(this);
-							} else {
-								complexObjectRanges.add(objPropRangeAxiom.getRange());
+								// If property contains the annotation property (name is specified in configuration
+								// file)
+								// indicating it is write-only, then set value on the schema.
+								final var writeOnlyAnnotation = propertyAnnotations.getWriteOnlyFlagName();
+								if (writeOnlyAnnotation != null && !writeOnlyAnnotation.isBlank()) {
+									if (EntitySearcher.getAnnotations(op, context.baseClassOntology)
+													.filter(
+															annotation ->
+																	writeOnlyAnnotation.equals(
+																			annotation.getProperty().getIRI().getShortForm()))
+													.count()
+											> 0) {
+										MapperObjectProperty.setWriteOnlyValueForPropertySchema(
+												objPropertySchema, true);
+									}
+								}
 							}
-						});
-
-		// Check the ranges.  Output relevant info.  May not be necessary.
-		if (propertyRanges.isEmpty()) {
-			logger.warning("\t\tProperty \"" + op.getIRI() + "\" has range equals zero.");
-		} else {
-			logger.info("\t\tProperty range(s): " + propertyRanges);
-		}
-		logger.info("");
-
-		// In cases, such as unionOf/intersectionOf/oneOf , the property schema may already be set.  Get
-		// it, if so.
-		var objPropertySchema =
-				this.classSchema.getProperties() == null
-						? null
-						: (Schema) this.classSchema.getProperties().get(propertyName);
-
-		try {
-			final var propertyDescription =
-					OntologyDescriptionUtils.getDescription(
-									op,
-									this.baseClassOntology,
-									GlobalFlags.getFlag(ConfigPropertyNames.DEFAULT_DESCRIPTIONS))
-							.orElse(null);
-
-			// Workaround for handling unionOf/intersectionOf/oneOf cases which may be set already above.
-			if (objPropertySchema == null) {
-				// Get object property schema from mapper.
-				objPropertySchema =
-						MapperObjectProperty.createObjectPropertySchema(
-								propertyName, propertyDescription, propertyRanges);
-			} else {
-				// These do not get set properly because the unionOf/intersectionOf/oneOf property schema
-				// was not created via MapperDataProperty.createDataPropertySchema().
-				MapperObjectProperty.setSchemaName(objPropertySchema, propertyName);
-				MapperObjectProperty.setSchemaDescription(objPropertySchema, propertyDescription);
-			}
-
-			// If property is functional, set the schema accordingly.
-			if (EntitySearcher.isFunctional(op, Collections.singleton(this.baseClassOntology).stream())) {
-				logger.info("\t\tProperty is functional.  Therefore, required with a max of 1 item.");
-				this.functionalProperties.add(propertyName);
-				this.requiredProperties.add(propertyName);
-				MapperObjectProperty.setFunctionalForPropertySchema(objPropertySchema);
-			}
-
-			final var annotationConfig = this.configData.getAnnotationConfig();
-			if (annotationConfig != null) {
-				final var propertyAnnotations = annotationConfig.getPropertyAnnotations();
-
-				if (propertyAnnotations != null) {
-					// If property contains the annotation property (name is specified in configuration file)
-					// indicating it is read-only, then set value on the schema.
-					final var readOnlyAnnotation = propertyAnnotations.getReadOnlyFlagName();
-					if (readOnlyAnnotation != null && !readOnlyAnnotation.isBlank()) {
-						if (EntitySearcher.getAnnotations(op, this.baseClassOntology)
-										.filter(
-												annotation ->
-														readOnlyAnnotation.equals(
-																annotation.getProperty().getIRI().getShortForm()))
-										.count()
-								> 0) {
-							MapperObjectProperty.setReadOnlyValueForPropertySchema(objPropertySchema, true);
 						}
+
+						// For any complex property ranges, traverse.  This will grab restrictions also.  There
+						// is no
+						// good way for this situation to grab only the types in this situation.
+						if (!complexObjectRanges.isEmpty()) {
+							complexObjectRanges.forEach(
+									(objectRange) -> {
+										objectRange.accept(this);
+									});
+						}
+					} catch (Exception e) {
+						e.printStackTrace();
 					}
 
-					// If property contains the annotation property (name is specified in configuration file)
-					// indicating it is write-only, then set value on the schema.
-					final var writeOnlyAnnotation = propertyAnnotations.getWriteOnlyFlagName();
-					if (writeOnlyAnnotation != null && !writeOnlyAnnotation.isBlank()) {
-						if (EntitySearcher.getAnnotations(op, this.baseClassOntology)
-										.filter(
-												annotation ->
-														writeOnlyAnnotation.equals(
-																annotation.getProperty().getIRI().getShortForm()))
-										.count()
-								> 0) {
-							MapperObjectProperty.setWriteOnlyValueForPropertySchema(objPropertySchema, true);
-						}
-					}
-				}
-			}
+					SchemaCloneUtils.clone(objPropertySchema, returnObjPropertySchema);
+				});
 
-			// For any complex property ranges, traverse.  This will grab restrictions also.  There is no
-			// good way for this situation to grab only the types in this situation.
-			if (!complexObjectRanges.isEmpty()) {
-				complexObjectRanges.forEach(
-						(objectRange) -> {
-							objectRange.accept(this);
-						});
-			}
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-
-		this.currentlyProcessedPropertyName = null;
-
-		return objPropertySchema;
+		return returnObjPropertySchema;
 	}
 
 	/**
@@ -1143,9 +1147,10 @@ public class ObjectVisitor implements OWLObjectVisitor {
 
 		// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		// Loop through all top-level object properties of this class's ontology.
-		this.reasoner
+		context
+				.reasoner
 				.subObjectProperties(
-						this.reasoner.getTopObjectPropertyNode().getRepresentativeElement(),
+						context.reasoner.getTopObjectPropertyNode().getRepresentativeElement(),
 						InferenceDepth.DIRECT)
 				.filter(objPropExpr -> !objPropExpr.isBottomEntity() && objPropExpr.isOWLObjectProperty())
 				.forEach(
@@ -1154,7 +1159,7 @@ public class ObjectVisitor implements OWLObjectVisitor {
 
 							// Check property contains this owlClass as a domain.
 							for (final var objPropDomainAx :
-									this.baseClassOntology.getObjectPropertyDomainAxioms(objPropExpr)) {
+									context.baseClassOntology.getObjectPropertyDomainAxioms(objPropExpr)) {
 								final var domain = objPropDomainAx.getDomain();
 								if (domain.isOWLClass()) {
 									if (owlClass.equals(domain)) {
@@ -1181,7 +1186,7 @@ public class ObjectVisitor implements OWLObjectVisitor {
 							// Keep track of all property ranges.  Even if the super-property has no domain, the
 							// ranges can be inherited by sub-properties which have this owlClass as a domain.
 							for (final var objPropRangeAx :
-									this.baseClassOntology.getObjectPropertyRangeAxioms(objPropExpr)) {
+									context.baseClassOntology.getObjectPropertyRangeAxioms(objPropExpr)) {
 								final var range = objPropRangeAx.getRange();
 
 								// Only handle ranges which are OWLClass objects
@@ -1209,24 +1214,21 @@ public class ObjectVisitor implements OWLObjectVisitor {
 								objPropertiesMap.put(
 										propertyName, this.getObjectPropertySchema(objPropExpr, objPropRanges));
 
-								// Keep track of the property name for the accept() call in the FOR loop below.
-								this.currentlyProcessedPropertyName = propertyName;
+								context.withProcessedProperty(
+										propertyName,
+										() -> {
+											for (final var objPropRangeAx :
+													context.baseClassOntology.getObjectPropertyRangeAxioms(objPropExpr)) {
+												final var range = objPropRangeAx.getRange();
 
-								for (final var objPropRangeAx :
-										this.baseClassOntology.getObjectPropertyRangeAxioms(objPropExpr)) {
-									final var range = objPropRangeAx.getRange();
-
-									this.currentlyProcessedPropertyName = propertyName;
-
-									// For complex ranges which are unions or intersections, treat like a
-									// restriction.
-									if (range instanceof OWLObjectUnionOf
-											|| range instanceof OWLObjectIntersectionOf) {
-										range.accept(this);
-									}
-								}
-
-								this.currentlyProcessedPropertyName = null;
+												// For complex ranges which are unions or intersections, treat like a
+												// restriction.
+												if (range instanceof OWLObjectUnionOf
+														|| range instanceof OWLObjectIntersectionOf) {
+													range.accept(this);
+												}
+											}
+										});
 							}
 
 							// ==========================================================================================
@@ -1234,7 +1236,8 @@ public class ObjectVisitor implements OWLObjectVisitor {
 							final var isOwlClassDomainOfObjPropFinal = isOwlClassDomainOfObjProp;
 
 							// Loop through all sub-properties of this property.
-							this.reasoner
+							context
+									.reasoner
 									.subObjectProperties(objPropExpr, InferenceDepth.ALL)
 									.filter(
 											subObjPropExpr ->
@@ -1246,7 +1249,8 @@ public class ObjectVisitor implements OWLObjectVisitor {
 												// Check sub-property's domain(s) and inherit from its super-property.
 												// Check property contains this owlClass as a domain.
 												for (final var subObjPropDomainAx :
-														this.baseClassOntology.getObjectPropertyDomainAxioms(subObjPropExpr)) {
+														context.baseClassOntology.getObjectPropertyDomainAxioms(
+																subObjPropExpr)) {
 													final var domain = subObjPropDomainAx.getDomain();
 													if (domain.isOWLClass()) {
 														if (owlClass.equals(domain)) {
@@ -1274,7 +1278,8 @@ public class ObjectVisitor implements OWLObjectVisitor {
 
 												// Check sub-property's range(s) and inherit from its super-property.
 												for (final var subObjPropRangeAx :
-														this.baseClassOntology.getObjectPropertyRangeAxioms(subObjPropExpr)) {
+														context.baseClassOntology.getObjectPropertyRangeAxioms(
+																subObjPropExpr)) {
 													final var range = subObjPropRangeAx.getRange();
 													if (range.isOWLClass()) {
 														subObjPropRanges.add(range.asOWLClass());
@@ -1308,23 +1313,23 @@ public class ObjectVisitor implements OWLObjectVisitor {
 															propertyName,
 															this.getObjectPropertySchema(subObjPropExpr, subObjPropRanges));
 
-													// Keep track of the property name for the accept() call in the FOR loop
-													// below.
-													this.currentlyProcessedPropertyName = propertyName;
+													context.withProcessedProperty(
+															propertyName,
+															() -> {
+																for (final var subObjPropRangeAx :
+																		context.baseClassOntology.getObjectPropertyRangeAxioms(
+																				subObjPropExpr)) {
+																	final var range = subObjPropRangeAx.getRange();
 
-													for (final var subObjPropRangeAx :
-															this.baseClassOntology.getObjectPropertyRangeAxioms(subObjPropExpr)) {
-														final var range = subObjPropRangeAx.getRange();
-
-														// For complex ranges which are unions or intersections, treat like a
-														// restriction.
-														if (range instanceof OWLObjectUnionOf
-																|| range instanceof OWLObjectIntersectionOf) {
-															range.accept(this);
-														}
-													}
-
-													this.currentlyProcessedPropertyName = null;
+																	// For complex ranges which are unions or intersections, treat
+																	// like a
+																	// restriction.
+																	if (range instanceof OWLObjectUnionOf
+																			|| range instanceof OWLObjectIntersectionOf) {
+																		range.accept(this);
+																	}
+																}
+															});
 												}
 											});
 							// ==========================================================================================
@@ -1343,7 +1348,8 @@ public class ObjectVisitor implements OWLObjectVisitor {
 	 */
 	private Map<String, Schema> getDataPropertySchemasForClass(OWLClass owlClass) {
 		final var dataPropDomainAxioms = new HashSet<OWLDataPropertyDomainAxiom>();
-		dataPropDomainAxioms.addAll(this.baseClassOntology.getAxioms(AxiomType.DATA_PROPERTY_DOMAIN));
+		dataPropDomainAxioms.addAll(
+				context.baseClassOntology.getAxioms(AxiomType.DATA_PROPERTY_DOMAIN));
 
 		// Data property map to return
 		final var dataPropertiesMap = new HashMap<String, Schema>();
@@ -1360,7 +1366,8 @@ public class ObjectVisitor implements OWLObjectVisitor {
 							final var dataProperties = dataPropDomainAx.getDataPropertiesInSignature();
 							for (final var topLevelDataProperty : dataProperties) {
 								for (final var dataPropEx :
-										this.reasoner
+										context
+												.reasoner
 												.getSubDataProperties(topLevelDataProperty, false)
 												.getFlattened()) {
 									// owl:bottomDataProperty
@@ -1373,163 +1380,186 @@ public class ObjectVisitor implements OWLObjectVisitor {
 							// Loop through each data (sub)property and generate its schema
 							for (final var dp : dataProperties) {
 								final var propertyName = dp.getIRI().getShortForm();
-								this.propertyNames.add(propertyName);
-								this.currentlyProcessedPropertyName = propertyName;
+								context.propertyNames.add(propertyName);
+								context.withProcessedProperty(
+										propertyName,
+										() -> {
+											logger.info("\thas property:  \"" + propertyName + "\"");
 
-								logger.info("\thas property:  \"" + propertyName + "\"");
+											final var propertyRanges = new HashSet<String>();
+											final var complexDataRanges = new HashSet<OWLDataRange>();
+											context
+													.baseClassOntology
+													.dataPropertyRangeAxioms(dp)
+													.forEach(
+															(dataPropRangeAxiom) -> {
+																if (dataPropRangeAxiom.getRange() instanceof OWLDatatype) {
+																	propertyRanges.add(
+																			((OWLDatatype) dataPropRangeAxiom.getRange())
+																					.getIRI()
+																					.getShortForm());
+																} else if (dataPropRangeAxiom.getRange() instanceof OWLDataUnionOf
+																		|| dataPropRangeAxiom.getRange()
+																				instanceof OWLDataIntersectionOf
+																		|| dataPropRangeAxiom.getRange() instanceof OWLDataOneOf
+																		|| dataPropRangeAxiom.getRange()
+																				instanceof OWLDataComplementOf) {
+																	logger.info(
+																			"\t\t...has complex range -> proceeding to its restrictions"
+																					+ " immediately...");
+																	dataPropRangeAxiom.getRange().accept(this);
+																} else {
+																	complexDataRanges.add(dataPropRangeAxiom.getRange());
+																}
+															});
 
-								final var propertyRanges = new HashSet<String>();
-								final var complexDataRanges = new HashSet<OWLDataRange>();
-								this.baseClassOntology
-										.dataPropertyRangeAxioms(dp)
-										.forEach(
-												(dataPropRangeAxiom) -> {
-													if (dataPropRangeAxiom.getRange() instanceof OWLDatatype) {
-														propertyRanges.add(
-																((OWLDatatype) dataPropRangeAxiom.getRange())
-																		.getIRI()
-																		.getShortForm());
-													} else if (dataPropRangeAxiom.getRange() instanceof OWLDataUnionOf
-															|| dataPropRangeAxiom.getRange() instanceof OWLDataIntersectionOf
-															|| dataPropRangeAxiom.getRange() instanceof OWLDataOneOf
-															|| dataPropRangeAxiom.getRange() instanceof OWLDataComplementOf) {
-														logger.info(
-																"\t\t...has complex range -> proceeding to its restrictions"
-																		+ " immediately...");
-														dataPropRangeAxiom.getRange().accept(this);
+											// Check the ranges.  Output relevant info.  May not be necessary.
+											if (propertyRanges.isEmpty()) {
+												logger.warning(
+														"\t\tProperty \"" + dp.getIRI() + "\" has range equals zero.");
+											} else {
+												logger.info("\t\tProperty range(s): " + propertyRanges);
+
+												try {
+													final var propertyDescription =
+															OntologyDescriptionUtils.getDescription(
+																			dp,
+																			context.baseClassOntology,
+																			GlobalFlags.getFlag(ConfigPropertyNames.DEFAULT_DESCRIPTIONS))
+																	.orElse(null);
+
+													// In cases, such as unionOf/intersectionOf/oneOf , the property schema
+													// may
+													// already be set.  Get it, if so.
+													var dataPropertySchema =
+															context.classSchema.getProperties() == null
+																	? null
+																	: (Schema) context.classSchema.getProperties().get(propertyName);
+
+													// Workaround for handling unionOf/intersectionOf/oneOf cases which may be
+													// set
+													// already above.
+													if (dataPropertySchema == null) {
+														// Get data property schema from mapper.
+														dataPropertySchema =
+																MapperDataProperty.createDataPropertySchema(
+																		propertyName, propertyDescription, propertyRanges);
 													} else {
-														complexDataRanges.add(dataPropRangeAxiom.getRange());
+														// These do not get set properly because the
+														// unionOf/intersectionOf/oneOf
+														// property schema was not created via
+														// MapperDataProperty.createDataPropertySchema().
+														MapperDataProperty.setSchemaName(dataPropertySchema, propertyName);
+														MapperDataProperty.setSchemaDescription(
+																dataPropertySchema, propertyDescription);
 													}
-												});
 
-								// Check the ranges.  Output relevant info.  May not be necessary.
-								if (propertyRanges.isEmpty()) {
-									logger.warning("\t\tProperty \"" + dp.getIRI() + "\" has range equals zero.");
-								} else {
-									logger.info("\t\tProperty range(s): " + propertyRanges);
-
-									try {
-										final var propertyDescription =
-												OntologyDescriptionUtils.getDescription(
-																dp,
-																this.baseClassOntology,
-																GlobalFlags.getFlag(ConfigPropertyNames.DEFAULT_DESCRIPTIONS))
-														.orElse(null);
-
-										// In cases, such as unionOf/intersectionOf/oneOf , the property schema may
-										// already be set.  Get it, if so.
-										var dataPropertySchema =
-												this.classSchema.getProperties() == null
-														? null
-														: (Schema) this.classSchema.getProperties().get(propertyName);
-
-										// Workaround for handling unionOf/intersectionOf/oneOf cases which may be set
-										// already above.
-										if (dataPropertySchema == null) {
-											// Get data property schema from mapper.
-											dataPropertySchema =
-													MapperDataProperty.createDataPropertySchema(
-															propertyName, propertyDescription, propertyRanges);
-										} else {
-											// These do not get set properly because the unionOf/intersectionOf/oneOf
-											// property schema was not created via
-											// MapperDataProperty.createDataPropertySchema().
-											MapperDataProperty.setSchemaName(dataPropertySchema, propertyName);
-											MapperDataProperty.setSchemaDescription(
-													dataPropertySchema, propertyDescription);
-										}
-
-										// If property is functional, set the schema accordingly.
-										if (EntitySearcher.isFunctional(
-												dp, Collections.singleton(this.baseClassOntology).stream())) {
-											logger.info(
-													"\t\tProperty is functional.  Therefore, required with a max of 1"
-															+ " item.");
-											this.functionalProperties.add(propertyName);
-											this.requiredProperties.add(propertyName);
-											MapperDataProperty.setFunctionalForPropertySchema(dataPropertySchema);
-										}
-
-										final var annotationConfig = this.configData.getAnnotationConfig();
-										if (annotationConfig != null) {
-											final var propertyAnnotations = annotationConfig.getPropertyAnnotations();
-
-											if (propertyAnnotations != null) {
-												// If property contains the annotation property (name is specified in
-												// configuration file) indicating it is read-only, then set value on the
-												// schema.
-												final var readOnlyAnnotation = propertyAnnotations.getReadOnlyFlagName();
-												if (readOnlyAnnotation != null && !readOnlyAnnotation.isBlank()) {
-													if (EntitySearcher.getAnnotations(dp, this.baseClassOntology)
-																	.filter(
-																			annotation ->
-																					readOnlyAnnotation.equals(
-																							annotation.getProperty().getIRI().getShortForm()))
-																	.count()
-															> 0) {
-														MapperDataProperty.setReadOnlyValueForPropertySchema(
-																dataPropertySchema, true);
+													// If property is functional, set the schema accordingly.
+													if (EntitySearcher.isFunctional(
+															dp, Collections.singleton(context.baseClassOntology).stream())) {
+														logger.info(
+																"\t\tProperty is functional.  Therefore, required with a max of 1"
+																		+ " item.");
+														context.functionalProperties.add(propertyName);
+														context.requiredProperties.add(propertyName);
+														MapperDataProperty.setFunctionalForPropertySchema(dataPropertySchema);
 													}
-												}
 
-												// If property contains the annotation property (name is specified in
-												// configuration file) indicating it is write-only, then set value on the
-												// schema.
-												final var writeOnlyAnnotation = propertyAnnotations.getWriteOnlyFlagName();
-												if (writeOnlyAnnotation != null && !writeOnlyAnnotation.isBlank()) {
-													if (EntitySearcher.getAnnotations(dp, this.baseClassOntology)
-																	.filter(
-																			annotation ->
-																					writeOnlyAnnotation.equals(
-																							annotation.getProperty().getIRI().getShortForm()))
-																	.count()
-															> 0) {
-														MapperDataProperty.setWriteOnlyValueForPropertySchema(
-																dataPropertySchema, true);
-													}
-												}
+													final var annotationConfig = context.configData.getAnnotationConfig();
+													if (annotationConfig != null) {
+														final var propertyAnnotations =
+																annotationConfig.getPropertyAnnotations();
 
-												// If property contains the annotation property (name is specified in
-												// configuration file) indicating what the example value is for a data
-												// property,
-												// then set value on the schema.
-												final var exampleValueAnnotation =
-														propertyAnnotations.getExampleValueName();
-												if (exampleValueAnnotation != null && !exampleValueAnnotation.isBlank()) {
-													for (final var annotation :
-															EntitySearcher.getAnnotations(dp, this.baseClassOntology)
-																	.filter(
-																			annotation ->
-																					exampleValueAnnotation.equals(
-																							annotation.getProperty().getIRI().getShortForm()))
-																	.collect(Collectors.toSet())) {
-														MapperDataProperty.setExampleValueForPropertySchema(
-																dataPropertySchema, annotation);
+														if (propertyAnnotations != null) {
+															// If property contains the annotation property (name is specified in
+															// configuration file) indicating it is read-only, then set value on
+															// the
+															// schema.
+															final var readOnlyAnnotation =
+																	propertyAnnotations.getReadOnlyFlagName();
+															if (readOnlyAnnotation != null && !readOnlyAnnotation.isBlank()) {
+																if (EntitySearcher.getAnnotations(dp, context.baseClassOntology)
+																				.filter(
+																						annotation ->
+																								readOnlyAnnotation.equals(
+																										annotation
+																												.getProperty()
+																												.getIRI()
+																												.getShortForm()))
+																				.count()
+																		> 0) {
+																	MapperDataProperty.setReadOnlyValueForPropertySchema(
+																			dataPropertySchema, true);
+																}
+															}
+
+															// If property contains the annotation property (name is specified in
+															// configuration file) indicating it is write-only, then set value on
+															// the
+															// schema.
+															final var writeOnlyAnnotation =
+																	propertyAnnotations.getWriteOnlyFlagName();
+															if (writeOnlyAnnotation != null && !writeOnlyAnnotation.isBlank()) {
+																if (EntitySearcher.getAnnotations(dp, context.baseClassOntology)
+																				.filter(
+																						annotation ->
+																								writeOnlyAnnotation.equals(
+																										annotation
+																												.getProperty()
+																												.getIRI()
+																												.getShortForm()))
+																				.count()
+																		> 0) {
+																	MapperDataProperty.setWriteOnlyValueForPropertySchema(
+																			dataPropertySchema, true);
+																}
+															}
+
+															// If property contains the annotation property (name is specified in
+															// configuration file) indicating what the example value is for a data
+															// property,
+															// then set value on the schema.
+															final var exampleValueAnnotation =
+																	propertyAnnotations.getExampleValueName();
+															if (exampleValueAnnotation != null
+																	&& !exampleValueAnnotation.isBlank()) {
+																for (final var annotation :
+																		EntitySearcher.getAnnotations(dp, context.baseClassOntology)
+																				.filter(
+																						annotation ->
+																								exampleValueAnnotation.equals(
+																										annotation
+																												.getProperty()
+																												.getIRI()
+																												.getShortForm()))
+																				.collect(Collectors.toSet())) {
+																	MapperDataProperty.setExampleValueForPropertySchema(
+																			dataPropertySchema, annotation);
+																}
+															}
+														}
 													}
+
+													// Save object property schema to class's schema.
+													dataPropertiesMap.put(dataPropertySchema.getName(), dataPropertySchema);
+
+													// For any complex property ranges, traverse.  This will grab restrictions
+													// also.
+													//  There is no good way for this situation to grab only the types in this
+													// situation.
+													if (!complexDataRanges.isEmpty()) {
+														complexDataRanges.forEach(
+																(dataRange) -> {
+																	dataRange.accept(this);
+																});
+													}
+												} catch (Exception e) {
+													e.printStackTrace();
 												}
 											}
-										}
 
-										// Save object property schema to class's schema.
-										dataPropertiesMap.put(dataPropertySchema.getName(), dataPropertySchema);
-
-										// For any complex property ranges, traverse.  This will grab restrictions also.
-										//  There is no good way for this situation to grab only the types in this
-										// situation.
-										if (!complexDataRanges.isEmpty()) {
-											complexDataRanges.forEach(
-													(dataRange) -> {
-														dataRange.accept(this);
-													});
-										}
-									} catch (Exception e) {
-										e.printStackTrace();
-									}
-								}
-
-								logger.info("");
-
-								this.currentlyProcessedPropertyName = null;
+											logger.info("");
+										});
 							}
 						});
 
@@ -1545,9 +1575,9 @@ public class ObjectVisitor implements OWLObjectVisitor {
 	 */
 	private Schema getPropertySchemaForRestrictionVisit(String propertyName) {
 		Schema currentPropertySchema =
-				this.classSchema.getProperties() == null
+				context.classSchema.getProperties() == null
 						? null
-						: (Schema) this.classSchema.getProperties().get(propertyName);
+						: (Schema) context.classSchema.getProperties().get(propertyName);
 
 		// In certain cases, a property was not set up with domains/ranges but has a restriction.
 		// This property will not exist in the map of property names + schemas yet, so add it and set it
@@ -1563,7 +1593,7 @@ public class ObjectVisitor implements OWLObjectVisitor {
 			MapperProperty.setSchemaDescription(currentPropertySchema, propertyDescription);
 
 			// If this was a new property schema, need to make sure it's added.
-			this.classSchema.addProperty(propertyName, currentPropertySchema);
+			context.classSchema.addProperty(propertyName, currentPropertySchema);
 		}
 
 		return currentPropertySchema;
@@ -1573,7 +1603,7 @@ public class ObjectVisitor implements OWLObjectVisitor {
 	@Override
 	public void visit(@Nonnull OWLEquivalentClassesAxiom ax) {
 		logger.info("\t-- analyzing OWLEquivalentClassesAxiom restrictions --");
-		logger.info("\t   class:  " + this.baseClass);
+		logger.info("\t   class:  " + context.baseClass);
 		logger.info("\t   axiom:  " + ax);
 		logger.info("");
 
@@ -1599,9 +1629,10 @@ public class ObjectVisitor implements OWLObjectVisitor {
 											// If different, then we've found the individual and know the short form
 											// name.
 											final var format =
-													this.baseClassOntology
+													context
+															.baseClassOntology
 															.getOWLOntologyManager()
-															.getOntologyFormat(this.baseClassOntology);
+															.getOntologyFormat(context.baseClassOntology);
 											if (format.isPrefixOWLDocumentFormat()) {
 												final var map =
 														format.asPrefixOWLDocumentFormat().getPrefixName2PrefixMap();
@@ -1610,7 +1641,7 @@ public class ObjectVisitor implements OWLObjectVisitor {
 														(prefix, iri) -> {
 															if (!fullIRI.equals(fullIRI.replaceFirst(iri, ""))) {
 																MapperObjectProperty.addEnumValueToObjectSchema(
-																		this.classSchema, fullIRI.replaceFirst(iri, ""));
+																		context.classSchema, fullIRI.replaceFirst(iri, ""));
 															}
 														});
 											}
@@ -1621,7 +1652,7 @@ public class ObjectVisitor implements OWLObjectVisitor {
 		// Loop through the class expressions in the defined / equivalent-to classes axiom and accept
 		// visits from everything else.
 		ax.classExpressions()
-				.filter((e) -> !this.baseClass.equals(e) && !(e instanceof OWLObjectOneOf))
+				.filter((e) -> !context.baseClass.equals(e) && !(e instanceof OWLObjectOneOf))
 				.forEach(
 						(e) -> {
 							// Correctly configured defined (equivalent to) classes (excluding enums, handled
@@ -1643,20 +1674,24 @@ public class ObjectVisitor implements OWLObjectVisitor {
 														final var objectProperty =
 																objectPropertyExpression.asOWLObjectProperty();
 														final var propertyName = objectProperty.getIRI().getShortForm();
-														this.propertyNames.add(propertyName);
-														this.currentlyProcessedPropertyName = propertyName;
-														intersectionOperand.accept(this);
-														this.currentlyProcessedPropertyName = null;
+														context.propertyNames.add(propertyName);
+														context.withProcessedProperty(
+																propertyName,
+																() -> {
+																	intersectionOperand.accept(this);
+																});
 													} else if (intersectionOperand instanceof OWLDataRestriction) {
 														// For data restrictions, we need to set the data property name first.
 														final var dataPropertyExpression =
 																((OWLDataRestriction) intersectionOperand).getProperty();
 														final var dataProperty = dataPropertyExpression.asOWLDataProperty();
 														final var propertyName = dataProperty.getIRI().getShortForm();
-														this.propertyNames.add(propertyName);
-														this.currentlyProcessedPropertyName = propertyName;
-														intersectionOperand.accept(this);
-														this.currentlyProcessedPropertyName = null;
+														context.propertyNames.add(propertyName);
+														context.withProcessedProperty(
+																propertyName,
+																() -> {
+																	intersectionOperand.accept(this);
+																});
 													} else {
 														// Not sure what would cause this, but lets spit out an error and figure
 														// it out if we encounter it.
@@ -1679,19 +1714,23 @@ public class ObjectVisitor implements OWLObjectVisitor {
 									final var objectPropertyExpression = ((OWLObjectRestriction) e).getProperty();
 									final var objectProperty = objectPropertyExpression.asOWLObjectProperty();
 									final var propertyName = objectProperty.getIRI().getShortForm();
-									this.propertyNames.add(propertyName);
-									this.currentlyProcessedPropertyName = propertyName;
-									e.accept(this);
-									this.currentlyProcessedPropertyName = null;
+									context.propertyNames.add(propertyName);
+									context.withProcessedProperty(
+											propertyName,
+											() -> {
+												e.accept(this);
+											});
 								} else if (e instanceof OWLDataRestriction) {
 									// For data restrictions, we need to set the data property name first.
 									final var dataPropertyExpression = ((OWLDataRestriction) e).getProperty();
 									final var dataProperty = dataPropertyExpression.asOWLDataProperty();
 									final var propertyName = dataProperty.getIRI().getShortForm();
-									this.propertyNames.add(propertyName);
-									this.currentlyProcessedPropertyName = propertyName;
-									e.accept(this);
-									this.currentlyProcessedPropertyName = null;
+									context.propertyNames.add(propertyName);
+									context.withProcessedProperty(
+											propertyName,
+											() -> {
+												e.accept(this);
+											});
 								} else {
 									// Not sure what would cause this, but lets spit out an error and figure it out if
 									// we encounter it.
@@ -1713,13 +1752,13 @@ public class ObjectVisitor implements OWLObjectVisitor {
 	 */
 	private void visitOWLNaryBooleanClassExpression(@Nonnull OWLNaryBooleanClassExpression ce) {
 		logger.info("\t-- analyzing OWLNaryBooleanClassExpression restrictions --");
-		logger.info("\t   class:  " + this.baseClass);
+		logger.info("\t   class:  " + context.baseClass);
 		logger.info("\t   axiom:  " + ce);
 		logger.info("");
 
 		// If no existing property schema, then create empty schema for it.
 		final var currentPropertySchema =
-				this.getPropertySchemaForRestrictionVisit(this.currentlyProcessedPropertyName);
+				this.getPropertySchemaForRestrictionVisit(context.currentlyProcessedPropertyName);
 
 		currentPropertySchema.setItems(MapperObjectProperty.getComplexObjectComposedSchema(ce));
 		MapperObjectProperty.setSchemaType(currentPropertySchema, "array");
@@ -1744,13 +1783,13 @@ public class ObjectVisitor implements OWLObjectVisitor {
 	 */
 	private void visitOWLQuantifiedObjectRestriction(@Nonnull OWLQuantifiedObjectRestriction or) {
 		logger.info("\t-- analyzing OWLQuantifiedObjectRestriction restrictions --");
-		logger.info("\t   class:  " + this.baseClass);
+		logger.info("\t   class:  " + context.baseClass);
 		logger.info("\t   axiom:  " + or);
 		logger.info("");
 
 		// If no existing property schema, then create empty schema for it.
 		final var currentPropertySchema =
-				this.getPropertySchemaForRestrictionVisit(this.currentlyProcessedPropertyName);
+				this.getPropertySchemaForRestrictionVisit(context.currentlyProcessedPropertyName);
 
 		final var ce = or.getFiller();
 		if (ce instanceof OWLObjectOneOf) {
@@ -1829,19 +1868,19 @@ public class ObjectVisitor implements OWLObjectVisitor {
 	@Override
 	public void visit(@Nonnull OWLObjectComplementOf ce) {
 		logger.info("\t-- analyzing OWLObjectComplementOf restrictions --");
-		logger.info("\t   class:  " + this.baseClass);
+		logger.info("\t   class:  " + context.baseClass);
 		logger.info("\t   axiom:  " + ce);
 		logger.info("");
 
 		// ComplementOf can occur either for OWLClass or for one of its object properties.  If the
 		// property name is null, assume it is a class's complement (and not a property's complement).
-		if (this.currentlyProcessedPropertyName == null) {
+		if (context.currentlyProcessedPropertyName == null) {
 			MapperObjectProperty.setComplementOfForObjectSchema(
-					this.classSchema, this.getPrefixedSchemaName(ce.getOperand().asOWLClass()));
+					context.classSchema, this.getPrefixedSchemaName(ce.getOperand().asOWLClass()));
 		} else {
 			// If no existing property schema, then create empty schema for it.
 			final var currentPropertySchema =
-					this.getPropertySchemaForRestrictionVisit(this.currentlyProcessedPropertyName);
+					this.getPropertySchemaForRestrictionVisit(context.currentlyProcessedPropertyName);
 
 			MapperObjectProperty.setComplementOfForObjectSchema(
 					currentPropertySchema, this.getPrefixedSchemaName(ce.getOperand().asOWLClass()));
@@ -1851,13 +1890,13 @@ public class ObjectVisitor implements OWLObjectVisitor {
 	@Override
 	public void visit(@Nonnull OWLObjectHasValue ce) {
 		logger.info("\t-- analyzing OWLObjectHasValue restrictions --");
-		logger.info("\t   class:  " + this.baseClass);
+		logger.info("\t   class:  " + context.baseClass);
 		logger.info("\t   axiom:  " + ce);
 		logger.info("");
 
 		// If no existing property schema, then create empty schema for it.
 		final var currentPropertySchema =
-				this.getPropertySchemaForRestrictionVisit(this.currentlyProcessedPropertyName);
+				this.getPropertySchemaForRestrictionVisit(context.currentlyProcessedPropertyName);
 
 		if (ce.getFiller() != null && ce.getFiller() instanceof OWLNamedIndividual) {
 			MapperObjectProperty.addHasValueOfPropertySchema(currentPropertySchema, ce.getFiller());
@@ -1872,26 +1911,26 @@ public class ObjectVisitor implements OWLObjectVisitor {
 	@Override
 	public void visit(@Nonnull OWLObjectOneOf ce) {
 		logger.info("\t-- analyzing OWLObjectOneOf restrictions --");
-		logger.info("\t   class:  " + this.baseClass);
+		logger.info("\t   class:  " + context.baseClass);
 		logger.info("\t   axiom:  " + ce);
 		logger.info("");
 
 		// ObjectOneOf can occur either for OWLClass or for one of its object properties.  If the
 		// property name is null, assume this class is actually an enum.
-		if (this.currentlyProcessedPropertyName == null) {
+		if (context.currentlyProcessedPropertyName == null) {
 			var enumValues = ce.getOperandsAsList();
 			if (enumValues != null && !enumValues.isEmpty()) {
 				// Add enum individuals to restriction range
 				enumValues.forEach(
 						(indv) -> {
 							MapperObjectProperty.addEnumValueToObjectSchema(
-									this.classSchema, ((OWLNamedIndividual) indv).getIRI().getShortForm());
+									context.classSchema, ((OWLNamedIndividual) indv).getIRI().getShortForm());
 						});
 			}
 		} else {
 			// If no existing property schema, then create empty schema for it.
 			final var currentPropertySchema =
-					this.getPropertySchemaForRestrictionVisit(this.currentlyProcessedPropertyName);
+					this.getPropertySchemaForRestrictionVisit(context.currentlyProcessedPropertyName);
 
 			for (OWLIndividual individual : ce.getIndividuals()) {
 				MapperObjectProperty.addOneOfToObjectPropertySchema(
@@ -1908,13 +1947,13 @@ public class ObjectVisitor implements OWLObjectVisitor {
 	 */
 	private void visitOWLNaryDataRange(@Nonnull OWLNaryDataRange ce) {
 		logger.info("\t-- analyzing OWLNaryDataRange restrictions --");
-		logger.info("\t   class:  " + this.baseClass);
+		logger.info("\t   class:  " + context.baseClass);
 		logger.info("\t   axiom:  " + ce);
 		logger.info("");
 
 		// If no existing property schema, then create empty schema for it.
 		final var currentPropertySchema =
-				this.getPropertySchemaForRestrictionVisit(this.currentlyProcessedPropertyName);
+				this.getPropertySchemaForRestrictionVisit(context.currentlyProcessedPropertyName);
 
 		currentPropertySchema.setItems(MapperDataProperty.getComplexDataComposedSchema(ce));
 		MapperDataProperty.setSchemaType(currentPropertySchema, "array");
@@ -1940,13 +1979,13 @@ public class ObjectVisitor implements OWLObjectVisitor {
 	 */
 	private void visitOWLQuantifiedDataRestriction(@Nonnull OWLQuantifiedDataRestriction dr) {
 		logger.info("\t-- analyzing OWLQuantifiedDataRestriction restrictions --");
-		logger.info("\t   class:  " + this.baseClass);
+		logger.info("\t   class:  " + context.baseClass);
 		logger.info("\t   axiom:  " + dr);
 		logger.info("");
 
 		// If no existing property schema, then create empty schema for it.
 		final var currentPropertySchema =
-				this.getPropertySchemaForRestrictionVisit(this.currentlyProcessedPropertyName);
+				this.getPropertySchemaForRestrictionVisit(context.currentlyProcessedPropertyName);
 
 		Integer restrictionValue =
 				(dr instanceof OWLDataCardinalityRestriction)
@@ -2060,7 +2099,7 @@ public class ObjectVisitor implements OWLObjectVisitor {
 	@Override
 	public void visit(@Nonnull OWLDataOneOf ce) {
 		logger.info("\t-- analyzing OWLDataOneOf restrictions --");
-		logger.info("\t   class:  " + this.baseClass);
+		logger.info("\t   class:  " + context.baseClass);
 		logger.info("\t   axiom:  " + ce);
 		logger.info("");
 
@@ -2069,7 +2108,7 @@ public class ObjectVisitor implements OWLObjectVisitor {
 						(oneOfValue) -> {
 							// If no existing property schema, then create empty schema for it.
 							final var currentPropertySchema =
-									this.getPropertySchemaForRestrictionVisit(this.currentlyProcessedPropertyName);
+									this.getPropertySchemaForRestrictionVisit(context.currentlyProcessedPropertyName);
 
 							MapperDataProperty.addOneOfDataPropertySchema(currentPropertySchema, oneOfValue);
 						});
@@ -2078,7 +2117,7 @@ public class ObjectVisitor implements OWLObjectVisitor {
 	@Override
 	public void visit(@Nonnull OWLDataComplementOf ce) {
 		logger.info("\t-- analyzing OWLDataComplementOf restrictions --");
-		logger.info("\t   class:  " + this.baseClass);
+		logger.info("\t   class:  " + context.baseClass);
 		logger.info("\t   axiom:  " + ce);
 		logger.info("");
 
@@ -2087,7 +2126,7 @@ public class ObjectVisitor implements OWLObjectVisitor {
 						(complementOfDatatype) -> {
 							// If no existing property schema, then create empty schema for it.
 							final var currentPropertySchema =
-									this.getPropertySchemaForRestrictionVisit(this.currentlyProcessedPropertyName);
+									this.getPropertySchemaForRestrictionVisit(context.currentlyProcessedPropertyName);
 
 							MapperDataProperty.setComplementOfForDataSchema(
 									currentPropertySchema, complementOfDatatype);
@@ -2097,13 +2136,13 @@ public class ObjectVisitor implements OWLObjectVisitor {
 	@Override
 	public void visit(@Nonnull OWLDataHasValue ce) {
 		logger.info("\t-- analyzing OWLDataHasValue restrictions --");
-		logger.info("\t   class:  " + this.baseClass);
+		logger.info("\t   class:  " + context.baseClass);
 		logger.info("\t   axiom:  " + ce);
 		logger.info("");
 
 		// If no existing property schema, then create empty schema for it.
 		final var currentPropertySchema =
-				this.getPropertySchemaForRestrictionVisit(this.currentlyProcessedPropertyName);
+				this.getPropertySchemaForRestrictionVisit(context.currentlyProcessedPropertyName);
 
 		if (ce.getFiller() != null
 				&& ce.getFiller() instanceof OWLLiteral
