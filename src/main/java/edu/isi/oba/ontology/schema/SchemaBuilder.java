@@ -56,7 +56,7 @@ public class SchemaBuilder {
 		final var classIRIAsString = classIRI.toString();
 		final var classPrefix = classIRIAsString.replaceAll(classIRI.getShortForm() + "$", "");
 
-		var prefixedSchemaName = owlClass.getIRI().getShortForm();
+		var prefixedSchemaName = classIRI.getShortForm();
 
 		final var format = ontology.getOWLOntologyManager().getOntologyFormat(ontology);
 		if (format != null && format.isPrefixOWLDocumentFormat()) {
