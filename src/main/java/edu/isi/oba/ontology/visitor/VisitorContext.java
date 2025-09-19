@@ -1,10 +1,11 @@
 package edu.isi.oba.ontology.visitor;
 
-import static edu.isi.oba.Oba.logger;
-
 import edu.isi.oba.config.YamlConfig;
 import io.swagger.v3.oas.models.media.Schema;
 import java.util.*;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import java.util.stream.Collectors;
 import org.semanticweb.owlapi.model.*;
 import org.semanticweb.owlapi.reasoner.OWLReasoner;
 import org.semanticweb.owlapi.reasoner.OWLReasonerFactory;
@@ -15,6 +16,8 @@ import org.semanticweb.owlapi.reasoner.OWLReasonerFactory;
  * classes.
  */
 class VisitorContext implements OwlVisitorContext {
+
+	private final Logger logger;
 
 	/** Configuration loaded from YAML file. */
 	final YamlConfig configData;
@@ -75,8 +78,9 @@ class VisitorContext implements OwlVisitorContext {
 	 *
 	 * @param configData the loaded YAML configuration
 	 */
-	VisitorContext(YamlConfig configData) {
+	VisitorContext(Logger logger, YamlConfig configData) {
 		this.configData = configData;
+		this.logger = logger;
 	}
 
 	// OwlVisitorContext} interface methods
@@ -174,7 +178,7 @@ class VisitorContext implements OwlVisitorContext {
 	public void addPropertyToSchema(String name, Schema schema) {
 		basePropertiesMap.put(name, schema);
 		if (classSchema == null) {
-			logger.warning("classSchema IS NULL WHEN ADDING PROPERTY: " + name);
+			this.logger.log(Level.WARNING, "classSchema IS NULL WHEN ADDING PROPERTY: " + name);
 		}
 
 		if (classSchema != null) {
@@ -193,11 +197,11 @@ class VisitorContext implements OwlVisitorContext {
 			List<String> required = classSchema.getRequired();
 			if (required == null) {
 				required = new ArrayList<>();
-				classSchema.setRequired(required);
 			}
-			if (!required.contains(name)) {
-				required.add(name);
-			}
+
+			final var requiredSet = required.stream().collect(Collectors.toSet());
+			requiredSet.add(name);
+			classSchema.setRequired(requiredSet.stream().collect(Collectors.toList()));
 		}
 	}
 

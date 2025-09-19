@@ -9,11 +9,9 @@ import edu.isi.oba.config.ConfigPropertyNames;
 import edu.isi.oba.config.YamlConfig;
 import edu.isi.oba.config.flags.GlobalFlags;
 import edu.isi.oba.ontology.schema.SchemaBuilder;
-import edu.isi.oba.utils.constants.ObaConstants;
 import edu.isi.oba.utils.exithandler.FatalErrorHandler;
 import edu.isi.oba.utils.ontology.OntologyDescriptionUtils;
 import edu.isi.oba.utils.schema.SchemaCloneUtils;
-import io.swagger.v3.oas.models.media.ArraySchema;
 import io.swagger.v3.oas.models.media.ObjectSchema;
 import io.swagger.v3.oas.models.media.Schema;
 import java.util.ArrayList;
@@ -35,7 +33,6 @@ import org.semanticweb.owlapi.model.OWLBooleanClassExpression;
 import org.semanticweb.owlapi.model.OWLClass;
 import org.semanticweb.owlapi.model.OWLClassExpression;
 import org.semanticweb.owlapi.model.OWLDataAllValuesFrom;
-import org.semanticweb.owlapi.model.OWLDataCardinalityRestriction;
 import org.semanticweb.owlapi.model.OWLDataComplementOf;
 import org.semanticweb.owlapi.model.OWLDataExactCardinality;
 import org.semanticweb.owlapi.model.OWLDataHasValue;
@@ -50,16 +47,9 @@ import org.semanticweb.owlapi.model.OWLDataRestriction;
 import org.semanticweb.owlapi.model.OWLDataSomeValuesFrom;
 import org.semanticweb.owlapi.model.OWLDataUnionOf;
 import org.semanticweb.owlapi.model.OWLDatatype;
-import org.semanticweb.owlapi.model.OWLDatatypeRestriction;
 import org.semanticweb.owlapi.model.OWLEntity;
 import org.semanticweb.owlapi.model.OWLEquivalentClassesAxiom;
-import org.semanticweb.owlapi.model.OWLIndividual;
-import org.semanticweb.owlapi.model.OWLLiteral;
-import org.semanticweb.owlapi.model.OWLNamedIndividual;
-import org.semanticweb.owlapi.model.OWLNaryBooleanClassExpression;
-import org.semanticweb.owlapi.model.OWLNaryDataRange;
 import org.semanticweb.owlapi.model.OWLObjectAllValuesFrom;
-import org.semanticweb.owlapi.model.OWLObjectCardinalityRestriction;
 import org.semanticweb.owlapi.model.OWLObjectComplementOf;
 import org.semanticweb.owlapi.model.OWLObjectExactCardinality;
 import org.semanticweb.owlapi.model.OWLObjectHasValue;
@@ -74,8 +64,6 @@ import org.semanticweb.owlapi.model.OWLObjectSomeValuesFrom;
 import org.semanticweb.owlapi.model.OWLObjectUnionOf;
 import org.semanticweb.owlapi.model.OWLObjectVisitor;
 import org.semanticweb.owlapi.model.OWLOntology;
-import org.semanticweb.owlapi.model.OWLQuantifiedDataRestriction;
-import org.semanticweb.owlapi.model.OWLQuantifiedObjectRestriction;
 import org.semanticweb.owlapi.model.OWLRestriction;
 import org.semanticweb.owlapi.reasoner.InferenceDepth;
 import org.semanticweb.owlapi.reasoner.structural.StructuralReasonerFactory;
@@ -85,6 +73,7 @@ import org.semanticweb.owlapi.search.EntitySearcher;
 public class ObjectVisitor implements OWLObjectVisitor {
 
 	private final VisitorContext context;
+	private final RestrictionProcessor restrictionProcessor;
 
 	/**
 	 * Constructor for ObjectVisitor.
@@ -95,7 +84,8 @@ public class ObjectVisitor implements OWLObjectVisitor {
 	 *     file.
 	 */
 	public ObjectVisitor(YamlConfig configData) {
-		this.context = new VisitorContext(configData);
+		this.context = new VisitorContext(logger, configData);
+		this.restrictionProcessor = new RestrictionProcessor(context, logger, this);
 	}
 
 	/**
@@ -1566,39 +1556,6 @@ public class ObjectVisitor implements OWLObjectVisitor {
 		return dataPropertiesMap;
 	}
 
-	/**
-	 * Gets a new (if one does not already exist) or existing property schema for use in updating
-	 * during restriction visits.
-	 *
-	 * @param propertyName the name of the property to get a {@link Schema} for.
-	 * @return a {@link Schema} for the property.
-	 */
-	private Schema getPropertySchemaForRestrictionVisit(String propertyName) {
-		Schema currentPropertySchema =
-				context.classSchema.getProperties() == null
-						? null
-						: (Schema) context.classSchema.getProperties().get(propertyName);
-
-		// In certain cases, a property was not set up with domains/ranges but has a restriction.
-		// This property will not exist in the map of property names + schemas yet, so add it and set it
-		// up with basic info.
-		if (currentPropertySchema == null) {
-			currentPropertySchema = new ArraySchema();
-			MapperProperty.setSchemaName(currentPropertySchema, propertyName);
-
-			final var propertyDescription =
-					GlobalFlags.getFlag(ConfigPropertyNames.DEFAULT_DESCRIPTIONS)
-							? ObaConstants.DEFAULT_DESCRIPTION
-							: null;
-			MapperProperty.setSchemaDescription(currentPropertySchema, propertyDescription);
-
-			// If this was a new property schema, need to make sure it's added.
-			context.classSchema.addProperty(propertyName, currentPropertySchema);
-		}
-
-		return currentPropertySchema;
-	}
-
 	/** ================== Restrictions traversals ================== */
 	@Override
 	public void visit(@Nonnull OWLEquivalentClassesAxiom ax) {
@@ -1743,416 +1700,103 @@ public class ObjectVisitor implements OWLObjectVisitor {
 						});
 	}
 
-	/**
-	 * Convenience method for adding restriction values and ranges from a visit to {@link
-	 * OWLNaryBooleanClassExpression} (i.e. {@link OWLObjectUnionOf} or {@link
-	 * OWLObjectIntersectionOf}).
-	 *
-	 * @param ce the OWLNaryBooleanClassExpression object
-	 */
-	private void visitOWLNaryBooleanClassExpression(@Nonnull OWLNaryBooleanClassExpression ce) {
-		logger.info("\t-- analyzing OWLNaryBooleanClassExpression restrictions --");
-		logger.info("\t   class:  " + context.baseClass);
-		logger.info("\t   axiom:  " + ce);
-		logger.info("");
-
-		// If no existing property schema, then create empty schema for it.
-		final var currentPropertySchema =
-				this.getPropertySchemaForRestrictionVisit(context.currentlyProcessedPropertyName);
-
-		currentPropertySchema.setItems(MapperObjectProperty.getComplexObjectComposedSchema(ce));
-		MapperObjectProperty.setSchemaType(currentPropertySchema, "array");
+	@Override
+	public void visit(OWLObjectAllValuesFrom ce) {
+		restrictionProcessor.processQuantifiedObjectRestriction(ce);
 	}
 
 	@Override
-	public void visit(@Nonnull OWLObjectUnionOf ce) {
-		this.visitOWLNaryBooleanClassExpression(ce);
+	public void visit(OWLObjectSomeValuesFrom ce) {
+		restrictionProcessor.processQuantifiedObjectRestriction(ce);
 	}
 
 	@Override
-	public void visit(@Nonnull OWLObjectIntersectionOf ce) {
-		this.visitOWLNaryBooleanClassExpression(ce);
-	}
-
-	/**
-	 * Convenience method for adding restriction values and ranges from a visit to {@link OWLQuantifiedObjectRestriction}
-	 * (i.e. {@link OWLObjectAllValuesFrom}, {@link OWLObjectSomeValuesFrom}, or
-	 * {@link OWLObjectCardinalityRestriction [subinterfaces: {@link OWLObjectExactCardinality}, {@link OWLObjectMaxCardinality}, or {@link OWLObjectMinCardinality}]).
-	 *
-	 * @param ce the {@link OWLQuantifiedObjectRestriction} object
-	 */
-	private void visitOWLQuantifiedObjectRestriction(@Nonnull OWLQuantifiedObjectRestriction or) {
-		logger.info("\t-- analyzing OWLQuantifiedObjectRestriction restrictions --");
-		logger.info("\t   class:  " + context.baseClass);
-		logger.info("\t   axiom:  " + or);
-		logger.info("");
-
-		// If no existing property schema, then create empty schema for it.
-		final var currentPropertySchema =
-				this.getPropertySchemaForRestrictionVisit(context.currentlyProcessedPropertyName);
-
-		final var ce = or.getFiller();
-		if (ce instanceof OWLObjectOneOf) {
-			ce.accept(this);
-		} else if (ce instanceof OWLObjectUnionOf || ce instanceof OWLObjectIntersectionOf) {
-			final var complexObjectRange =
-					MapperObjectProperty.getComplexObjectComposedSchema((OWLNaryBooleanClassExpression) ce);
-
-			if (or instanceof OWLObjectSomeValuesFrom) {
-				MapperObjectProperty.addSomeValuesFromToObjectPropertySchema(
-						currentPropertySchema, complexObjectRange);
-			} else if (or instanceof OWLObjectAllValuesFrom) {
-				MapperObjectProperty.addAllOfToObjectPropertySchema(
-						currentPropertySchema, complexObjectRange);
-			}
-		} else {
-			final Integer restrictionValue =
-					(or instanceof OWLObjectCardinalityRestriction)
-							? ((OWLObjectCardinalityRestriction) or).getCardinality()
-							: null;
-			final var objRestrictionRange = this.getPrefixedSchemaName(ce.asOWLClass());
-
-			// Update current property schema with the appropriate restriction range/value.
-			if (or instanceof OWLObjectSomeValuesFrom) {
-				MapperObjectProperty.addSomeValuesFromToObjectPropertySchema(
-						currentPropertySchema, objRestrictionRange);
-			} else if (or instanceof OWLObjectAllValuesFrom) {
-				MapperObjectProperty.addAllOfToObjectPropertySchema(
-						currentPropertySchema, objRestrictionRange);
-			} else if (or instanceof OWLObjectMinCardinality) {
-				MapperObjectProperty.addMinCardinalityToPropertySchema(
-						currentPropertySchema, restrictionValue, objRestrictionRange);
-			} else if (or instanceof OWLObjectMaxCardinality) {
-				MapperObjectProperty.addMaxCardinalityToPropertySchema(
-						currentPropertySchema, restrictionValue, objRestrictionRange);
-			} else if (or instanceof OWLObjectExactCardinality) {
-				MapperObjectProperty.addExactCardinalityToPropertySchema(
-						currentPropertySchema, restrictionValue, objRestrictionRange);
-			}
-		}
-	}
-
-	/**
-	 * This method gets called when a class expression is an existential (someValuesFrom) restriction
-	 * and it asks us to visit it
-	 */
-	@Override
-	public void visit(@Nonnull OWLObjectSomeValuesFrom ce) {
-		this.visitOWLQuantifiedObjectRestriction(ce);
-	}
-
-	/**
-	 * This method gets called when a class expression is a universal (allValuesFrom) restriction and
-	 * it asks us to visit it
-	 */
-	@Override
-	public void visit(@Nonnull OWLObjectAllValuesFrom ce) {
-		this.visitOWLQuantifiedObjectRestriction(ce);
+	public void visit(OWLObjectMinCardinality ce) {
+		restrictionProcessor.processQuantifiedObjectRestriction(ce);
 	}
 
 	@Override
-	public void visit(@Nonnull OWLObjectMinCardinality ce) {
-		this.visitOWLQuantifiedObjectRestriction(ce);
+	public void visit(OWLObjectMaxCardinality ce) {
+		restrictionProcessor.processQuantifiedObjectRestriction(ce);
 	}
 
 	@Override
-	public void visit(@Nonnull OWLObjectMaxCardinality ce) {
-		this.visitOWLQuantifiedObjectRestriction(ce);
+	public void visit(OWLObjectExactCardinality ce) {
+		restrictionProcessor.processQuantifiedObjectRestriction(ce);
 	}
 
 	@Override
-	public void visit(@Nonnull OWLObjectExactCardinality ce) {
-		this.visitOWLQuantifiedObjectRestriction(ce);
+	public void visit(OWLObjectUnionOf ce) {
+		restrictionProcessor.processNaryBooleanClassExpression(ce);
 	}
 
 	@Override
-	public void visit(@Nonnull OWLObjectComplementOf ce) {
-		logger.info("\t-- analyzing OWLObjectComplementOf restrictions --");
-		logger.info("\t   class:  " + context.baseClass);
-		logger.info("\t   axiom:  " + ce);
-		logger.info("");
-
-		// ComplementOf can occur either for OWLClass or for one of its object properties.  If the
-		// property name is null, assume it is a class's complement (and not a property's complement).
-		if (context.currentlyProcessedPropertyName == null) {
-			MapperObjectProperty.setComplementOfForObjectSchema(
-					context.classSchema, this.getPrefixedSchemaName(ce.getOperand().asOWLClass()));
-		} else {
-			// If no existing property schema, then create empty schema for it.
-			final var currentPropertySchema =
-					this.getPropertySchemaForRestrictionVisit(context.currentlyProcessedPropertyName);
-
-			MapperObjectProperty.setComplementOfForObjectSchema(
-					currentPropertySchema, this.getPrefixedSchemaName(ce.getOperand().asOWLClass()));
-		}
+	public void visit(OWLObjectIntersectionOf ce) {
+		restrictionProcessor.processNaryBooleanClassExpression(ce);
 	}
 
 	@Override
-	public void visit(@Nonnull OWLObjectHasValue ce) {
-		logger.info("\t-- analyzing OWLObjectHasValue restrictions --");
-		logger.info("\t   class:  " + context.baseClass);
-		logger.info("\t   axiom:  " + ce);
-		logger.info("");
-
-		// If no existing property schema, then create empty schema for it.
-		final var currentPropertySchema =
-				this.getPropertySchemaForRestrictionVisit(context.currentlyProcessedPropertyName);
-
-		if (ce.getFiller() != null && ce.getFiller() instanceof OWLNamedIndividual) {
-			MapperObjectProperty.addHasValueOfPropertySchema(currentPropertySchema, ce.getFiller());
-		} else {
-			logger.severe(
-					"Restriction for OWLObjectHasValue has unknown value \""
-							+ ce.getFiller()
-							+ "\", which is not an OWLNamedIndividual.  Skipping restriction.");
-		}
+	public void visit(OWLObjectComplementOf ce) {
+		restrictionProcessor.processComplementOf(ce);
 	}
 
 	@Override
-	public void visit(@Nonnull OWLObjectOneOf ce) {
-		logger.info("\t-- analyzing OWLObjectOneOf restrictions --");
-		logger.info("\t   class:  " + context.baseClass);
-		logger.info("\t   axiom:  " + ce);
-		logger.info("");
-
-		// ObjectOneOf can occur either for OWLClass or for one of its object properties.  If the
-		// property name is null, assume this class is actually an enum.
-		if (context.currentlyProcessedPropertyName == null) {
-			var enumValues = ce.getOperandsAsList();
-			if (enumValues != null && !enumValues.isEmpty()) {
-				// Add enum individuals to restriction range
-				enumValues.forEach(
-						(indv) -> {
-							MapperObjectProperty.addEnumValueToObjectSchema(
-									context.classSchema, ((OWLNamedIndividual) indv).getIRI().getShortForm());
-						});
-			}
-		} else {
-			// If no existing property schema, then create empty schema for it.
-			final var currentPropertySchema =
-					this.getPropertySchemaForRestrictionVisit(context.currentlyProcessedPropertyName);
-
-			for (OWLIndividual individual : ce.getIndividuals()) {
-				MapperObjectProperty.addOneOfToObjectPropertySchema(
-						currentPropertySchema, individual.asOWLNamedIndividual().getIRI().getShortForm());
-			}
-		}
-	}
-
-	/**
-	 * Convenience method for adding restriction values and ranges from a visit to {@link
-	 * OWLNaryDataRange} (i.e. {@link OWLDataUnionOf} or {@link OWLDataIntersectionOf}).
-	 *
-	 * @param ce the OWLNaryDataRange object
-	 */
-	private void visitOWLNaryDataRange(@Nonnull OWLNaryDataRange ce) {
-		logger.info("\t-- analyzing OWLNaryDataRange restrictions --");
-		logger.info("\t   class:  " + context.baseClass);
-		logger.info("\t   axiom:  " + ce);
-		logger.info("");
-
-		// If no existing property schema, then create empty schema for it.
-		final var currentPropertySchema =
-				this.getPropertySchemaForRestrictionVisit(context.currentlyProcessedPropertyName);
-
-		currentPropertySchema.setItems(MapperDataProperty.getComplexDataComposedSchema(ce));
-		MapperDataProperty.setSchemaType(currentPropertySchema, "array");
+	public void visit(OWLObjectHasValue ce) {
+		restrictionProcessor.processHasValue(ce);
 	}
 
 	@Override
-	public void visit(@Nonnull OWLDataUnionOf ce) {
-		this.visitOWLNaryDataRange(ce);
+	public void visit(OWLObjectOneOf ce) {
+		restrictionProcessor.processOneOf(ce);
 	}
 
 	@Override
-	public void visit(@Nonnull OWLDataIntersectionOf ce) {
-		this.visitOWLNaryDataRange(ce);
-	}
-
-	/**
-	 * Convenience method for adding restriction values and ranges from a visit to {@link
-	 * OWLQuantifiedDataRestriction} (i.e. {@link OWLDataAllValuesFrom}, {@link
-	 * OWLDataSomeValuesFrom}, or {@link OWLDataCardinalityRestriction} [subinterfaces: {@link
-	 * OWLDataMinCardinality}, {@link OWLDataMaxCardinality}, or {@link OWLDataExactCardinality}]).
-	 *
-	 * @param ce the {@link OWLQuantifiedDataRestriction} object
-	 */
-	private void visitOWLQuantifiedDataRestriction(@Nonnull OWLQuantifiedDataRestriction dr) {
-		logger.info("\t-- analyzing OWLQuantifiedDataRestriction restrictions --");
-		logger.info("\t   class:  " + context.baseClass);
-		logger.info("\t   axiom:  " + dr);
-		logger.info("");
-
-		// If no existing property schema, then create empty schema for it.
-		final var currentPropertySchema =
-				this.getPropertySchemaForRestrictionVisit(context.currentlyProcessedPropertyName);
-
-		Integer restrictionValue =
-				(dr instanceof OWLDataCardinalityRestriction)
-						? ((OWLDataCardinalityRestriction) dr).getCardinality()
-						: null;
-
-		final var ce = dr.getFiller();
-		if (ce instanceof OWLDataOneOf) {
-			ce.accept(this);
-		} else if (ce instanceof OWLDataUnionOf || ce instanceof OWLDataIntersectionOf) {
-			final var complexDataRange =
-					MapperDataProperty.getComplexDataComposedSchema((OWLNaryDataRange) ce);
-
-			if (dr instanceof OWLDataSomeValuesFrom) {
-				MapperDataProperty.addSomeValuesFromToDataPropertySchema(
-						currentPropertySchema, complexDataRange);
-			} else if (dr instanceof OWLDataAllValuesFrom) {
-				MapperDataProperty.addAllOfDataPropertySchema(currentPropertySchema, complexDataRange);
-			}
-		} else {
-			if (ce instanceof OWLDatatypeRestriction) {
-				final var restrictionDatatype = ((OWLDatatypeRestriction) ce).getDatatype();
-				for (final var facet : ((OWLDatatypeRestriction) ce).getFacetRestrictions()) {
-					final var dataRestrictionRange = restrictionDatatype.getIRI().getShortForm();
-
-					if (dataRestrictionRange != null) {
-						// Update current property schema with the appropriate restriction datatype/value.
-						if (dr instanceof OWLDataSomeValuesFrom) {
-							MapperDataProperty.addSomeValuesFromToDataPropertySchema(
-									currentPropertySchema, dataRestrictionRange);
-						} else if (dr instanceof OWLDataAllValuesFrom) {
-							MapperDataProperty.addAllOfDataPropertySchema(
-									currentPropertySchema, dataRestrictionRange);
-						} else if (dr instanceof OWLDataMinCardinality) {
-							MapperDataProperty.addMinCardinalityToPropertySchema(
-									currentPropertySchema, restrictionValue, dataRestrictionRange);
-						} else if (dr instanceof OWLDataMaxCardinality) {
-							MapperDataProperty.addMaxCardinalityToPropertySchema(
-									currentPropertySchema, restrictionValue, dataRestrictionRange);
-						} else if (dr instanceof OWLDataExactCardinality) {
-							MapperDataProperty.addExactCardinalityToPropertySchema(
-									currentPropertySchema, restrictionValue, dataRestrictionRange);
-						}
-
-						MapperDataProperty.addDatatypeRestrictionToPropertySchema(currentPropertySchema, facet);
-					} else {
-						logger.severe(
-								"\t   Invalid datatype restriction range (i.e. null).  Verify it is valid in the"
-										+ " ontology.");
-						logger.severe("");
-					}
-				}
-
-			} else {
-				final var dataRestrictionRange = ce.asOWLDatatype().getIRI().getShortForm();
-
-				// Update current property schema with the appropriate restriction datatype/value.
-				if (dr instanceof OWLDataSomeValuesFrom) {
-					MapperDataProperty.addSomeValuesFromToDataPropertySchema(
-							currentPropertySchema, dataRestrictionRange);
-				} else if (dr instanceof OWLDataAllValuesFrom) {
-					MapperDataProperty.addAllOfDataPropertySchema(
-							currentPropertySchema, dataRestrictionRange);
-				} else if (dr instanceof OWLDataMinCardinality) {
-					MapperDataProperty.addMinCardinalityToPropertySchema(
-							currentPropertySchema, restrictionValue, dataRestrictionRange);
-				} else if (dr instanceof OWLDataMaxCardinality) {
-					MapperDataProperty.addMaxCardinalityToPropertySchema(
-							currentPropertySchema, restrictionValue, dataRestrictionRange);
-				} else if (dr instanceof OWLDataExactCardinality) {
-					MapperDataProperty.addExactCardinalityToPropertySchema(
-							currentPropertySchema, restrictionValue, dataRestrictionRange);
-				}
-			}
-		}
-	}
-
-	/**
-	 * This method gets called when a class expression is a universal (allValuesFrom) restriction and
-	 * it asks us to visit it
-	 */
-	@Override
-	public void visit(@Nonnull OWLDataAllValuesFrom ce) {
-		this.visitOWLQuantifiedDataRestriction(ce);
-	}
-
-	/**
-	 * This method gets called when a class expression is a some (someValuesFrom) restriction and it
-	 * asks us to visit it
-	 */
-	@Override
-	public void visit(@Nonnull OWLDataSomeValuesFrom ce) {
-		this.visitOWLQuantifiedDataRestriction(ce);
+	public void visit(OWLDataAllValuesFrom ce) {
+		restrictionProcessor.processQuantifiedDataRestriction(ce);
 	}
 
 	@Override
-	public void visit(@Nonnull OWLDataMinCardinality ce) {
-		this.visitOWLQuantifiedDataRestriction(ce);
+	public void visit(OWLDataSomeValuesFrom ce) {
+		restrictionProcessor.processQuantifiedDataRestriction(ce);
 	}
 
 	@Override
-	public void visit(@Nonnull OWLDataMaxCardinality ce) {
-		this.visitOWLQuantifiedDataRestriction(ce);
+	public void visit(OWLDataMinCardinality ce) {
+		restrictionProcessor.processQuantifiedDataRestriction(ce);
 	}
 
 	@Override
-	public void visit(@Nonnull OWLDataExactCardinality ce) {
-		this.visitOWLQuantifiedDataRestriction(ce);
+	public void visit(OWLDataMaxCardinality ce) {
+		restrictionProcessor.processQuantifiedDataRestriction(ce);
 	}
 
 	@Override
-	public void visit(@Nonnull OWLDataOneOf ce) {
-		logger.info("\t-- analyzing OWLDataOneOf restrictions --");
-		logger.info("\t   class:  " + context.baseClass);
-		logger.info("\t   axiom:  " + ce);
-		logger.info("");
-
-		ce.values()
-				.forEach(
-						(oneOfValue) -> {
-							// If no existing property schema, then create empty schema for it.
-							final var currentPropertySchema =
-									this.getPropertySchemaForRestrictionVisit(context.currentlyProcessedPropertyName);
-
-							MapperDataProperty.addOneOfDataPropertySchema(currentPropertySchema, oneOfValue);
-						});
+	public void visit(OWLDataExactCardinality ce) {
+		restrictionProcessor.processQuantifiedDataRestriction(ce);
 	}
 
 	@Override
-	public void visit(@Nonnull OWLDataComplementOf ce) {
-		logger.info("\t-- analyzing OWLDataComplementOf restrictions --");
-		logger.info("\t   class:  " + context.baseClass);
-		logger.info("\t   axiom:  " + ce);
-		logger.info("");
-
-		ce.datatypesInSignature()
-				.forEach(
-						(complementOfDatatype) -> {
-							// If no existing property schema, then create empty schema for it.
-							final var currentPropertySchema =
-									this.getPropertySchemaForRestrictionVisit(context.currentlyProcessedPropertyName);
-
-							MapperDataProperty.setComplementOfForDataSchema(
-									currentPropertySchema, complementOfDatatype);
-						});
+	public void visit(OWLDataUnionOf ce) {
+		restrictionProcessor.processNaryDataRange(ce);
 	}
 
 	@Override
-	public void visit(@Nonnull OWLDataHasValue ce) {
-		logger.info("\t-- analyzing OWLDataHasValue restrictions --");
-		logger.info("\t   class:  " + context.baseClass);
-		logger.info("\t   axiom:  " + ce);
-		logger.info("");
+	public void visit(OWLDataIntersectionOf ce) {
+		restrictionProcessor.processNaryDataRange(ce);
+	}
 
-		// If no existing property schema, then create empty schema for it.
-		final var currentPropertySchema =
-				this.getPropertySchemaForRestrictionVisit(context.currentlyProcessedPropertyName);
+	@Override
+	public void visit(OWLDataComplementOf ce) {
+		restrictionProcessor.processComplementOf(ce);
+	}
 
-		if (ce.getFiller() != null
-				&& ce.getFiller() instanceof OWLLiteral
-				&& ce.getFiller().getDatatype() != null) {
-			MapperDataProperty.addHasValueOfPropertySchema(currentPropertySchema, ce.getFiller());
-		} else {
-			logger.severe(
-					"Restriction for OWLDataHasValue has unknown value \""
-							+ ce.getFiller()
-							+ "\", which is not a valid OWLLiteral.  Skipping restriction.");
-		}
+	@Override
+	public void visit(OWLDataHasValue ce) {
+		restrictionProcessor.processHasValue(ce);
+	}
+
+	@Override
+	public void visit(OWLDataOneOf ce) {
+		restrictionProcessor.processOneOf(ce);
 	}
 }
