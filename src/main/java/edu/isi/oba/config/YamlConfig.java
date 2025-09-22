@@ -8,6 +8,7 @@ import edu.isi.oba.config.ontology.annotations.AnnotationConfig;
 import edu.isi.oba.config.paths.PathConfig;
 import edu.isi.oba.exceptions.ConfigValidationException;
 import edu.isi.oba.exceptions.OntologyLoadingException;
+import edu.isi.oba.ontology.reasoner.ReasonerUtil;
 import edu.isi.oba.utils.exithandler.FatalErrorHandler;
 import edu.isi.oba.utils.ontology.OntologyDownloader;
 import io.swagger.v3.oas.models.OpenAPI;
@@ -35,7 +36,6 @@ import org.semanticweb.owlapi.model.OWLOntology;
 import org.semanticweb.owlapi.model.OWLOntologyCreationException;
 import org.semanticweb.owlapi.model.OWLOntologyLoaderConfiguration;
 import org.semanticweb.owlapi.model.OWLOntologyManager;
-import org.semanticweb.owlapi.reasoner.structural.StructuralReasonerFactory;
 
 /**
  * Represents the configuration loaded from a YAML file for generating OpenAPI schemas based on OWL
@@ -425,13 +425,12 @@ public class YamlConfig {
 		// Set ontology paths in YAML to the ones we have downloaded
 		this.owlOntologies.addAll(this.manager.ontologies().collect(Collectors.toSet()));
 
-		final var reasonerFactory = new StructuralReasonerFactory();
-
 		// Before any data processing, loop through all the ontologies and fail if any are inconsistent.
 		this.owlOntologies.stream()
 				.forEach(
 						(ontology) -> {
-							final var reasoner = reasonerFactory.createReasoner(ontology);
+							final var reasoner = ReasonerUtil.createReasoner(ontology);
+
 							if (!reasoner.isConsistent()) {
 								FatalErrorHandler.fatal(
 										"Please fix errors with inconsistent ontology.  IRI:  "
