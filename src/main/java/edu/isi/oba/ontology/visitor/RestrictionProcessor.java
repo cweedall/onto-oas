@@ -177,10 +177,10 @@ public class RestrictionProcessor {
 	}
 
 	Schema getOrCreateSchema() {
-		String propertyName = context.currentlyProcessedPropertyName;
+		String propertyName = context.getCurrentlyProcessedPropertyName();
 		Schema schema =
 				(Schema)
-						Optional.ofNullable(context.classSchema.getProperties())
+						Optional.ofNullable(context.getClassSchema().getProperties())
 								.map(props -> props.get(propertyName))
 								.orElse(null);
 
@@ -192,7 +192,7 @@ public class RestrictionProcessor {
 							? ObaConstants.DEFAULT_DESCRIPTION
 							: null;
 			MapperProperty.setSchemaDescription(schema, description);
-			context.classSchema.addProperty(propertyName, schema);
+			context.getClassSchema().addProperty(propertyName, schema);
 		}
 
 		return schema;

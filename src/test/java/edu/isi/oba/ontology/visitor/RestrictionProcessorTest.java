@@ -46,10 +46,10 @@ public class RestrictionProcessorTest {
 
 		Schema classSchema = new Schema();
 		when(context.getClassSchema()).thenReturn(classSchema);
-		context.classSchema = classSchema;
+		context.setClassSchema(classSchema);
 		Schema schema = new Schema();
-		context.classSchema.addProperty("testProperty", schema);
-		context.currentlyProcessedPropertyName = "testProperty";
+		context.getClassSchema().addProperty("testProperty", schema);
+		context.setCurrentlyProcessedPropertyName("testProperty");
 	}
 
 	@Test
@@ -656,33 +656,35 @@ public class RestrictionProcessorTest {
 	public void testGetOrCreateSchema_withNoPropertySchemaAndNoDefaultDescription() {
 		try (MockedStatic<MapperProperty> mapperProperty = mockStatic(MapperProperty.class); ) {
 			GlobalFlags.setFlag(ConfigPropertyNames.DEFAULT_DESCRIPTIONS, false);
-			context.currentlyProcessedPropertyName = "noPropertySchemaExistsForThisPropertyName";
 
-			mapperProperty
-					.when(
-							() -> MapperProperty.setSchemaName(any(), eq(context.currentlyProcessedPropertyName)))
-					.then(invocationOnMock -> null);
+			final var propertyName = "noPropertySchemaExistsForThisPropertyName";
+			context.withProcessedProperty(
+					propertyName,
+					() -> {
+						mapperProperty
+								.when(() -> MapperProperty.setSchemaName(any(), eq(propertyName)))
+								.then(invocationOnMock -> null);
 
-			mapperProperty
-					.when(() -> MapperProperty.setSchemaDescription(any(), eq(null)))
-					.then(invocationOnMock -> null);
+						mapperProperty
+								.when(() -> MapperProperty.setSchemaDescription(any(), eq(null)))
+								.then(invocationOnMock -> null);
 
-			doCallRealMethod().when(processorSpy).getOrCreateSchema();
+						doCallRealMethod().when(processorSpy).getOrCreateSchema();
 
-			// A property schema is initialized in the setUp() method
-			processorSpy.getOrCreateSchema();
+						// A property schema is initialized in the setUp() method
+						processorSpy.getOrCreateSchema();
 
-			verify(processorSpy, times(1)).getOrCreateSchema();
+						verify(processorSpy, times(1)).getOrCreateSchema();
 
-			// Verify that the expected static method was invoked
-			mapperProperty.verify(
-					() -> MapperProperty.setSchemaName(any(), eq(context.currentlyProcessedPropertyName)),
-					times(1));
+						// Verify that the expected static method was invoked
+						mapperProperty.verify(
+								() -> MapperProperty.setSchemaName(any(), eq(propertyName)), times(1));
 
-			mapperProperty.verify(() -> MapperProperty.setSchemaDescription(any(), eq(null)), times(1));
+						mapperProperty.verify(
+								() -> MapperProperty.setSchemaDescription(any(), eq(null)), times(1));
 
-			assertNotNull(
-					context.classSchema.getProperties().get(context.currentlyProcessedPropertyName));
+						assertNotNull(context.getClassSchema().getProperties().get(propertyName));
+					});
 		}
 	}
 
@@ -690,37 +692,41 @@ public class RestrictionProcessorTest {
 	public void testGetOrCreateSchema_withNoPropertySchemaAndDefaultDescription() {
 		try (MockedStatic<MapperProperty> mapperProperty = mockStatic(MapperProperty.class); ) {
 			GlobalFlags.setFlag(ConfigPropertyNames.DEFAULT_DESCRIPTIONS, true);
-			context.currentlyProcessedPropertyName = "noPropertySchemaExistsForThisPropertyName";
 
-			mapperProperty
-					.when(
-							() -> MapperProperty.setSchemaName(any(), eq(context.currentlyProcessedPropertyName)))
-					.then(invocationOnMock -> null);
+			final var propertyName = "noPropertySchemaExistsForThisPropertyName";
+			context.withProcessedProperty(
+					propertyName,
+					() -> {
+						mapperProperty
+								.when(() -> MapperProperty.setSchemaName(any(), eq(propertyName)))
+								.then(invocationOnMock -> null);
 
-			mapperProperty
-					.when(
-							() ->
-									MapperProperty.setSchemaDescription(any(), eq(ObaConstants.DEFAULT_DESCRIPTION)))
-					.then(invocationOnMock -> null);
+						mapperProperty
+								.when(
+										() ->
+												MapperProperty.setSchemaDescription(
+														any(), eq(ObaConstants.DEFAULT_DESCRIPTION)))
+								.then(invocationOnMock -> null);
 
-			doCallRealMethod().when(processorSpy).getOrCreateSchema();
+						doCallRealMethod().when(processorSpy).getOrCreateSchema();
 
-			// A property schema is initialized in the setUp() method
-			processorSpy.getOrCreateSchema();
+						// A property schema is initialized in the setUp() method
+						processorSpy.getOrCreateSchema();
 
-			verify(processorSpy, times(1)).getOrCreateSchema();
+						verify(processorSpy, times(1)).getOrCreateSchema();
 
-			// Verify that the expected static method was invoked
-			mapperProperty.verify(
-					() -> MapperProperty.setSchemaName(any(), eq(context.currentlyProcessedPropertyName)),
-					times(1));
+						// Verify that the expected static method was invoked
+						mapperProperty.verify(
+								() -> MapperProperty.setSchemaName(any(), eq(propertyName)), times(1));
 
-			mapperProperty.verify(
-					() -> MapperProperty.setSchemaDescription(any(), eq(ObaConstants.DEFAULT_DESCRIPTION)),
-					times(1));
+						mapperProperty.verify(
+								() ->
+										MapperProperty.setSchemaDescription(
+												any(), eq(ObaConstants.DEFAULT_DESCRIPTION)),
+								times(1));
 
-			assertNotNull(
-					context.classSchema.getProperties().get(context.currentlyProcessedPropertyName));
+						assertNotNull(context.getClassSchema().getProperties().get(propertyName));
+					});
 		}
 	}
 
