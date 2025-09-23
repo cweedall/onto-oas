@@ -8,6 +8,10 @@ import org.semanticweb.owlapi.reasoner.structural.StructuralReasonerFactory;
 public class ReasonerUtil {
 	private static final OWLReasonerFactory factory = new StructuralReasonerFactory();
 
+	private ReasonerUtil() {
+		throw new UnsupportedOperationException("Static utility class");
+	}
+
 	public static OWLReasoner createReasoner(OWLOntology ontology) {
 		return factory.createReasoner(ontology);
 	}
