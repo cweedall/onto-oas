@@ -336,7 +336,7 @@ public class MapperDataProperty extends MapperProperty {
 		Schema complement = MapperDataProperty.getTypeSchema(complementOfType);
 		MapperDataProperty.setSchemaFormat(
 				complement, MapperDataProperty.getFormatForDatatype(complementOfType));
-		dataPropertySchema.not(complement);
+		dataPropertySchema.setNot(complement);
 	}
 
 	/**

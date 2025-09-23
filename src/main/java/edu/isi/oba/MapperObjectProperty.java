@@ -106,7 +106,7 @@ public class MapperObjectProperty extends MapperProperty {
 			Schema objectSchema, String complementOfReference) {
 		Schema complement = new ObjectSchema();
 		complement.set$ref(complementOfReference);
-		objectSchema.not(complement);
+		objectSchema.setNot(complement);
 	}
 
 	/**
