@@ -17,7 +17,7 @@ import org.semanticweb.owlapi.reasoner.OWLReasoner;
  * traversal. This class implements {@link OwlVisitorContext} to expose read-only access to helper
  * classes.
  */
-class VisitorContext implements OwlVisitorContext {
+public class VisitorContext implements OwlVisitorContext {
 
 	private final Logger logger;
 
@@ -300,6 +300,16 @@ class VisitorContext implements OwlVisitorContext {
 	 */
 	public void addPropertyName(String name) {
 		this.propertyNames.add(name);
+	}
+
+	/**
+	 * Adds a property {@link Schema} to the class {@link Schema}
+	 *
+	 * @param propertyName the property name
+	 * @param propertySchema the property {@link Schema}
+	 */
+	public void addPropertySchemaToClassSchema(String propertyName, Schema propertySchema) {
+		this.classSchema.addProperty(propertyName, propertySchema);
 	}
 
 	@Override
