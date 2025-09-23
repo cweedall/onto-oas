@@ -277,7 +277,6 @@ public class RestrictionProcessor {
 				MapperDataProperty.addSomeValuesFromToDataPropertySchema(schema, (Schema) range);
 			}
 		} else if (dr instanceof OWLDataAllValuesFrom) {
-			MapperDataProperty.addAllOfDataPropertySchema(schema, (String) range);
 			if (range instanceof String) {
 				MapperDataProperty.addAllOfDataPropertySchema(schema, (String) range);
 			} else if (range instanceof Schema) {
