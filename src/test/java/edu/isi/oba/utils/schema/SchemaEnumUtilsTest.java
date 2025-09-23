@@ -69,7 +69,7 @@ public class SchemaEnumUtilsTest extends BaseTest {
 		List<Object> values = Arrays.asList("ONE", 2, true);
 
 		// Should log warnings but still attempt to copy
-		SchemaEnumUtils.castAndCopy(schema, values, Object.class);
+		SchemaEnumUtils.castAndCopy(schema, values, Boolean.class);
 		assertEquals(values, schema.getEnum());
 	}
 
