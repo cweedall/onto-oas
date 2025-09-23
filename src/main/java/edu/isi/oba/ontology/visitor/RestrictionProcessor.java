@@ -177,22 +177,30 @@ public class RestrictionProcessor {
 	}
 
 	Schema getOrCreateSchema() {
-		String propertyName = context.getCurrentlyProcessedPropertyName();
-		Schema schema =
-				(Schema)
-						Optional.ofNullable(context.getClassSchema().getProperties())
-								.map(props -> props.get(propertyName))
-								.orElse(null);
+		final var propertyName = context.getCurrentlyProcessedPropertyName();
+		Schema schema = null;
 
-		if (schema == null) {
-			schema = new ArraySchema();
-			MapperProperty.setSchemaName(schema, propertyName);
-			String description =
-					GlobalFlags.getFlag(ConfigPropertyNames.DEFAULT_DESCRIPTIONS)
-							? ObaConstants.DEFAULT_DESCRIPTION
-							: null;
-			MapperProperty.setSchemaDescription(schema, description);
-			context.getClassSchema().addProperty(propertyName, schema);
+		if (propertyName == null) {
+			// Dealing directly with the class schema.  This should always exist already.
+			schema = context.getClassSchema();
+		} else {
+			schema =
+					(Schema)
+							Optional.ofNullable(context.getClassSchema().getProperties())
+									.map(props -> props.get(propertyName))
+									.orElse(null);
+
+			// If schema is null, this is a new property that needs to have a schema created and added.
+			if (schema == null) {
+				schema = new ArraySchema();
+				MapperProperty.setSchemaName(schema, propertyName);
+				String description =
+						GlobalFlags.getFlag(ConfigPropertyNames.DEFAULT_DESCRIPTIONS)
+								? ObaConstants.DEFAULT_DESCRIPTION
+								: null;
+				MapperProperty.setSchemaDescription(schema, description);
+				context.addPropertySchemaToClassSchema(propertyName, schema);
+			}
 		}
 
 		return schema;
@@ -263,15 +271,45 @@ public class RestrictionProcessor {
 	void applyDataRestriction(
 			Schema schema, OWLQuantifiedDataRestriction dr, Object range, Integer cardinality) {
 		if (dr instanceof OWLDataSomeValuesFrom) {
-			MapperDataProperty.addSomeValuesFromToDataPropertySchema(schema, (String) range);
+			if (range instanceof String) {
+				MapperDataProperty.addSomeValuesFromToDataPropertySchema(schema, (String) range);
+			} else if (range instanceof Schema) {
+				MapperDataProperty.addSomeValuesFromToDataPropertySchema(schema, (Schema) range);
+			}
 		} else if (dr instanceof OWLDataAllValuesFrom) {
 			MapperDataProperty.addAllOfDataPropertySchema(schema, (String) range);
+			if (range instanceof String) {
+				MapperDataProperty.addAllOfDataPropertySchema(schema, (String) range);
+			} else if (range instanceof Schema) {
+				MapperDataProperty.addAllOfDataPropertySchema(schema, (Schema) range);
+			}
 		} else if (dr instanceof OWLDataMinCardinality) {
-			MapperDataProperty.addMinCardinalityToPropertySchema(schema, cardinality, (String) range);
+			if (range instanceof String) {
+				MapperDataProperty.addMinCardinalityToPropertySchema(schema, cardinality, (String) range);
+			} else {
+				logger.log(
+						Level.SEVERE,
+						"applyDataRestriction(): Attempting to call addMinCardinalityToPropertySchema(), but"
+								+ " the `range` object is not a String value.");
+			}
 		} else if (dr instanceof OWLDataMaxCardinality) {
-			MapperDataProperty.addMaxCardinalityToPropertySchema(schema, cardinality, (String) range);
+			if (range instanceof String) {
+				MapperDataProperty.addMaxCardinalityToPropertySchema(schema, cardinality, (String) range);
+			} else {
+				logger.log(
+						Level.SEVERE,
+						"applyDataRestriction(): Attempting to call addMaxCardinalityToPropertySchema(), but"
+								+ " the `range` object is not a String value.");
+			}
 		} else if (dr instanceof OWLDataExactCardinality) {
-			MapperDataProperty.addExactCardinalityToPropertySchema(schema, cardinality, (String) range);
+			if (range instanceof String) {
+				MapperDataProperty.addExactCardinalityToPropertySchema(schema, cardinality, (String) range);
+			} else {
+				logger.log(
+						Level.SEVERE,
+						"applyDataRestriction(): Attempting to call addExactCardinalityToPropertySchema(), but"
+								+ " the `range` object is not a String value.");
+			}
 		}
 	}
 }
