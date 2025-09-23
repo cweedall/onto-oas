@@ -35,8 +35,6 @@ public final class ZipUtils {
 
 				if (!normalizedPath.startsWith(outputPath)) {
 					throw new Exception("Bad zip entry. Possibly malicious. Exiting to avoid 'Zip Slip'.");
-					// FatalErrorHandler.fatal(
-					// 		"Bad zip entry. Possibly malicious. Exiting to avoid 'Zip Slip'.");
 				}
 
 				if (entry.isDirectory()) {
