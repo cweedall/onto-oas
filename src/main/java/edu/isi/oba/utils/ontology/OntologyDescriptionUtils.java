@@ -34,8 +34,7 @@ public class OntologyDescriptionUtils {
 			languageTag = ObaConstants.DEFAULT_LANGUAGE;
 		}
 
-		final var resolvedEntity = resolveEntityForDescription(entity, ontology);
-		final var langDescMap = extractDescriptions(resolvedEntity, ontology);
+		final var langDescMap = extractDescriptions(entity, ontology);
 
 		return getLanguageSpecificDescription(langDescMap, languageTag)
 				.or(() -> applyFallbackDescription(langDescMap, hasDefaultDescriptions));
@@ -52,39 +51,6 @@ public class OntologyDescriptionUtils {
 	public static Optional<String> getDescription(
 			OWLEntity entity, OWLOntology ontology, Boolean hasDefaultDescriptions) {
 		return getDescription(entity, ontology, hasDefaultDescriptions, "en");
-	}
-
-	private static boolean hasDescriptionAnnotations(OWLEntity entity, OWLOntology ontology) {
-		return ObaConstants.DESCRIPTION_PROPERTIES.stream()
-						.map(
-								description ->
-										ontology
-												.getOWLOntologyManager()
-												.getOWLDataFactory()
-												.getOWLAnnotationProperty(IRI.create(description)))
-						.mapToLong(
-								prop ->
-										EntitySearcher.getAnnotationObjects(entity, Set.of(ontology).stream(), prop)
-												.count())
-						.sum()
-				> 0;
-	}
-
-	private static OWLEntity resolveObjectPropertyRange(
-			OWLObjectProperty property, OWLOntology ontology) {
-		for (final var objPropRange :
-				ontology.getObjectPropertyRangeAxioms(property.asObjectPropertyExpression())) {
-			if (objPropRange.getRange() instanceof OWLClass) {
-				return objPropRange.getRange().asOWLClass();
-			}
-		}
-		return property;
-	}
-
-	private static OWLEntity resolveEntityForDescription(OWLEntity entity, OWLOntology ontology) {
-		if (!(entity instanceof OWLObjectProperty)) return entity;
-		if (hasDescriptionAnnotations(entity, ontology)) return entity;
-		return resolveObjectPropertyRange((OWLObjectProperty) entity, ontology);
 	}
 
 	static List<String> getDescriptionProperties() {
