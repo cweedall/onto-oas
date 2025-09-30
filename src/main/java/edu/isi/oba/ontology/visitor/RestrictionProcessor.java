@@ -16,14 +16,8 @@ import org.semanticweb.owlapi.model.*;
 
 public class RestrictionProcessor {
 
-	private final VisitorContext context;
-	private final Logger logger;
-	private final OWLObjectVisitor visitor;
-
-	public RestrictionProcessor(VisitorContext context, Logger logger, OWLObjectVisitor visitor) {
-		this.context = context;
-		this.logger = logger;
-		this.visitor = visitor;
+	private RestrictionProcessor() {
+		throw new UnsupportedOperationException("Static utility class");
 	}
 
 	/**
@@ -32,8 +26,12 @@ public class RestrictionProcessor {
 	 *
 	 * @param or the OWL quantified object restriction
 	 */
-	public void processQuantifiedObjectRestriction(OWLQuantifiedObjectRestriction or) {
-		Schema schema = getOrCreateSchema();
+	public static void processQuantifiedObjectRestriction(
+			OWLQuantifiedObjectRestriction or,
+			OWLObjectVisitor visitor,
+			VisitorContext context,
+			Logger logger) {
+		Schema schema = getOrCreateSchema(visitor, context);
 		OWLClassExpression filler = or.getFiller();
 
 		if (filler instanceof OWLObjectOneOf) {
@@ -42,11 +40,11 @@ public class RestrictionProcessor {
 			Schema composed =
 					MapperObjectProperty.getComplexObjectComposedSchema(
 							(OWLNaryBooleanClassExpression) filler);
-			applyObjectRestriction(schema, or, composed);
+			applyObjectRestriction(schema, or, composed, logger);
 		} else {
 			String range =
 					SchemaBuilder.getPrefixedSchemaName(filler.asOWLClass(), context.getBaseClassOntology());
-			applyObjectRestriction(schema, or, range);
+			applyObjectRestriction(schema, or, range, logger);
 		}
 	}
 
@@ -56,8 +54,12 @@ public class RestrictionProcessor {
 	 *
 	 * @param dr the OWL quantified data restriction
 	 */
-	public void processQuantifiedDataRestriction(OWLQuantifiedDataRestriction dr) {
-		Schema schema = getOrCreateSchema();
+	public static void processQuantifiedDataRestriction(
+			OWLQuantifiedDataRestriction dr,
+			OWLObjectVisitor visitor,
+			VisitorContext context,
+			Logger logger) {
+		Schema schema = getOrCreateSchema(visitor, context);
 		OWLDataRange filler = dr.getFiller();
 		Integer cardinality =
 				(dr instanceof OWLDataCardinalityRestriction)
@@ -68,17 +70,17 @@ public class RestrictionProcessor {
 			filler.accept(visitor);
 		} else if (filler instanceof OWLNaryDataRange) {
 			Schema composed = MapperDataProperty.getComplexDataComposedSchema((OWLNaryDataRange) filler);
-			applyDataRestriction(schema, dr, composed, cardinality);
+			applyDataRestriction(schema, dr, composed, cardinality, logger);
 		} else if (filler instanceof OWLDatatypeRestriction) {
 			OWLDatatypeRestriction restriction = (OWLDatatypeRestriction) filler;
 			String range = restriction.getDatatype().getIRI().getShortForm();
 			for (OWLFacetRestriction facet : restriction.getFacetRestrictions()) {
-				applyDataRestriction(schema, dr, range, cardinality);
+				applyDataRestriction(schema, dr, range, cardinality, logger);
 				MapperDataProperty.addDatatypeRestrictionToPropertySchema(schema, facet);
 			}
 		} else {
 			String range = filler.asOWLDatatype().getIRI().getShortForm();
-			applyDataRestriction(schema, dr, range, cardinality);
+			applyDataRestriction(schema, dr, range, cardinality, logger);
 		}
 	}
 
@@ -88,8 +90,9 @@ public class RestrictionProcessor {
 	 *
 	 * @param ce the OWL n-ary boolean class expression
 	 */
-	public void processNaryBooleanClassExpression(OWLNaryBooleanClassExpression ce) {
-		Schema schema = getOrCreateSchema();
+	public static void processNaryBooleanClassExpression(
+			OWLNaryBooleanClassExpression ce, OWLObjectVisitor visitor, VisitorContext context) {
+		Schema schema = getOrCreateSchema(visitor, context);
 		schema.setItems(MapperObjectProperty.getComplexObjectComposedSchema(ce));
 		MapperProperty.setSchemaType(schema, "array");
 	}
@@ -99,8 +102,9 @@ public class RestrictionProcessor {
 	 *
 	 * @param ce the OWL n-ary data range
 	 */
-	public void processNaryDataRange(OWLNaryDataRange ce) {
-		Schema schema = getOrCreateSchema();
+	public static void processNaryDataRange(
+			OWLNaryDataRange ce, OWLObjectVisitor visitor, VisitorContext context) {
+		Schema schema = getOrCreateSchema(visitor, context);
 		schema.setItems(MapperDataProperty.getComplexDataComposedSchema(ce));
 		MapperProperty.setSchemaType(schema, "array");
 	}
@@ -110,8 +114,9 @@ public class RestrictionProcessor {
 	 *
 	 * @param ce the OWL hasValue restriction
 	 */
-	public void processHasValue(OWLObjectHasValue ce) {
-		Schema schema = getOrCreateSchema();
+	public static void processHasValue(
+			OWLObjectHasValue ce, OWLObjectVisitor visitor, VisitorContext context) {
+		Schema schema = getOrCreateSchema(visitor, context);
 		if (ce.getFiller() instanceof OWLNamedIndividual) {
 			MapperObjectProperty.addHasValueOfPropertySchema(schema, ce.getFiller());
 		}
@@ -122,8 +127,9 @@ public class RestrictionProcessor {
 	 *
 	 * @param ce the OWL hasValue restriction
 	 */
-	public void processHasValue(OWLDataHasValue ce) {
-		Schema schema = getOrCreateSchema();
+	public static void processHasValue(
+			OWLDataHasValue ce, OWLObjectVisitor visitor, VisitorContext context) {
+		Schema schema = getOrCreateSchema(visitor, context);
 		if (ce.getFiller().getDatatype() != null) {
 			MapperDataProperty.addHasValueOfPropertySchema(schema, ce.getFiller());
 		}
@@ -134,8 +140,9 @@ public class RestrictionProcessor {
 	 *
 	 * @param ce the OWL oneOf restriction
 	 */
-	public void processOneOf(OWLObjectOneOf ce) {
-		Schema schema = getOrCreateSchema();
+	public static void processOneOf(
+			OWLObjectOneOf ce, OWLObjectVisitor visitor, VisitorContext context) {
+		Schema schema = getOrCreateSchema(visitor, context);
 		for (OWLIndividual individual : ce.getIndividuals()) {
 			MapperObjectProperty.addOneOfToObjectPropertySchema(
 					schema, individual.asOWLNamedIndividual().getIRI().getShortForm());
@@ -147,8 +154,9 @@ public class RestrictionProcessor {
 	 *
 	 * @param ce the OWL oneOf restriction
 	 */
-	public void processOneOf(OWLDataOneOf ce) {
-		Schema schema = getOrCreateSchema();
+	public static void processOneOf(
+			OWLDataOneOf ce, OWLObjectVisitor visitor, VisitorContext context) {
+		Schema schema = getOrCreateSchema(visitor, context);
 		ce.values().forEach(value -> MapperDataProperty.addOneOfDataPropertySchema(schema, value));
 	}
 
@@ -157,8 +165,9 @@ public class RestrictionProcessor {
 	 *
 	 * @param ce the OWL complementOf restriction
 	 */
-	public void processComplementOf(OWLObjectComplementOf ce) {
-		Schema schema = getOrCreateSchema();
+	public static void processComplementOf(
+			OWLObjectComplementOf ce, OWLObjectVisitor visitor, VisitorContext context) {
+		Schema schema = getOrCreateSchema(visitor, context);
 		String range =
 				SchemaBuilder.getPrefixedSchemaName(
 						ce.getOperand().asOWLClass(), context.getBaseClassOntology());
@@ -170,13 +179,14 @@ public class RestrictionProcessor {
 	 *
 	 * @param ce the OWL complementOf restriction
 	 */
-	public void processComplementOf(OWLDataComplementOf ce) {
-		Schema schema = getOrCreateSchema();
+	public static void processComplementOf(
+			OWLDataComplementOf ce, OWLObjectVisitor visitor, VisitorContext context) {
+		Schema schema = getOrCreateSchema(visitor, context);
 		ce.datatypesInSignature()
 				.forEach(dt -> MapperDataProperty.setComplementOfForDataSchema(schema, dt));
 	}
 
-	Schema getOrCreateSchema() {
+	static Schema getOrCreateSchema(OWLObjectVisitor visitor, VisitorContext context) {
 		final var propertyName = context.getCurrentlyProcessedPropertyName();
 		Schema schema = null;
 
@@ -213,7 +223,8 @@ public class RestrictionProcessor {
 	 * @param or the object restriction
 	 * @param range the range (either a String or Schema) to apply
 	 */
-	void applyObjectRestriction(Schema schema, OWLQuantifiedObjectRestriction or, Object range) {
+	static void applyObjectRestriction(
+			Schema schema, OWLQuantifiedObjectRestriction or, Object range, Logger logger) {
 		if (or instanceof OWLObjectSomeValuesFrom) {
 			if (range instanceof String) {
 				MapperObjectProperty.addSomeValuesFromToObjectPropertySchema(schema, (String) range);
@@ -268,8 +279,12 @@ public class RestrictionProcessor {
 	 * @param range the range (either a String or Schema) to apply
 	 * @param cardinality the cardinality value, if applicable
 	 */
-	void applyDataRestriction(
-			Schema schema, OWLQuantifiedDataRestriction dr, Object range, Integer cardinality) {
+	static void applyDataRestriction(
+			Schema schema,
+			OWLQuantifiedDataRestriction dr,
+			Object range,
+			Integer cardinality,
+			Logger logger) {
 		if (dr instanceof OWLDataSomeValuesFrom) {
 			if (range instanceof String) {
 				MapperDataProperty.addSomeValuesFromToDataPropertySchema(schema, (String) range);
