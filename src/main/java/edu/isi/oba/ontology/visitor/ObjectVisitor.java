@@ -4,11 +4,13 @@ import static edu.isi.oba.Oba.logger;
 
 import edu.isi.oba.MapperDataProperty;
 import edu.isi.oba.MapperObjectProperty;
-import edu.isi.oba.MapperProperty;
 import edu.isi.oba.config.ConfigPropertyNames;
 import edu.isi.oba.config.YamlConfig;
 import edu.isi.oba.config.flags.GlobalFlags;
 import edu.isi.oba.exceptions.OntologyVisitorException;
+import edu.isi.oba.ontology.annotation.AnnotationProcessor;
+import edu.isi.oba.ontology.restrictions.RestrictionClassifier;
+import edu.isi.oba.ontology.restrictions.RestrictionKind;
 import edu.isi.oba.ontology.schema.SchemaBuilder;
 import edu.isi.oba.ontology.schema.SchemaOrchestrator;
 import edu.isi.oba.utils.ontology.OntologyDescriptionUtils;
@@ -19,7 +21,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.semanticweb.owlapi.model.AxiomType;
@@ -60,6 +61,7 @@ import org.semanticweb.owlapi.model.OWLObjectUnionOf;
 import org.semanticweb.owlapi.model.OWLObjectVisitor;
 import org.semanticweb.owlapi.model.OWLOntology;
 import org.semanticweb.owlapi.model.OWLRestriction;
+import org.semanticweb.owlapi.model.OWLSubClassOfAxiom;
 import org.semanticweb.owlapi.reasoner.InferenceDepth;
 import org.semanticweb.owlapi.search.EntitySearcher;
 
@@ -68,7 +70,6 @@ public class ObjectVisitor implements OWLObjectVisitor {
 
 	// private final OWLClass owlClass;
 	private final VisitorContext context;
-	private final RestrictionProcessor restrictionProcessor;
 
 	/**
 	 * Constructor for ObjectVisitor.
@@ -81,8 +82,6 @@ public class ObjectVisitor implements OWLObjectVisitor {
 	public ObjectVisitor(OWLClass owlClass, OWLOntology ontology, YamlConfig configData)
 			throws OntologyVisitorException {
 		this.context = new VisitorContext(owlClass, ontology, configData, logger);
-		this.restrictionProcessor = new RestrictionProcessor(this.context, logger, this);
-
 		this.visit(this.context.getBaseClass());
 	}
 
@@ -90,7 +89,6 @@ public class ObjectVisitor implements OWLObjectVisitor {
 	ObjectVisitor(OWLClass owlClass, OWLOntology ontology, YamlConfig configData, boolean skipVisit)
 			throws Exception {
 		this.context = new VisitorContext(owlClass, ontology, configData, logger);
-		this.restrictionProcessor = new RestrictionProcessor(this.context, logger, this);
 		if (!skipVisit) {
 			this.visit(this.context.getBaseClass());
 		}
@@ -233,17 +231,17 @@ public class ObjectVisitor implements OWLObjectVisitor {
 	 */
 	private void generatePropertySchemasWithRestrictions(OWLClass owlClass) {
 		if (owlClass != null && owlClass.equals(this.context.getBaseClass())) {
-			logger.info("--------------------------------------------------");
+			logger.info("------------------------------------------------------------");
 			logger.info("\tGenerating restrictions for:");
 			logger.info("\t\t" + this.context.getBaseClass());
-			logger.info("--------------------------------------------------");
+			logger.info("------------------------------------------------------------");
 		} else {
-			logger.info("--------------------------------------------------");
+			logger.info("------------------------------------------------------------");
 			logger.info("\tGenerating restrictions for:");
 			logger.info("\t\t" + this.context.getBaseClass());
 			logger.info("\twhich were inherited from:");
 			logger.info("\t\t" + owlClass);
-			logger.info("--------------------------------------------------");
+			logger.info("------------------------------------------------------------");
 		}
 
 		// Avoid cycles and accept visits from super classes for the purpose of getting all properties.
@@ -258,97 +256,90 @@ public class ObjectVisitor implements OWLObjectVisitor {
 					.subClassAxiomsForSubClass(owlClass)
 					.forEach(
 							ax -> {
-								// A flag to determine whether we should skip visiting the axiom's super class.
-								boolean shouldSkipVisits = false;
+								OWLClassExpression superClass = ax.getSuperClass();
 
-								// Well-formed axioms should not be an OWLClass type.
-								if (!(ax instanceof OWLClass)) {
-									if (ax.getSuperClass() instanceof OWLRestriction) {
-										final var property =
-												ax.getSuperClass() instanceof OWLObjectRestriction
-														? ((OWLObjectRestriction) ax.getSuperClass())
-																.getProperty()
-																.asOWLObjectProperty()
-														: ((OWLDataRestriction) ax.getSuperClass())
-																.getProperty()
-																.asOWLDataProperty();
-										this.context.setCurrentlyProcessedPropertyName(
-												property.getIRI().getShortForm());
+								// Set property name if it's a restriction
+								if (superClass instanceof OWLRestriction) {
+									final var property =
+											superClass instanceof OWLObjectRestriction
+													? ((OWLObjectRestriction) superClass).getProperty().asOWLObjectProperty()
+													: ((OWLDataRestriction) superClass).getProperty().asOWLDataProperty();
 
-										// Add any classes referenced by the restriction.
-										this.context.addAllReferencedClasses(
-												ax.getSuperClass().getClassesInSignature());
-									} else if (ax.getSuperClass() instanceof OWLBooleanClassExpression) {
-										if (ax.getSuperClass() instanceof OWLObjectComplementOf) {
-
-											// Add the object complement reference class.
-											this.context.addAllReferencedClasses(
-													ax.getSuperClass().getClassesInSignature());
-
-											logger.info(
-													"\t"
-															+ this.getBaseClassName()
-															+ " has an object complement of axiom.  This is not for a property,"
-															+ " so do not set property name.");
-											logger.info("\t\taxiom:  " + ax);
-										} else {
-											logger.severe("\t" + this.getBaseClassName() + " has unknown restriction.");
-											logger.severe("\t\taxiom:  " + ax);
-											shouldSkipVisits = true;
-										}
-									} else if (ax.getSuperClass() instanceof OWLObjectOneOf) {
-										logger.info(
-												"\t"
-														+ this.getBaseClassName()
-														+ " is an ObjectOneOf set containing one or more Individuals.  Not"
-														+ " setting property name, to treat it like an enum.");
-										logger.info("\t\taxiom:  " + ax);
-									} else {
-										logger.info(
-												"\t"
-														+ this.getBaseClassName()
-														+ " is a subclass of "
-														+ this.getPrefixedSchemaName(ax.getSuperClass().asOWLClass())
-														+ ".  No restrictions to process.");
-										logger.info("\t\taxiom:  " + ax);
-										shouldSkipVisits = true;
-									}
-
-									if (!shouldSkipVisits) {
-										// Proceed with the visit.
-										ax.getSuperClass().accept(this);
-
-										// There are cases where property description/annotations have not been
-										// processed yet.
-										// Check each entity here to be safe.
-										ax.getSuperClass()
-												.objectPropertiesInSignature()
-												.forEach(this::setDescriptionReadOnlyWriteOnlyFromAnnotations);
-										ax.getSuperClass()
-												.dataPropertiesInSignature()
-												.forEach(this::setDescriptionReadOnlyWriteOnlyFromAnnotations);
-
-										// Also check the subClass axioms for annotations specifying read/write only.
-										this.setReadOnlyWriteOnlyFromAxiomAnnotations(ax);
-									}
-
-									// Clear out the property name.
-									this.context.clearCurrentlyProcessedPropertyName();
-								} else {
-									logger.severe("\t" + this.getBaseClassName() + " has unknown restriction.");
-									logger.severe("\t\taxiom:  " + ax);
+									this.context.setCurrentlyProcessedPropertyName(property.getIRI().getShortForm());
+									this.context.addAllReferencedClasses(superClass.getClassesInSignature());
+								} else if (superClass instanceof OWLBooleanClassExpression) {
+									// Handle boolean expressions and complements
+									this.context.addAllReferencedClasses(superClass.getClassesInSignature());
+									logger.info("\t" + getBaseClassName() + " has a boolean class expression.");
+									logger.info("\t\taxiom: " + ax);
+								} else if (superClass instanceof OWLObjectOneOf) {
+									// Handle ObjectOneOf (enum-like)
+									logger.info("\t" + getBaseClassName() + " is an ObjectOneOf set.");
+									logger.info("\t\taxiom: " + ax);
+								} else if (superClass.isOWLClass()) {
+									// Handle simple subclassing
+									logger.info(
+											"\t"
+													+ getBaseClassName()
+													+ " is a subclass of "
+													+ getPrefixedSchemaName(superClass.asOWLClass())
+													+ ". No restrictions to process.");
+									logger.info("\t\taxiom: " + ax);
 								}
+
+								// Dispatch restriction handling
+								dispatchRestriction(ax);
+
+								// Clear property name after processing
+								this.context.clearCurrentlyProcessedPropertyName();
 							});
 
-			// For equivalent (to) classes (e.g. Defined classes) we need to accept the visit to
-			// navigate it.
+			// Also handle equivalent classes
 			this.context
 					.getBaseClassOntology()
 					.equivalentClassesAxioms(owlClass)
-					.forEach(
-							(eqClsAx) -> {
-								eqClsAx.accept(this);
-							});
+					.forEach(eqClsAx -> eqClsAx.accept(this));
+		}
+	}
+
+	private void dispatchRestriction(OWLSubClassOfAxiom ax) {
+		RestrictionKind kind = RestrictionClassifier.classify(ax.getSuperClass());
+
+		switch (kind) {
+			case OBJECT_SOME_VALUES_FROM:
+			case OBJECT_ALL_VALUES_FROM:
+			case OBJECT_MIN_CARDINALITY:
+			case OBJECT_MAX_CARDINALITY:
+			case OBJECT_EXACT_CARDINALITY:
+			case OBJECT_HAS_VALUE:
+			case OBJECT_ONE_OF:
+			case OBJECT_COMPLEMENT_OF:
+			case OBJECT_INTERSECTION_OF:
+			case OBJECT_UNION_OF:
+			case DATA_SOME_VALUES_FROM:
+			case DATA_ALL_VALUES_FROM:
+			case DATA_MIN_CARDINALITY:
+			case DATA_MAX_CARDINALITY:
+			case DATA_EXACT_CARDINALITY:
+			case DATA_HAS_VALUE:
+			case DATA_ONE_OF:
+			case DATA_COMPLEMENT_OF:
+			case DATA_INTERSECTION_OF:
+			case DATA_UNION_OF:
+				ax.getSuperClass().accept(this);
+				ax.getSuperClass()
+						.objectPropertiesInSignature()
+						.forEach(this::setDescriptionReadOnlyWriteOnlyFromAnnotations);
+				ax.getSuperClass()
+						.dataPropertiesInSignature()
+						.forEach(this::setDescriptionReadOnlyWriteOnlyFromAnnotations);
+				this.setReadOnlyWriteOnlyFromAxiomAnnotations(ax);
+				break;
+
+			case UNKNOWN:
+				logger.severe("\t" + getBaseClassName() + " has unknown restriction.");
+				logger.severe("\t\taxiom: " + ax);
+				break;
 		}
 	}
 
@@ -361,76 +352,11 @@ public class ObjectVisitor implements OWLObjectVisitor {
 	 *     OWLObjectProperty}
 	 */
 	private void setDescriptionReadOnlyWriteOnlyFromAnnotations(OWLEntity entity) {
-		if (entity.isOWLDataProperty() || entity.isOWLObjectProperty()) {
-			EntitySearcher.getAnnotations(entity, this.context.getBaseClassOntology())
-					.forEach(
-							annotation -> {
-								var propertySchema =
-										this.context.getClassSchema().getProperties() == null
-												? null
-												: (Schema)
-														this.context
-																.getClassSchema()
-																.getProperties()
-																.get(entity.getIRI().getShortForm());
-
-								if (propertySchema != null) {
-									if (propertySchema.getDescription() == null
-											|| propertySchema.getDescription().isBlank()) {
-										final var propertyDescription =
-												OntologyDescriptionUtils.getDescription(
-																entity,
-																this.context.getBaseClassOntology(),
-																GlobalFlags.getFlag(ConfigPropertyNames.DEFAULT_DESCRIPTIONS))
-														.orElse(null);
-										MapperProperty.setSchemaDescription(propertySchema, propertyDescription);
-									}
-
-									final var annotationConfig = this.context.getConfigData().getAnnotationConfig();
-									if (annotationConfig != null) {
-										final var annotationPropertyName =
-												annotation.getProperty().getIRI().getShortForm();
-
-										final var propertyAnnotations = annotationConfig.getPropertyAnnotations();
-
-										if (propertyAnnotations != null) {
-											// If property contains the annotation property (name is specified in
-											// configuration
-											// file) indicating it is read-only, then set value on the schema.
-											final var readOnlyAnnotation = propertyAnnotations.getReadOnlyFlagName();
-											if (readOnlyAnnotation != null
-													&& !readOnlyAnnotation.isBlank()
-													&& readOnlyAnnotation.equals(annotationPropertyName)) {
-												MapperProperty.setReadOnlyValueForPropertySchema(propertySchema, true);
-											}
-
-											// If property contains the annotation property (name is specified in
-											// configuration
-											// file) indicating it is write-only, then set value on the schema.
-											final var writeOnlyAnnotation = propertyAnnotations.getWriteOnlyFlagName();
-											if (writeOnlyAnnotation != null
-													&& !writeOnlyAnnotation.isBlank()
-													&& writeOnlyAnnotation.equals(annotationPropertyName)) {
-												MapperProperty.setWriteOnlyValueForPropertySchema(propertySchema, true);
-											}
-
-											// If property contains the annotation property (name is specified in
-											// configuration file) indicating what the example value is for a data
-											// property,
-											// then set value on the schema.
-											final var exampleValueAnnotation = propertyAnnotations.getExampleValueName();
-											if (entity.isOWLDataProperty()
-													&& exampleValueAnnotation != null
-													&& !exampleValueAnnotation.isBlank()
-													&& exampleValueAnnotation.equals(annotationPropertyName)) {
-												MapperDataProperty.setExampleValueForPropertySchema(
-														propertySchema, annotation);
-											}
-										}
-									}
-								}
-							});
-		}
+		AnnotationProcessor.applyEntityAnnotations(
+				this.context.getClassSchema(),
+				entity,
+				this.context.getBaseClassOntology(),
+				this.context.getConfigData().getAnnotationConfig());
 	}
 
 	/**
@@ -440,63 +366,11 @@ public class ObjectVisitor implements OWLObjectVisitor {
 	 * @param axiom an {@link OWLAxiom}
 	 */
 	private void setReadOnlyWriteOnlyFromAxiomAnnotations(OWLAxiom axiom) {
-		axiom
-				.annotations()
-				.forEach(
-						annotation -> {
-							var propertySchema =
-									this.context.getClassSchema().getProperties() == null
-											? null
-											: (Schema)
-													this.context
-															.getClassSchema()
-															.getProperties()
-															.get(this.context.getCurrentlyProcessedPropertyName());
-
-							if (propertySchema != null) {
-								final var annotationConfig = this.context.getConfigData().getAnnotationConfig();
-								if (annotationConfig != null) {
-									final var annotationPropertyName =
-											annotation.getProperty().getIRI().getShortForm();
-
-									final var propertyAnnotations = annotationConfig.getPropertyAnnotations();
-
-									if (propertyAnnotations != null) {
-
-										// If property contains the annotation property (name is specified in
-										// configuration
-										// file) indicating it is read-only, then set value on the schema.
-										final var readOnlyAnnotation = propertyAnnotations.getReadOnlyFlagName();
-										if (readOnlyAnnotation != null
-												&& !readOnlyAnnotation.isBlank()
-												&& readOnlyAnnotation.equals(annotationPropertyName)) {
-											MapperProperty.setReadOnlyValueForPropertySchema(propertySchema, true);
-										}
-
-										// If property contains the annotation property (name is specified in
-										// configuration
-										// file) indicating it is write-only, then set value on the schema.
-										final var writeOnlyAnnotation = propertyAnnotations.getWriteOnlyFlagName();
-										if (writeOnlyAnnotation != null
-												&& !writeOnlyAnnotation.isBlank()
-												&& writeOnlyAnnotation.equals(annotationPropertyName)) {
-											MapperProperty.setWriteOnlyValueForPropertySchema(propertySchema, true);
-										}
-
-										// If property contains the annotation property (name is specified in
-										// configuration file) indicating what the example value is for a data property,
-										// then set value on the schema.
-										final var exampleValueAnnotation = propertyAnnotations.getExampleValueName();
-										if (exampleValueAnnotation != null
-												&& !exampleValueAnnotation.isBlank()
-												&& exampleValueAnnotation.equals(annotationPropertyName)) {
-											MapperDataProperty.setExampleValueForPropertySchema(
-													propertySchema, annotation);
-										}
-									}
-								}
-							}
-						});
+		AnnotationProcessor.applyAxiomAnnotations(
+				this.context.getClassSchema(),
+				axiom,
+				this.context.getCurrentlyProcessedPropertyName(),
+				this.context.getConfigData().getAnnotationConfig());
 	}
 
 	/**
@@ -639,45 +513,11 @@ public class ObjectVisitor implements OWLObjectVisitor {
 							MapperObjectProperty.setFunctionalForPropertySchema(objPropertySchema);
 						}
 
-						final var annotationConfig = this.context.getConfigData().getAnnotationConfig();
-						if (annotationConfig != null) {
-							final var propertyAnnotations = annotationConfig.getPropertyAnnotations();
-
-							if (propertyAnnotations != null) {
-								// If property contains the annotation property (name is specified in configuration
-								// file)
-								// indicating it is read-only, then set value on the schema.
-								final var readOnlyAnnotation = propertyAnnotations.getReadOnlyFlagName();
-								if (readOnlyAnnotation != null && !readOnlyAnnotation.isBlank()) {
-									if (EntitySearcher.getAnnotations(op, this.context.getBaseClassOntology())
-													.filter(
-															annotation ->
-																	readOnlyAnnotation.equals(
-																			annotation.getProperty().getIRI().getShortForm()))
-													.count()
-											> 0) {
-										MapperObjectProperty.setReadOnlyValueForPropertySchema(objPropertySchema, true);
-									}
-								}
-
-								// If property contains the annotation property (name is specified in configuration
-								// file)
-								// indicating it is write-only, then set value on the schema.
-								final var writeOnlyAnnotation = propertyAnnotations.getWriteOnlyFlagName();
-								if (writeOnlyAnnotation != null && !writeOnlyAnnotation.isBlank()) {
-									if (EntitySearcher.getAnnotations(op, this.context.getBaseClassOntology())
-													.filter(
-															annotation ->
-																	writeOnlyAnnotation.equals(
-																			annotation.getProperty().getIRI().getShortForm()))
-													.count()
-											> 0) {
-										MapperObjectProperty.setWriteOnlyValueForPropertySchema(
-												objPropertySchema, true);
-									}
-								}
-							}
-						}
+						AnnotationProcessor.applyEntityAnnotations(
+								objPropertySchema,
+								op,
+								this.context.getBaseClassOntology(),
+								this.context.getConfigData().getAnnotationConfig());
 
 						// For any complex property ranges, traverse.  This will grab restrictions also.  There
 						// is no
@@ -1040,84 +880,11 @@ public class ObjectVisitor implements OWLObjectVisitor {
 														MapperDataProperty.setFunctionalForPropertySchema(dataPropertySchema);
 													}
 
-													final var annotationConfig =
-															this.context.getConfigData().getAnnotationConfig();
-													if (annotationConfig != null) {
-														final var propertyAnnotations =
-																annotationConfig.getPropertyAnnotations();
-
-														if (propertyAnnotations != null) {
-															// If property contains the annotation property (name is specified in
-															// configuration file) indicating it is read-only, then set value on
-															// the
-															// schema.
-															final var readOnlyAnnotation =
-																	propertyAnnotations.getReadOnlyFlagName();
-															if (readOnlyAnnotation != null && !readOnlyAnnotation.isBlank()) {
-																if (EntitySearcher.getAnnotations(
-																						dp, this.context.getBaseClassOntology())
-																				.filter(
-																						annotation ->
-																								readOnlyAnnotation.equals(
-																										annotation
-																												.getProperty()
-																												.getIRI()
-																												.getShortForm()))
-																				.count()
-																		> 0) {
-																	MapperDataProperty.setReadOnlyValueForPropertySchema(
-																			dataPropertySchema, true);
-																}
-															}
-
-															// If property contains the annotation property (name is specified in
-															// configuration file) indicating it is write-only, then set value on
-															// the
-															// schema.
-															final var writeOnlyAnnotation =
-																	propertyAnnotations.getWriteOnlyFlagName();
-															if (writeOnlyAnnotation != null && !writeOnlyAnnotation.isBlank()) {
-																if (EntitySearcher.getAnnotations(
-																						dp, this.context.getBaseClassOntology())
-																				.filter(
-																						annotation ->
-																								writeOnlyAnnotation.equals(
-																										annotation
-																												.getProperty()
-																												.getIRI()
-																												.getShortForm()))
-																				.count()
-																		> 0) {
-																	MapperDataProperty.setWriteOnlyValueForPropertySchema(
-																			dataPropertySchema, true);
-																}
-															}
-
-															// If property contains the annotation property (name is specified in
-															// configuration file) indicating what the example value is for a data
-															// property,
-															// then set value on the schema.
-															final var exampleValueAnnotation =
-																	propertyAnnotations.getExampleValueName();
-															if (exampleValueAnnotation != null
-																	&& !exampleValueAnnotation.isBlank()) {
-																for (final var annotation :
-																		EntitySearcher.getAnnotations(
-																						dp, this.context.getBaseClassOntology())
-																				.filter(
-																						annotation ->
-																								exampleValueAnnotation.equals(
-																										annotation
-																												.getProperty()
-																												.getIRI()
-																												.getShortForm()))
-																				.collect(Collectors.toSet())) {
-																	MapperDataProperty.setExampleValueForPropertySchema(
-																			dataPropertySchema, annotation);
-																}
-															}
-														}
-													}
+													AnnotationProcessor.applyEntityAnnotations(
+															dataPropertySchema,
+															dp,
+															this.context.getBaseClassOntology(),
+															this.context.getConfigData().getAnnotationConfig());
 
 													// Save object property schema to class's schema.
 													dataPropertiesMap.put(dataPropertySchema.getName(), dataPropertySchema);
@@ -1153,249 +920,171 @@ public class ObjectVisitor implements OWLObjectVisitor {
 		logger.info("\t   axiom:  " + ax);
 		logger.info("");
 
-		// If equivalent class axiom AND contains owl:oneOf, then we're looking at an ENUM class.
 		ax.classExpressions()
-				.filter((e) -> e instanceof OWLObjectOneOf)
-				.forEach(
-						(oneOfObj) -> {
-							var enumValues = ((OWLObjectOneOf) oneOfObj).getOperandsAsList();
-							if (enumValues != null && !enumValues.isEmpty()) {
-								// Add enum individuals to restriction range
-								enumValues.forEach(
-										(indv) -> {
-											// The getShortForm() method appears to have a bug and removes numbers at the
-											// beginning
-											// MapperObjectProperty.addEnumValueToObjectSchema(this.classSchema,
-											// ((OWLNamedIndividual) indv).getIRI().getShortForm());
+				.filter(e -> e instanceof OWLObjectOneOf)
+				.forEach(e -> handleEnumEquivalentClass((OWLObjectOneOf) e));
 
-											// This is a workaround for the bug.
-											// Basically loop through all the prefixes and find/replace the current
-											// prefix
-											// individual's IRI with nothing.
-											// If different, then we've found the individual and know the short form
-											// name.
-											final var format =
-													this.context
-															.getBaseClassOntology()
-															.getOWLOntologyManager()
-															.getOntologyFormat(this.context.getBaseClassOntology());
-											if (format.isPrefixOWLDocumentFormat()) {
-												final var map =
-														format.asPrefixOWLDocumentFormat().getPrefixName2PrefixMap();
-												final var fullIRI = indv.asOWLNamedIndividual().getIRI().toString();
-												map.forEach(
-														(prefix, iri) -> {
-															if (!fullIRI.equals(fullIRI.replaceFirst(iri, ""))) {
-																MapperObjectProperty.addEnumValueToObjectSchema(
-																		this.context.getClassSchema(), fullIRI.replaceFirst(iri, ""));
-															}
-														});
-											}
-										});
-							}
-						});
-
-		// Loop through the class expressions in the defined / equivalent-to classes axiom and accept
-		// visits from everything else.
 		ax.classExpressions()
-				.filter((e) -> !this.context.getBaseClass().equals(e) && !(e instanceof OWLObjectOneOf))
-				.forEach(
-						(e) -> {
-							// Correctly configured defined (equivalent to) classes (excluding enums, handled
-							// above) _should_ be an intersection of
-							// one or more classes plus (optional) properties.
-							if (e instanceof OWLObjectIntersectionOf) {
-								((OWLObjectIntersectionOf) e)
-										.operands()
-										.forEach(
-												(intersectionOperand) -> {
-													if (intersectionOperand instanceof OWLClass) {
-														// Handle classes normally, as though a superclass that we inherit from.
-														// intersectionOperand.accept(this);
-														OWLClass cls = (OWLClass) intersectionOperand;
-														if (!this.context.isClassProcessed(cls)) {
-															this.context.markClassAsProcessed(cls);
-															intersectionOperand.accept(this);
-														}
-													} else if (intersectionOperand instanceof OWLObjectRestriction) {
-														// For object restrictions, we need to set the object property name
-														// first.
-														final var objectPropertyExpression =
-																((OWLObjectRestriction) intersectionOperand).getProperty();
-														final var objectProperty =
-																objectPropertyExpression.asOWLObjectProperty();
-														final var propertyName = objectProperty.getIRI().getShortForm();
-														this.context.addPropertyName(propertyName);
-														this.context.withProcessedProperty(
-																propertyName,
-																() -> {
-																	intersectionOperand.accept(this);
-																});
-													} else if (intersectionOperand instanceof OWLDataRestriction) {
-														// For data restrictions, we need to set the data property name first.
-														final var dataPropertyExpression =
-																((OWLDataRestriction) intersectionOperand).getProperty();
-														final var dataProperty = dataPropertyExpression.asOWLDataProperty();
-														final var propertyName = dataProperty.getIRI().getShortForm();
-														this.context.addPropertyName(propertyName);
-														this.context.withProcessedProperty(
-																propertyName,
-																() -> {
-																	intersectionOperand.accept(this);
-																});
-													} else {
-														// Not sure what would cause this, but lets spit out an error and figure
-														// it out if we encounter it.
-														logger.severe(
-																"################ Operand instanceof ???:  " + intersectionOperand);
-														logger.severe(
-																"################ Taking no action for now.  Need to figure out"
-																		+ " what use case this is.");
-													}
-												});
-							} else {
-								// Not sure this is a valid scenario??  This might happen for synonym classes?  Not
-								// sure if other scenarios are valid (e.g. only an object/data property)??
+				.filter(e -> !this.context.getBaseClass().equals(e) && !(e instanceof OWLObjectOneOf))
+				.forEach(this::handleNonEnumEquivalentClass);
+	}
 
-								if (e instanceof OWLClass) {
-									// Handle classes normally, as though a superclass that we inherit from.
-									// e.accept(this);
-									OWLClass cls = (OWLClass) e;
-									if (!this.context.isClassProcessed(cls)) {
-										this.context.markClassAsProcessed(cls);
-										e.accept(this);
-									}
-								} else if (e instanceof OWLObjectRestriction) {
-									// For object restrictions, we need to set the object property name first.
-									final var objectPropertyExpression = ((OWLObjectRestriction) e).getProperty();
-									final var objectProperty = objectPropertyExpression.asOWLObjectProperty();
-									final var propertyName = objectProperty.getIRI().getShortForm();
-									this.context.addPropertyName(propertyName);
-									this.context.withProcessedProperty(
-											propertyName,
-											() -> {
-												e.accept(this);
-											});
-								} else if (e instanceof OWLDataRestriction) {
-									// For data restrictions, we need to set the data property name first.
-									final var dataPropertyExpression = ((OWLDataRestriction) e).getProperty();
-									final var dataProperty = dataPropertyExpression.asOWLDataProperty();
-									final var propertyName = dataProperty.getIRI().getShortForm();
-									this.context.addPropertyName(propertyName);
-									this.context.withProcessedProperty(
-											propertyName,
-											() -> {
-												e.accept(this);
-											});
-								} else {
-									// Not sure what would cause this, but lets spit out an error and figure it out if
-									// we encounter it.
-									logger.severe("################ Operand instanceof ???:  " + e);
-									logger.severe(
-											"################ Taking no action for now.  Need to figure out what use case"
-													+ " this is.");
+	private void handleEnumEquivalentClass(OWLObjectOneOf oneOfObj) {
+		var enumValues = oneOfObj.getOperandsAsList();
+		if (enumValues != null && !enumValues.isEmpty()) {
+			for (var indv : enumValues) {
+				var format =
+						this.context
+								.getBaseClassOntology()
+								.getOWLOntologyManager()
+								.getOntologyFormat(this.context.getBaseClassOntology());
+
+				if (format.isPrefixOWLDocumentFormat()) {
+					var map = format.asPrefixOWLDocumentFormat().getPrefixName2PrefixMap();
+					var fullIRI = indv.asOWLNamedIndividual().getIRI().toString();
+					map.forEach(
+							(prefix, iri) -> {
+								if (!fullIRI.equals(fullIRI.replaceFirst(iri, ""))) {
+									MapperObjectProperty.addEnumValueToObjectSchema(
+											this.context.getClassSchema(), fullIRI.replaceFirst(iri, ""));
 								}
-							}
-						});
+							});
+				}
+			}
+		}
+	}
+
+	private void handleNonEnumEquivalentClass(OWLClassExpression e) {
+		if (e instanceof OWLObjectIntersectionOf) {
+			((OWLObjectIntersectionOf) e).operands().forEach(this::visitIntersectionOperand);
+		} else {
+			visitIntersectionOperand(e);
+		}
+	}
+
+	private void visitIntersectionOperand(@Nonnull OWLClassExpression operand) {
+		if (operand instanceof OWLClass) {
+			OWLClass cls = (OWLClass) operand;
+			if (!this.context.isClassProcessed(cls)) {
+				this.context.markClassAsProcessed(cls);
+				operand.accept(this);
+			}
+		} else if (operand instanceof OWLObjectRestriction) {
+			final var objectPropertyExpression = ((OWLObjectRestriction) operand).getProperty();
+			final var objectProperty = objectPropertyExpression.asOWLObjectProperty();
+			final var propertyName = objectProperty.getIRI().getShortForm();
+			this.context.addPropertyName(propertyName);
+			this.context.withProcessedProperty(propertyName, () -> operand.accept(this));
+		} else if (operand instanceof OWLDataRestriction) {
+			final var dataPropertyExpression = ((OWLDataRestriction) operand).getProperty();
+			final var dataProperty = dataPropertyExpression.asOWLDataProperty();
+			final var propertyName = dataProperty.getIRI().getShortForm();
+			this.context.addPropertyName(propertyName);
+			this.context.withProcessedProperty(propertyName, () -> operand.accept(this));
+		} else {
+			logger.severe("################ Operand instanceof ???: " + operand);
+			logger.severe(
+					"################ Taking no action for now. Need to figure out what use case this is.");
+		}
 	}
 
 	@Override
 	public void visit(OWLObjectAllValuesFrom ce) {
-		this.restrictionProcessor.processQuantifiedObjectRestriction(ce);
+		RestrictionProcessor.processQuantifiedObjectRestriction(ce, this, this.context, logger);
 	}
 
 	@Override
 	public void visit(OWLObjectSomeValuesFrom ce) {
-		this.restrictionProcessor.processQuantifiedObjectRestriction(ce);
+		RestrictionProcessor.processQuantifiedObjectRestriction(ce, this, this.context, logger);
 	}
 
 	@Override
 	public void visit(OWLObjectMinCardinality ce) {
-		this.restrictionProcessor.processQuantifiedObjectRestriction(ce);
+		RestrictionProcessor.processQuantifiedObjectRestriction(ce, this, this.context, logger);
 	}
 
 	@Override
 	public void visit(OWLObjectMaxCardinality ce) {
-		this.restrictionProcessor.processQuantifiedObjectRestriction(ce);
+		RestrictionProcessor.processQuantifiedObjectRestriction(ce, this, this.context, logger);
 	}
 
 	@Override
 	public void visit(OWLObjectExactCardinality ce) {
-		this.restrictionProcessor.processQuantifiedObjectRestriction(ce);
+		RestrictionProcessor.processQuantifiedObjectRestriction(ce, this, this.context, logger);
 	}
 
 	@Override
 	public void visit(OWLObjectUnionOf ce) {
-		this.restrictionProcessor.processNaryBooleanClassExpression(ce);
+		RestrictionProcessor.processNaryBooleanClassExpression(ce, this, this.context);
 	}
 
 	@Override
 	public void visit(OWLObjectIntersectionOf ce) {
-		this.restrictionProcessor.processNaryBooleanClassExpression(ce);
+		RestrictionProcessor.processNaryBooleanClassExpression(ce, this, this.context);
 	}
 
 	@Override
 	public void visit(OWLObjectComplementOf ce) {
-		this.restrictionProcessor.processComplementOf(ce);
+		RestrictionProcessor.processComplementOf(ce, this, this.context);
 	}
 
 	@Override
 	public void visit(OWLObjectHasValue ce) {
-		this.restrictionProcessor.processHasValue(ce);
+		RestrictionProcessor.processHasValue(ce, this, this.context);
 	}
 
 	@Override
 	public void visit(OWLObjectOneOf ce) {
-		this.restrictionProcessor.processOneOf(ce);
+		RestrictionProcessor.processOneOf(ce, this, this.context);
 	}
 
 	@Override
 	public void visit(OWLDataAllValuesFrom ce) {
-		this.restrictionProcessor.processQuantifiedDataRestriction(ce);
+		RestrictionProcessor.processQuantifiedDataRestriction(ce, this, this.context, logger);
 	}
 
 	@Override
 	public void visit(OWLDataSomeValuesFrom ce) {
-		this.restrictionProcessor.processQuantifiedDataRestriction(ce);
+		RestrictionProcessor.processQuantifiedDataRestriction(ce, this, this.context, logger);
 	}
 
 	@Override
 	public void visit(OWLDataMinCardinality ce) {
-		this.restrictionProcessor.processQuantifiedDataRestriction(ce);
+		RestrictionProcessor.processQuantifiedDataRestriction(ce, this, this.context, logger);
 	}
 
 	@Override
 	public void visit(OWLDataMaxCardinality ce) {
-		this.restrictionProcessor.processQuantifiedDataRestriction(ce);
+		RestrictionProcessor.processQuantifiedDataRestriction(ce, this, this.context, logger);
 	}
 
 	@Override
 	public void visit(OWLDataExactCardinality ce) {
-		this.restrictionProcessor.processQuantifiedDataRestriction(ce);
+		RestrictionProcessor.processQuantifiedDataRestriction(ce, this, this.context, logger);
 	}
 
 	@Override
 	public void visit(OWLDataUnionOf ce) {
-		this.restrictionProcessor.processNaryDataRange(ce);
+		RestrictionProcessor.processNaryDataRange(ce, this, this.context);
 	}
 
 	@Override
 	public void visit(OWLDataIntersectionOf ce) {
-		this.restrictionProcessor.processNaryDataRange(ce);
+		RestrictionProcessor.processNaryDataRange(ce, this, this.context);
 	}
 
 	@Override
 	public void visit(OWLDataComplementOf ce) {
-		this.restrictionProcessor.processComplementOf(ce);
+		RestrictionProcessor.processComplementOf(ce, this, this.context);
 	}
 
 	@Override
 	public void visit(OWLDataHasValue ce) {
-		this.restrictionProcessor.processHasValue(ce);
+		RestrictionProcessor.processHasValue(ce, this, this.context);
 	}
 
 	@Override
 	public void visit(OWLDataOneOf ce) {
-		this.restrictionProcessor.processOneOf(ce);
+		RestrictionProcessor.processOneOf(ce, this, this.context);
 	}
 }
