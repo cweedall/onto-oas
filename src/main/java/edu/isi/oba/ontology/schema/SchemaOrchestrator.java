@@ -10,6 +10,7 @@ import io.swagger.v3.oas.models.media.Schema;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -21,10 +22,14 @@ import org.semanticweb.owlapi.search.EntitySearcher;
 public class SchemaOrchestrator {
 	private final Logger logger;
 	private final VisitorContext context;
+	private final Schema schema;
 	private final MarkdownAnnotationProcessor mdProcessor;
 
 	public SchemaOrchestrator(VisitorContext context, Logger logger) {
+		Objects.requireNonNull(context.getClassSchema(), "The context's class schema must not be null");
+
 		this.context = context;
+		this.schema = this.context.getClassSchema();
 		this.logger = logger;
 		this.mdProcessor = new MarkdownAnnotationProcessor(this.context, this.logger);
 	}
@@ -65,14 +70,11 @@ public class SchemaOrchestrator {
 
 		logger.log(Level.FINE, "Schema generation complete.");
 
-		return this.context.getClassSchema();
+		return this.schema;
 	}
 
 	private void cleanUpEnumProperties() {
-		final Map<String, Schema> classProperties =
-				this.context.getClassSchema() == null
-						? null
-						: this.context.getClassSchema().getProperties();
+		final Map<String, Schema> classProperties = this.schema.getProperties();
 		if (classProperties != null) {
 			classProperties
 					.values()
@@ -99,14 +101,14 @@ public class SchemaOrchestrator {
 	private void generateRequiredProperties() {
 		// Enums are already set up.  They should also never have required properties (even if
 		// inherited somehow).
-		if (this.context.getClassSchema().getEnum() != null) {
+		if (this.schema.getEnum() != null) {
 			this.context.clearRequiredProperties();
 		}
 
 		// Generate the required properties for the class, if applicable.
 		if (GlobalFlags.getFlag(ConfigPropertyNames.REQUIRED_PROPERTIES_FROM_CARDINALITY)) {
 			SchemaBuilder.generateRequiredPropertiesForClassSchemas(
-					this.context.getClassSchema(), this.context.getFunctionalProperties());
+					this.schema, this.context.getFunctionalProperties());
 		}
 	}
 
@@ -114,7 +116,7 @@ public class SchemaOrchestrator {
 		// Convert non-array property items, if applicable.
 		if (!GlobalFlags.getFlag(ConfigPropertyNames.ALWAYS_GENERATE_ARRAYS)) {
 			MapperProperty.convertArrayToNonArrayPropertySchemas(
-					this.context.getClassSchema(),
+					this.schema,
 					this.context.getEnumProperties(),
 					this.context.getFunctionalProperties(),
 					GlobalFlags.getFlag(ConfigPropertyNames.FIX_SINGULAR_PLURAL_PROPERTY_NAMES));
@@ -125,11 +127,9 @@ public class SchemaOrchestrator {
 			if (!this.context.getRequiredProperties().isEmpty()) {
 				this.context.clearRequiredProperties();
 
-				if (this.context.getClassSchema().getRequired() != null
-						&& !this.context.getClassSchema().getRequired().isEmpty()) {
+				if (this.schema.getRequired() != null && !this.schema.getRequired().isEmpty()) {
 					this.context.addAllRequiredProperties(
-							(Set<String>)
-									this.context.getClassSchema().getRequired().stream().collect(Collectors.toSet()));
+							(Set<String>) this.schema.getRequired().stream().collect(Collectors.toSet()));
 					this.context
 							.getClassSchema()
 							.setRequired(
@@ -145,15 +145,14 @@ public class SchemaOrchestrator {
 		// Student > ExchangeStudent, Student already inherits everything from Person.  For
 		// ExchangeStudent, we do not want to inherit from Person AND Student. We only need to inherit
 		// from Student [which automatically inherits everything from Person also].)
-		if (this.context.getClassSchema().getEnum() == null
+		if (this.schema.getEnum() == null
 				&& GlobalFlags.getFlag(ConfigPropertyNames.FOLLOW_REFERENCES)
 				&& GlobalFlags.getFlag(ConfigPropertyNames.USE_INHERITANCE_REFERENCES)) {
 
 			// If adding for the first time, need to include a "type: object" entry.
-			if (this.context.getClassSchema().getAllOf() == null
-					|| this.context.getClassSchema().getAllOf().isEmpty()) {
+			if (this.schema.getAllOf() == null) {
 				final var objSchema = new ObjectSchema();
-				this.context.getClassSchema().addAllOfItem(objSchema);
+				this.schema.addAllOfItem(objSchema);
 			}
 
 			// All processed classes, minus the base class, are the super classes.
@@ -186,16 +185,16 @@ public class SchemaOrchestrator {
 												+ SchemaBuilder.getPrefixedSchemaName(
 														superClass, this.context.getBaseClassOntology()));
 
-								this.context.getClassSchema().addAllOfItem(refSchema);
+								this.schema.addAllOfItem(refSchema);
 							});
 		}
 
 		// After checking/processing, if the base class schema has properties but no AllOf list and no
 		// type, set its type to "object".
-		if (this.context.getClassSchema().getProperties() != null
-				&& this.context.getClassSchema().getAllOf() == null
-				&& this.context.getClassSchema().getType() == null) {
-			MapperProperty.setSchemaType(this.context.getClassSchema(), "object");
+		if (this.schema.getProperties() != null
+				&& this.schema.getAllOf() == null
+				&& this.schema.getType() == null) {
+			MapperProperty.setSchemaType(this.schema, "object");
 		}
 	}
 
@@ -239,10 +238,7 @@ public class SchemaOrchestrator {
 				}
 			}
 
-			final Map<String, Schema> classProperties =
-					this.context.getClassSchema() == null
-							? null
-							: this.context.getClassSchema().getProperties();
+			final Map<String, Schema> classProperties = this.schema.getProperties();
 
 			// Look at all object properties for the base class.  If any of them contain a range which is
 			// the current referenced class, then set flag to keep the reference class to true.
@@ -269,10 +265,9 @@ public class SchemaOrchestrator {
 				this.context.removeReferencedClass(refClass);
 
 				// Also remove from the AllOf list of schemas, if applicable.
-				if (this.context.getClassSchema().getEnum() == null) {
-					if (this.context.getClassSchema().getAllOf() != null) {
-						for (final var allOfSchema :
-								new ArrayList<Schema>(this.context.getClassSchema().getAllOf())) {
+				if (this.schema.getEnum() == null) {
+					if (this.schema.getAllOf() != null) {
+						for (final var allOfSchema : new ArrayList<Schema>(this.schema.getAllOf())) {
 							if (allOfSchema.get$ref() != null
 									&& allOfSchema
 											.get$ref()
@@ -280,7 +275,7 @@ public class SchemaOrchestrator {
 													"#/components/schemas/"
 															+ SchemaBuilder.getPrefixedSchemaName(
 																	refClass, this.context.getBaseClassOntology()))) {
-								this.context.getClassSchema().getAllOf().remove(allOfSchema);
+								this.schema.getAllOf().remove(allOfSchema);
 							}
 						}
 					}
