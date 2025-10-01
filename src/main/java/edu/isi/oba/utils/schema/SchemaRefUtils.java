@@ -1,5 +1,6 @@
 package edu.isi.oba.utils.schema;
 
+import edu.isi.oba.MapperProperty;
 import io.swagger.v3.oas.models.media.Schema;
 import java.util.Collections;
 import java.util.HashMap;
@@ -79,6 +80,9 @@ public class SchemaRefUtils {
 						replacePropertySchemaReferenceWithFullSchema(
 								allOfItemSchema, allSchemas.get(allOfRefSchemaName));
 						allOfItemSchema.set$ref(null);
+						MapperProperty.setNullableValueForPropertySchema(allOfItemSchema, null);
+						MapperProperty.setReadOnlyValueForPropertySchema(allOfItemSchema, null);
+						MapperProperty.setWriteOnlyValueForPropertySchema(allOfItemSchema, null);
 					}
 				}
 			}
@@ -91,6 +95,9 @@ public class SchemaRefUtils {
 						replacePropertySchemaReferenceWithFullSchema(
 								anyOfItemSchema, allSchemas.get(anyOfRefSchemaName));
 						anyOfItemSchema.set$ref(null);
+						MapperProperty.setNullableValueForPropertySchema(anyOfItemSchema, null);
+						MapperProperty.setReadOnlyValueForPropertySchema(anyOfItemSchema, null);
+						MapperProperty.setWriteOnlyValueForPropertySchema(anyOfItemSchema, null);
 					}
 				}
 			}
@@ -103,6 +110,9 @@ public class SchemaRefUtils {
 						replacePropertySchemaReferenceWithFullSchema(
 								oneOfItemSchema, allSchemas.get(oneOfRefSchemaName));
 						oneOfItemSchema.set$ref(null);
+						MapperProperty.setNullableValueForPropertySchema(oneOfItemSchema, null);
+						MapperProperty.setReadOnlyValueForPropertySchema(oneOfItemSchema, null);
+						MapperProperty.setWriteOnlyValueForPropertySchema(oneOfItemSchema, null);
 					}
 				}
 			}
