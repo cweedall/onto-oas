@@ -13,7 +13,7 @@ package edu.isi.oba.utils.schema;
  *       one subschema to be valid.
  * </ul>
  */
-enum ComplexSchemaListType {
+public enum ComplexSchemaListType {
 	ALLOF_LIST,
 	ANYOF_LIST,
 	ONEOF_LIST
