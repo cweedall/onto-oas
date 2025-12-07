@@ -74,6 +74,18 @@ public class SchemaRefUtils {
 
 			final var allOf = derefSchema.getAllOf();
 			if (allOf != null) {
+				var hasAllOfDescription = false;
+				var hasAllOfExampleValue = false;
+				// FIRST PASS - Check whether there are items to override on the reference schema.
+				// Only relevant for allOf, not anyOf or oneOf.
+				for (final var allOfItemSchema : allOf) {
+					hasAllOfDescription |=
+							allOfItemSchema.getDescription() != null
+									&& !allOfItemSchema.getDescription().isBlank();
+					hasAllOfExampleValue |= allOfItemSchema.getExample() != null;
+				}
+
+				// SECOND PASS - Remove reference schema's example, if an allOf example exists already.
 				for (final var allOfItemSchema : allOf) {
 					final var allOfRefSchemaName = getSchemaRefName(allOfItemSchema);
 					if (allOfRefSchemaName != null && allSchemas.get(allOfRefSchemaName) != null) {
@@ -83,6 +95,22 @@ public class SchemaRefUtils {
 						MapperProperty.setNullableValueForPropertySchema(allOfItemSchema, null);
 						MapperProperty.setReadOnlyValueForPropertySchema(allOfItemSchema, null);
 						MapperProperty.setWriteOnlyValueForPropertySchema(allOfItemSchema, null);
+
+						// If there is an description already in the allOf items (other than this reference
+						// schema),
+						// then it is likely from a class's axiom which has priority over the reference schema's
+						// example.
+						if (hasAllOfDescription) {
+							allOfItemSchema.setDescription(null);
+						}
+
+						// If there is an example already in the allOf items (other than this reference schema),
+						// then it is likely from a class's axiom which has priority over the reference schema's
+						// example.
+						if (hasAllOfExampleValue) {
+							allOfItemSchema.setExample(null);
+							allOfItemSchema.setExampleSetFlag(false);
+						}
 					}
 				}
 			}
