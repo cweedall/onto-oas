@@ -237,36 +237,29 @@ public class RestrictionProcessor {
 			} else if (range instanceof Schema) {
 				MapperObjectProperty.addAllOfToObjectPropertySchema(schema, (Schema) range);
 			}
-
 		} else if (or instanceof OWLObjectMinCardinality) {
 			if (range instanceof String) {
 				MapperObjectProperty.addMinCardinalityToPropertySchema(
 						schema, ((OWLObjectCardinalityRestriction) or).getCardinality(), (String) range);
-			} else {
-				logger.log(
-						Level.SEVERE,
-						"applyObjectRestriction(): Attempting to call addMinCardinalityToPropertySchema(), but"
-								+ " the `range` object is not a String value.");
+			} else if (range instanceof Schema) {
+				MapperObjectProperty.addMinCardinalityToPropertySchema(
+						schema, ((OWLObjectCardinalityRestriction) or).getCardinality(), (Schema) range);
 			}
 		} else if (or instanceof OWLObjectMaxCardinality) {
 			if (range instanceof String) {
 				MapperObjectProperty.addMaxCardinalityToPropertySchema(
 						schema, ((OWLObjectCardinalityRestriction) or).getCardinality(), (String) range);
-			} else {
-				logger.log(
-						Level.SEVERE,
-						"applyObjectRestriction(): Attempting to call addMaxCardinalityToPropertySchema(), but"
-								+ " the `range` object is not a String value.");
+			} else if (range instanceof Schema) {
+				MapperObjectProperty.addMaxCardinalityToPropertySchema(
+						schema, ((OWLObjectCardinalityRestriction) or).getCardinality(), (Schema) range);
 			}
 		} else if (or instanceof OWLObjectExactCardinality) {
 			if (range instanceof String) {
 				MapperObjectProperty.addExactCardinalityToPropertySchema(
 						schema, ((OWLObjectCardinalityRestriction) or).getCardinality(), (String) range);
-			} else {
-				logger.log(
-						Level.SEVERE,
-						"applyObjectRestriction(): Attempting to call addExactCardinalityToPropertySchema(),"
-								+ " but the `range` object is not a String value.");
+			} else if (range instanceof Schema) {
+				MapperObjectProperty.addExactCardinalityToPropertySchema(
+						schema, ((OWLObjectCardinalityRestriction) or).getCardinality(), (Schema) range);
 			}
 		}
 	}

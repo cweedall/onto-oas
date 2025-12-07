@@ -3,6 +3,8 @@ package edu.isi.oba;
 import static edu.isi.oba.Oba.logger;
 
 import edu.isi.oba.utils.StringUtils;
+import edu.isi.oba.utils.schema.ComplexSchemaListType;
+import edu.isi.oba.utils.schema.SchemaCloneUtils;
 import io.swagger.v3.oas.models.media.ComposedSchema;
 import io.swagger.v3.oas.models.media.ObjectSchema;
 import io.swagger.v3.oas.models.media.Schema;
@@ -349,12 +351,36 @@ public class MapperObjectProperty extends MapperProperty {
 	}
 
 	/**
+	 * Add a minimum cardinality value to the property's {@link Schema}.
+	 *
+	 * @param propertySchema a (data / object) property {@link Schema}.
+	 * @param cardinalityInt a minimum cardinality value.
+	 * @param objectRange a {@link Schema} value (likely a complex range, such as intersection or
+	 *     union)
+	 */
+	public static void addMinCardinalityToPropertySchema(
+			Schema propertySchema, Integer cardinalityInt, Schema objectRange) {
+		MapperProperty.addMinCardinalityToPropertySchema(propertySchema, cardinalityInt);
+
+		// Deep copy 'allOf' list if present
+		SchemaCloneUtils.deepCopyListTypeValues(
+				objectRange, propertySchema, ComplexSchemaListType.ALLOF_LIST);
+
+		// Deep copy 'anyOf' list if present
+		SchemaCloneUtils.deepCopyListTypeValues(
+				objectRange, propertySchema, ComplexSchemaListType.ANYOF_LIST);
+
+		// Deep copy 'oneOf' list if present
+		SchemaCloneUtils.deepCopyListTypeValues(
+				objectRange, propertySchema, ComplexSchemaListType.ONEOF_LIST);
+	}
+
+	/**
 	 * Add a maximum cardinality value to the property's {@link Schema}.
 	 *
 	 * @param propertySchema a (data / object) property {@link Schema}.
 	 * @param cardinalityInt a maximum cardinality value.
 	 * @param objectRange a {@link String} value (i.e. OWLClass' short form name) to add
-	 * @return the {@link Schema} with added cardinality value.
 	 */
 	public static void addMaxCardinalityToPropertySchema(
 			Schema propertySchema, Integer cardinalityInt, String objectRange) {
@@ -363,6 +389,31 @@ public class MapperObjectProperty extends MapperProperty {
 		final var objSchema = new ObjectSchema();
 		objSchema.set$ref(objectRange);
 		propertySchema.setItems(objSchema);
+	}
+
+	/**
+	 * Add a maximum cardinality value to the property's {@link Schema}.
+	 *
+	 * @param propertySchema a (data / object) property {@link Schema}.
+	 * @param cardinalityInt a maximum cardinality value.
+	 * @param objectRange a {@link Schema} value (likely a complex range, such as intersection or
+	 *     union)
+	 */
+	public static void addMaxCardinalityToPropertySchema(
+			Schema propertySchema, Integer cardinalityInt, Schema objectRange) {
+		MapperProperty.addMaxCardinalityToPropertySchema(propertySchema, cardinalityInt);
+
+		// Deep copy 'allOf' list if present
+		SchemaCloneUtils.deepCopyListTypeValues(
+				objectRange, propertySchema, ComplexSchemaListType.ALLOF_LIST);
+
+		// Deep copy 'anyOf' list if present
+		SchemaCloneUtils.deepCopyListTypeValues(
+				objectRange, propertySchema, ComplexSchemaListType.ANYOF_LIST);
+
+		// Deep copy 'oneOf' list if present
+		SchemaCloneUtils.deepCopyListTypeValues(
+				objectRange, propertySchema, ComplexSchemaListType.ONEOF_LIST);
 	}
 
 	/**
@@ -380,6 +431,32 @@ public class MapperObjectProperty extends MapperProperty {
 		final var objSchema = new ObjectSchema();
 		objSchema.set$ref(objectRange);
 		propertySchema.setItems(objSchema);
+	}
+
+	/**
+	 * Add an exact cardinality value to the property's {@link Schema}.
+	 *
+	 * @param propertySchema a (data / object) property {@link Schema}.
+	 * @param cardinalityInt an exact cardinality value.
+	 * @param objectRange a {@link Schema} value (likely a complex range, such as intersection or
+	 *     union)
+	 */
+	public static void addExactCardinalityToPropertySchema(
+			Schema propertySchema, Integer cardinalityInt, Schema objectRange) {
+		propertySchema.setMinItems(cardinalityInt);
+		propertySchema.setMaxItems(cardinalityInt);
+
+		// Deep copy 'allOf' list if present
+		SchemaCloneUtils.deepCopyListTypeValues(
+				objectRange, propertySchema, ComplexSchemaListType.ALLOF_LIST);
+
+		// Deep copy 'anyOf' list if present
+		SchemaCloneUtils.deepCopyListTypeValues(
+				objectRange, propertySchema, ComplexSchemaListType.ANYOF_LIST);
+
+		// Deep copy 'oneOf' list if present
+		SchemaCloneUtils.deepCopyListTypeValues(
+				objectRange, propertySchema, ComplexSchemaListType.ONEOF_LIST);
 	}
 
 	/**
