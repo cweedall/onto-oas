@@ -43,10 +43,11 @@ public final class AnnotationProcessor {
 				|| schema == null) return;
 
 		final var propertyName = entity.getIRI().getShortForm();
-		final var propertySchema =
-				schema.getProperties() == null ? null : (Schema) schema.getProperties().get(propertyName);
 
-		if (propertySchema == null) return;
+		// If it has properties, assume it's a classs schema.  Otherwise, it's an enum or property
+		// schema already.
+		final var propertySchema =
+				schema.getProperties() == null ? schema : (Schema) schema.getProperties().get(propertyName);
 
 		// Description
 		if (propertySchema.getDescription() == null || propertySchema.getDescription().isBlank()) {
