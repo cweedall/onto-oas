@@ -146,18 +146,6 @@ public class ObjectVisitor implements OWLObjectVisitor {
 	}
 
 	/**
-	 * Wrapper for the {@link #visit(OWLClass)} method which also takes the visited class's ontology
-	 * as an argument.
-	 *
-	 * @param visitedClassOntology an {@link OWLOntology} which contains the visited class.
-	 * @param ce an {@link OWLClass} to be visited by this {@link ObjectVisitor} class.
-	 */
-	public void visit(@Nonnull OWLOntology visitedClassOntology, @Nonnull OWLClass ce) {
-		this.context.setBaseClassOntology(visitedClassOntology);
-		ce.accept(this);
-	}
-
-	/**
 	 * @param ce an {@link OWLClass} to be visited by this {@link ObjectVisitor} class.
 	 */
 	@Override
@@ -270,17 +258,23 @@ public class ObjectVisitor implements OWLObjectVisitor {
 								} else if (superClass instanceof OWLBooleanClassExpression) {
 									// Handle boolean expressions and complements
 									this.context.addAllReferencedClasses(superClass.getClassesInSignature());
-									logger.info("\t" + getBaseClassName() + " has a boolean class expression.");
+									logger.info(
+											"\t"
+													+ this.context.getBaseClass().getIRI().getShortForm()
+													+ " has a boolean class expression.");
 									logger.info("\t\taxiom: " + ax);
 								} else if (superClass instanceof OWLObjectOneOf) {
 									// Handle ObjectOneOf (enum-like)
-									logger.info("\t" + getBaseClassName() + " is an ObjectOneOf set.");
+									logger.info(
+											"\t"
+													+ this.context.getBaseClass().getIRI().getShortForm()
+													+ " is an ObjectOneOf set.");
 									logger.info("\t\taxiom: " + ax);
 								} else if (superClass.isOWLClass()) {
 									// Handle simple subclassing
 									logger.info(
 											"\t"
-													+ getBaseClassName()
+													+ this.context.getBaseClass().getIRI().getShortForm()
 													+ " is a subclass of "
 													+ getPrefixedSchemaName(superClass.asOWLClass())
 													+ ". No restrictions to process.");
@@ -337,7 +331,10 @@ public class ObjectVisitor implements OWLObjectVisitor {
 				break;
 
 			case UNKNOWN:
-				logger.severe("\t" + getBaseClassName() + " has unknown restriction.");
+				logger.severe(
+						"\t"
+								+ this.context.getBaseClass().getIRI().getShortForm()
+								+ " has unknown restriction.");
 				logger.severe("\t\taxiom: " + ax);
 				break;
 		}
@@ -371,16 +368,6 @@ public class ObjectVisitor implements OWLObjectVisitor {
 				axiom,
 				this.context.getCurrentlyProcessedPropertyName(),
 				this.context.getConfigData().getAnnotationConfig());
-	}
-
-	/**
-	 * Convenience method for getting the base class's short form name (i.e. only its name, not its
-	 * full IRI).
-	 *
-	 * @return a {@link String} which is the (short form) name of the base class.
-	 */
-	private String getBaseClassName() {
-		return this.context.getBaseClass().getIRI().getShortForm();
 	}
 
 	/**
@@ -982,9 +969,39 @@ public class ObjectVisitor implements OWLObjectVisitor {
 			this.context.addPropertyName(propertyName);
 			this.context.withProcessedProperty(propertyName, () -> operand.accept(this));
 		} else {
-			logger.severe("################ Operand instanceof ???: " + operand);
-			logger.severe(
-					"################ Taking no action for now. Need to figure out what use case this is.");
+			RestrictionKind kind = RestrictionClassifier.classify(operand);
+
+			switch (kind) {
+				case OBJECT_SOME_VALUES_FROM:
+				case OBJECT_ALL_VALUES_FROM:
+				case OBJECT_MIN_CARDINALITY:
+				case OBJECT_MAX_CARDINALITY:
+				case OBJECT_EXACT_CARDINALITY:
+				case OBJECT_HAS_VALUE:
+				case OBJECT_ONE_OF:
+				case OBJECT_COMPLEMENT_OF:
+				case OBJECT_INTERSECTION_OF:
+				case OBJECT_UNION_OF:
+				case DATA_SOME_VALUES_FROM:
+				case DATA_ALL_VALUES_FROM:
+				case DATA_MIN_CARDINALITY:
+				case DATA_MAX_CARDINALITY:
+				case DATA_EXACT_CARDINALITY:
+				case DATA_HAS_VALUE:
+				case DATA_ONE_OF:
+				case DATA_COMPLEMENT_OF:
+				case DATA_INTERSECTION_OF:
+				case DATA_UNION_OF:
+					operand.accept(this);
+					break;
+
+				case UNKNOWN:
+					logger.severe("################ Operand instanceof ???: " + operand);
+					logger.severe(
+							"################ Taking no action for now. Need to figure out what use case this"
+									+ " is.");
+					break;
+			}
 		}
 	}
 
