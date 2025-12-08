@@ -49,6 +49,11 @@ public final class AnnotationProcessor {
 		final var propertySchema =
 				schema.getProperties() == null ? schema : (Schema) schema.getProperties().get(propertyName);
 
+		// Occurs sometimes.
+		// TODO: Not sure if valid (i.e. ignore by returning) or property *should* exist but is not
+		// handled correctly elsewhere(??)
+		if (propertySchema == null) return;
+
 		// Description
 		if (propertySchema.getDescription() == null || propertySchema.getDescription().isBlank()) {
 			final var description =
