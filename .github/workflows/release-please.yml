@@ -1,0 +1,65 @@
+# -----------------------------------------------------------------------------
+# Workflow: Generate New Release Using Release Please
+# Purpose: Automates release versioning and changelog generation by creating
+#          a release PR when changes are merged into the main branch.
+#
+# Trigger: pull_request_target (closed) for main branch; workflow_dispatch
+# Dependencies: googleapis/release-please-action@v4
+# Permissions: contents: write; issues: write; pull-requests: write
+#
+# Created: 2025-07-18
+# Modification History:
+#   - 2025-11-23: move release-based ontology file version updates to release PR-triggered workflow
+#   - 2025-11-18: remove merge check; use correct branch to update onto versions
+#                 remove testing; get version and check validity
+#                 logging output of release please attempt 2
+#                 run commands and output before attempting to parse
+#                 use sed to grab JSON array instead
+#   - 2025-11-17: extra comments; add tail -n 1 to get only JSON data
+#                 revert to release-pr --dry-run but keep some fixes
+#                 replace RP dry-run with suggest-version to simplify workflow
+#                 add workflow_dispatch to manually run RP workflow
+#   - 2025-11-10: re-add repo-url; trigger workflow update [skip ci]
+#   - 2025-11-07: handle multiple versions returned from Release Please dry run command
+#   - 2025-10-09: don't look for JSON output of version number from Release Please
+#                 remove --json flag
+#                 move detect version to first job; use to skip other jobs, if no new version
+#                 fix badge workflow link and use --target-branch instead of deprecated --default-branch
+#                 automate TTL versioning during release process
+#   - 2025-07-18: add Release-Please workflow for release file and tag creation
+# Maintainer: Christopher Weedall
+# -----------------------------------------------------------------------------
+
+name: Generate New Release Using Release Please
+
+on:
+  # Run action for closed pull requests, but only for the main branch.
+  pull_request_target:
+    types:
+      - closed
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write # need this permission for writing tags; see: https://github.com/orgs/community/discussions/156181
+  pull-requests: write
+
+jobs:
+  release-please:
+    if: ${{ github.event.pull_request.merged }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: googleapis/release-please-action@v4
+        with:
+          # this assumes that you have created a personal access token
+          # (PAT) and configured it as a GitHub action secret named
+          # `GITHUB_TOKEN` (this secret name is not important).
+          token: ${{ secrets.GITHUB_TOKEN }}
+          # Configuration and manifest files to keep track of versioning
+          config-file: .github/config/release-please/release-please-config.json
+          manifest-file: .github/config/release-please/.release-please-manifest.json
+          # The short ref name of the branch or tag that triggered
+          #  the workflow run. For example, `main`.
+          target-branch: ${{ github.ref_name }}
