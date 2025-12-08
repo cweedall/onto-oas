@@ -1201,7 +1201,10 @@ public class RestrictionProcessorTest {
 			Schema range = mock(Schema.class);
 
 			mapperObjProperty
-					.when(() -> MapperObjectProperty.addMinCardinalityToPropertySchema(any(), any(), any()))
+					.when(
+							() ->
+									MapperObjectProperty.addMinCardinalityToPropertySchema(
+											any(), any(), any(String.class)))
 					.then(invocationOnMock -> null);
 
 			mockedRestrictProc
@@ -1212,10 +1215,12 @@ public class RestrictionProcessorTest {
 
 			// Verify that the expected static method was invoked
 			mapperObjProperty.verify(
-					() -> MapperObjectProperty.addMinCardinalityToPropertySchema(any(), any(), any()),
+					() ->
+							MapperObjectProperty.addMinCardinalityToPropertySchema(
+									any(), any(), any(String.class)),
 					times(0));
 
-			verify(logger, times(1)).log(eq(Level.SEVERE), anyString());
+			verify(logger, times(0)).log(eq(Level.SEVERE), anyString());
 		}
 	}
 
@@ -1267,7 +1272,10 @@ public class RestrictionProcessorTest {
 			Schema range = mock(Schema.class);
 
 			mapperObjProperty
-					.when(() -> MapperObjectProperty.addMaxCardinalityToPropertySchema(any(), any(), any()))
+					.when(
+							() ->
+									MapperObjectProperty.addMaxCardinalityToPropertySchema(
+											any(), any(), any(Schema.class)))
 					.then(invocationOnMock -> null);
 
 			mockedRestrictProc
@@ -1278,10 +1286,12 @@ public class RestrictionProcessorTest {
 
 			// Verify that the expected static method was invoked
 			mapperObjProperty.verify(
-					() -> MapperObjectProperty.addMaxCardinalityToPropertySchema(any(), any(), any()),
-					times(0));
+					() ->
+							MapperObjectProperty.addMaxCardinalityToPropertySchema(
+									any(), any(), any(Schema.class)),
+					times(1));
 
-			verify(logger, times(1)).log(eq(Level.SEVERE), anyString());
+			verify(logger, times(0)).log(eq(Level.SEVERE), anyString());
 		}
 	}
 
@@ -1333,7 +1343,10 @@ public class RestrictionProcessorTest {
 			Schema range = mock(Schema.class);
 
 			mapperObjProperty
-					.when(() -> MapperObjectProperty.addExactCardinalityToPropertySchema(any(), any(), any()))
+					.when(
+							() ->
+									MapperObjectProperty.addExactCardinalityToPropertySchema(
+											any(), any(), any(String.class)))
 					.then(invocationOnMock -> null);
 
 			mockedRestrictProc
@@ -1344,10 +1357,12 @@ public class RestrictionProcessorTest {
 
 			// Verify that the expected static method was invoked
 			mapperObjProperty.verify(
-					() -> MapperObjectProperty.addExactCardinalityToPropertySchema(any(), any(), any()),
-					times(0));
+					() ->
+							MapperObjectProperty.addExactCardinalityToPropertySchema(
+									any(), any(), any(Schema.class)),
+					times(1));
 
-			verify(logger, times(1)).log(eq(Level.SEVERE), anyString());
+			verify(logger, times(0)).log(eq(Level.SEVERE), anyString());
 		}
 	}
 
@@ -1407,15 +1422,21 @@ public class RestrictionProcessorTest {
 					times(0));
 
 			mapperObjProperty.verify(
-					() -> MapperObjectProperty.addMaxCardinalityToPropertySchema(any(), any(), any()),
+					() ->
+							MapperObjectProperty.addMaxCardinalityToPropertySchema(
+									any(), any(), any(String.class)),
 					times(0));
 
 			mapperObjProperty.verify(
-					() -> MapperObjectProperty.addMaxCardinalityToPropertySchema(any(), any(), any()),
+					() ->
+							MapperObjectProperty.addMaxCardinalityToPropertySchema(
+									any(), any(), any(String.class)),
 					times(0));
 
 			mapperObjProperty.verify(
-					() -> MapperObjectProperty.addExactCardinalityToPropertySchema(any(), any(), any()),
+					() ->
+							MapperObjectProperty.addExactCardinalityToPropertySchema(
+									any(), any(), any(String.class)),
 					times(0));
 
 			verify(logger, times(0)).log(eq(Level.SEVERE), anyString());
