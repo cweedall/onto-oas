@@ -1,12 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <packaging>jar</packaging>
     <groupId>edu.isi.oba</groupId>
     <artifactId>oba</artifactId>
-    <version>4.1.0</version>
+    <version>4.1.1-SNAPSHOT</version>
     <name>core</name>
     <url>https://github.com/cweedall/onto-oas</url>
 
@@ -301,7 +300,7 @@
                                     https://github.com/solven-eu/cleanthat/tree/master/maven
                                     https://mvnrepository.com/artifact/io.github.solven-eu.cleanthat/cleanthat-maven-plugin
                         -->
-                        <cleanthat />
+                        <cleanthat/>
 
                         <googleJavaFormat>
                             <!-- GOOGLE or AOSP (optional) -->
@@ -318,7 +317,7 @@
                             <!--<engine>google-java-format</engine>--> <!-- optional. Defaults to `google-java-format`. Can be switched to `cleanthat-javaparser-unnecessaryimport` (e.g. to process JDK17 source files with a JDK8+ Runtime) -->
                         </removeUnusedImports>
 
-                        <formatAnnotations /> <!-- fixes formatting of type annotations -->
+                        <formatAnnotations/> <!-- fixes formatting of type annotations -->
 
                         <indent>
                             <tabs>true</tabs>
@@ -386,7 +385,7 @@
                     <target>${jdk.version}</target>
                     <!-- Added compiler argument based on: https://stackoverflow.com/a/45228340/7363740 -->
                     <compilerArgs>
-                        <Xlint:unchecked />
+                        <Xlint:unchecked/>
                     </compilerArgs>
                 </configuration>
             </plugin>
