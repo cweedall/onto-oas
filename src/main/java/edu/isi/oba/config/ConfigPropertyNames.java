@@ -108,7 +108,7 @@ public class ConfigPropertyNames {
 	public static final String GET_BY_KEY = GET + SEPARATOR + BY_KEY;
 	public static final String GET_BY_KEY_ENABLE = GET_BY_KEY + SEPARATOR + ENABLE;
 	public static final String GET_BY_KEY_RESPONSE_ARRAY_ENABLE =
-			GET_BY_KEY + SEPARATOR + RESPONSE_ARRAY + ENABLE;
+			GET_BY_KEY + SEPARATOR + RESPONSE_ARRAY + SEPARATOR + ENABLE;
 
 	// ---------------------------------------------------------
 	//  PATCH operation constants

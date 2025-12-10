@@ -5,7 +5,9 @@ import static edu.isi.oba.Oba.logger;
 import edu.isi.oba.config.ConfigPropertyNames;
 import edu.isi.oba.config.YamlConfig;
 import edu.isi.oba.config.flags.GlobalFlags;
+import edu.isi.oba.exceptions.OntologyVisitorException;
 import edu.isi.oba.generators.PathGenerator;
+import edu.isi.oba.ontology.visitor.ObjectVisitor;
 import edu.isi.oba.utils.exithandler.FatalErrorHandler;
 import edu.isi.oba.utils.schema.SchemaRefUtils;
 import io.swagger.v3.oas.models.Paths;
@@ -43,7 +45,7 @@ class Mapper {
 		this.configData = configData;
 	}
 
-	private Schema getSchema(OWLClass cls, OWLOntology ontology) {
+	private Schema getSchema(OWLClass cls, OWLOntology ontology) throws OntologyVisitorException {
 		logger.info("=======================================================================");
 		logger.info("##############################################");
 		logger.info("###  Beginning schema mapping for class:");
@@ -51,8 +53,7 @@ class Mapper {
 		logger.info("##############################################");
 
 		// Convert from OWL Class to OpenAPI Schema.
-		final var objVisitor = new ObjectVisitor(this.configData);
-		objVisitor.visit(ontology, cls);
+		final var objVisitor = new ObjectVisitor(cls, ontology, this.configData);
 
 		final var mappedSchema = objVisitor.getClassSchema();
 
@@ -206,7 +207,7 @@ class Mapper {
 									mappedSchema, cls.getIRI(), this.configData));
 				}
 			}
-		} catch (Exception e) {
+		} catch (OntologyVisitorException e) {
 			logger.log(Level.SEVERE, "Could not parse class " + cls.getIRI().toString());
 			logger.log(Level.SEVERE, "\n\tdetails:\n" + e);
 		}

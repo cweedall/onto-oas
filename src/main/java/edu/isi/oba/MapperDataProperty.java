@@ -29,7 +29,7 @@ import org.semanticweb.owlapi.model.OWLNaryDataRange;
  * Class for generating an new data property {@link Schema} OR taking an existing one and updating
  * it.
  */
-class MapperDataProperty extends MapperProperty {
+public class MapperDataProperty extends MapperProperty {
 	private static final Map<String, String> DATA_TYPES =
 			Map.ofEntries(
 					Map.entry("ENTITIES", "string"),
@@ -336,7 +336,7 @@ class MapperDataProperty extends MapperProperty {
 		Schema complement = MapperDataProperty.getTypeSchema(complementOfType);
 		MapperDataProperty.setSchemaFormat(
 				complement, MapperDataProperty.getFormatForDatatype(complementOfType));
-		dataPropertySchema.not(complement);
+		dataPropertySchema.setNot(complement);
 	}
 
 	/**

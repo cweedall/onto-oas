@@ -450,7 +450,7 @@ public class OperationGenerator {
 			final var refSchema = new Schema().$ref("#/components/schemas/" + schema.getName());
 			if (GlobalFlags.getFlag(ConfigPropertyNames.GET_BY_KEY_RESPONSE_ARRAY_ENABLE)) {
 				final var oneOfSchema = new Schema();
-				oneOfSchema.addOneOfItem(new ArraySchema().items(refSchema));
+				oneOfSchema.addOneOfItem(new ArraySchema().items(refSchema).minItems(1));
 				oneOfSchema.addOneOfItem(
 						new ArraySchema().items(new StringSchema()).maxItems(0).example(new ArrayList<>()));
 
