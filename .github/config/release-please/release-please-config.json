@@ -2,7 +2,7 @@
   "manifest": true,
   "packages": {
     ".": {
-      "release-type": "simple"
+      "release-type": "maven"
     }
   }
 }
