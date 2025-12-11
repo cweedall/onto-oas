@@ -2,8 +2,7 @@
   "manifest": true,
   "packages": {
     ".": {
-      "release-type": "maven",
-      "snapshot": false
+      "release-type": "maven"
     }
   }
 }
