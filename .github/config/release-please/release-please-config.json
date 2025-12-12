@@ -1,5 +1,4 @@
 {
-  "manifest": true,
   "packages": {
     ".": {
       "release-type": "maven"
