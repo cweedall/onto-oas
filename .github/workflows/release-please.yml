@@ -51,3 +51,4 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           config-file: .github/config/release-please/release-please-config.json
+          manifest-file: .github/config/release-please/.release-please-manifest.json
